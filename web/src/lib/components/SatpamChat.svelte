@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { getSocket } from '$lib/socket.js';
   import { items } from '$lib/stores/items.js';
   import Avatar from './Avatar.svelte';
@@ -10,31 +9,24 @@
   let chatHistory: Array<{ role: 'user' | 'satpam'; text: string }> = $state([]);
   let chatLoading = $state(false);
   let chatContainer = $state<HTMLElement>();
-
-  // Offset koordinat pupil mata avatar
-  let eyeOffsetX = $state(0);
-  let eyeOffsetY = $state(0);
   let avatarEl = $state<HTMLElement>();
 
-  // Melacak pergerakan kursor mouse agar mata avatar mengikuti arah kursor
-  onMount(() => {
-    function handleMouseMove(e: MouseEvent) {
-      if (!avatarEl) return;
-      const rect = avatarEl.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-
-      const dx = e.clientX - centerX;
-      const dy = e.clientY - centerY;
-
-      // Batasi jarak pergerakan mata maksimal 3px
-      eyeOffsetX = Math.max(-3, Math.min(3, dx / 80));
-      eyeOffsetY = Math.max(-3, Math.min(3, dy / 80));
-    }
-
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  });
+  // Konfigurasi 8-Bit Pak Satpam menggunakan DiceBear PixelArt
+  const satpamOptions = {
+    seed: 'PakSatpamAI',
+    hair: ['short01'],
+    hairColor: ['28150a'],
+    hat: ['variant02'],
+    hatColor: ['2663a3'],
+    hatProbability: 100,
+    beard: ['variant01'],
+    beardProbability: 100,
+    clothing: ['variant01'],
+    clothingColor: ['03396c'],
+    skinColor: ['e0b687'],
+    eyes: ['variant11'],
+    mouth: ['happy01']
+  };
 
   // Membuka atau menutup jendela obrolan dengan Satpam AI
   function toggleChat() {
@@ -62,7 +54,7 @@
 
     const socket = getSocket();
     if (!socket?.connected) {
-      chatHistory = [...chatHistory, { role: 'satpam', text: 'Socket offline nih, coba lagi ya!' }];
+      chatHistory = [...chatHistory, { role: 'satpam', text: 'Koneksi socket offline nih, coba sebentar lagi ya!' }];
       chatLoading = false;
       scrollToBottom();
       return;
@@ -109,82 +101,121 @@
     role="dialog"
     aria-label="Chat Log Satpam AI"
     tabindex="-1"
-    class="absolute bottom-[100%] left-1/2 transform -translate-x-1/2 mb-8 mc-block w-[300px] md:w-[380px] bg-white flex flex-col z-[300]"
+    class="absolute bottom-[100%] left-1/2 transform -translate-x-1/2 mb-4 w-[320px] md:w-[380px] bg-[#b87d46] border-[4px] border-[#2c1b0f] shadow-[6px_6px_0px_rgba(0,0,0,0.5)] rounded-lg flex flex-col z-[300] overflow-hidden"
     onclick={(e) => e.stopPropagation()}
     onkeydown={(e) => e.stopPropagation()}
-    transition:fly={{ y: 20, duration: 250 }}
+    transition:fly={{ y: 15, duration: 200 }}
   >
-    <!-- Header panel chat -->
-    <div class="bg-blue-600 text-white p-2 font-pixel text-[10px] flex justify-between items-center border-b-4 border-black">
-      <span>Chat Log Satpam AI</span>
-      <button onclick={toggleChat} class="text-white hover:text-red-300" type="button">X</button>
+    <!-- Header panel chat: 8-Bit Solid Wood Theme -->
+    <div class="bg-[#24170e] text-yellow-300 px-3 py-2 font-pixel text-[9px] md:text-[10px] flex justify-between items-center border-b-3 border-[#140b05]">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-green-400 border border-[#140b05] animate-pulse"></span>
+        <span>POSKO BANTUAN SATPAM AI</span>
+      </div>
+      <button
+        onclick={toggleChat}
+        class="text-yellow-300 hover:text-red-400 font-pixel text-xs px-1.5 py-0.5 border border-transparent hover:border-yellow-300 transition-colors cursor-pointer"
+        type="button"
+        aria-label="Tutup Chat"
+      >
+        [X]
+      </button>
     </div>
+
     <!-- Area riwayat pesan -->
     <div
       bind:this={chatContainer}
-      class="p-3 max-h-[180px] overflow-y-auto font-sans text-xs flex flex-col gap-3 bg-gray-100"
+      class="p-3 max-h-[220px] overflow-y-auto font-sans text-xs flex flex-col gap-2.5 bg-[#fefce8] border-b-3 border-[#2c1b0f]"
     >
       {#if chatHistory.length === 0}
-        <div class="text-gray-500 italic text-center font-bold">Klik input di bawah untuk menyapa Satpam AI!</div>
+        <div class="text-[#78350f] font-pixel text-[8px] text-center p-3 border-2 border-dashed border-[#b87d46] rounded leading-relaxed">
+          Halo! Ada barang hilang atau butuh bantuan di kampus? Ketik pertanyaan di bawah ya!
+        </div>
       {:else}
         {#each chatHistory as msg, i}
           <div class="flex flex-col {msg.role === 'user' ? 'items-end' : 'items-start'}">
-            <span class="font-bold text-[10px] mb-1 {msg.role === 'user' ? 'text-blue-600' : 'text-gray-700'}">
+            <span class="font-pixel text-[7px] mb-0.5 {msg.role === 'user' ? 'text-[#1e3a8a]' : 'text-[#78350f]'}">
               {msg.role === 'user' ? 'Kamu' : 'Satpam AI'}
             </span>
-            <div class="p-2 mc-block max-w-[85%] font-bold {msg.role === 'user' ? 'bg-blue-200' : 'bg-white'}">
+            <div
+              class="p-2 rounded border-2 font-sans text-xs font-bold max-w-[88%] shadow-[2px_2px_0px_rgba(0,0,0,0.15)] {msg.role === 'user'
+                ? 'bg-[#24170e] text-yellow-300 border-[#140b05]'
+                : 'bg-white text-[#2c1b0f] border-[#2c1b0f]'}"
+            >
               {msg.text}
             </div>
           </div>
         {/each}
         {#if chatLoading}
           <div class="flex flex-col items-start" transition:fade={{ duration: 150 }}>
-            <span class="font-bold text-[10px] mb-1 text-gray-700">Satpam AI</span>
-            <div class="p-2 mc-block max-w-[85%] font-bold bg-white text-blue-500 animate-pulse">
-              Hmm... bentar ya...
+            <span class="font-pixel text-[7px] mb-0.5 text-[#78350f]">Satpam AI</span>
+            <div class="p-2 rounded border-2 border-[#2c1b0f] bg-white text-[#b87d46] font-pixel text-[8px] animate-pulse">
+              Sebentar, saya cek buku catatan posko dulu...
             </div>
           </div>
         {/if}
       {/if}
     </div>
+
     <!-- Input form chat -->
-    <div class="p-2 flex gap-2 border-t-4 border-black bg-white">
+    <div class="p-2.5 flex gap-2 bg-[#9e6435]">
       <input
         type="text"
         bind:value={chatInput}
-        placeholder="Tanya satpam..."
-        class="w-full border-2 border-black p-2 text-xs font-sans font-bold focus:outline-none bg-gray-50"
+        placeholder="Tanya info barang / bantuan..."
+        class="w-full bg-white border-[3px] border-[#2c1b0f] focus:border-[#f59e0b] rounded py-1.5 px-2.5 text-stone-900 font-sans text-xs font-bold placeholder-stone-400 outline-none shadow-[inset_2px_2px_0px_rgba(0,0,0,0.15)]"
         autocomplete="off"
         onkeypress={handleKeypress}
       />
-      <button onclick={sendChat} class="mc-btn bg-blue-500 text-white px-4 text-xs font-bold" type="button">Kirim</button>
+      <button
+        onclick={sendChat}
+        class="bg-[#24170e] hover:bg-[#382315] active:translate-y-0.5 text-yellow-300 font-pixel text-[9px] px-3.5 py-1.5 rounded border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] cursor-pointer shrink-0"
+        type="button"
+      >
+        KIRIM
+      </button>
     </div>
   </div>
 {/if}
 
-<!-- Avatar visual Satpam AI dengan kemampuan melacak arah kursor -->
-<div
-  bind:this={avatarEl}
-  class="mc-avatar"
-  onclick={toggleChat}
-  onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleChat(); }}
-  role="button"
-  tabindex="0"
->
-  <div class="satpam-hair">
-    <div class="hair-spike-1"></div>
-    <div class="hair-spike-2"></div>
-  </div>
-  <div class="avatar-head">
-    <div
-      class="avatar-eye eye-left"
-      style="transform: translate({eyeOffsetX}px, {eyeOffsetY}px);"
-    ></div>
-    <div
-      class="avatar-eye eye-right"
-      style="transform: translate({eyeOffsetX}px, {eyeOffsetY}px);"
-    ></div>
-    <div class="avatar-mouth"></div>
-  </div>
-  <div class="avatar-body body-blue"></div>
+<!-- Pos Satpam AI: Karakter 8-Bit Interaktif di Bawah Board -->
+<div class="relative flex flex-col items-center">
+  <!-- Balon Dialog Petunjuk Mengambang (Pulsing Hint) -->
+  {#if !chatOpen}
+    <button
+      type="button"
+      onclick={toggleChat}
+      class="absolute -top-7 left-1/2 -translate-x-1/2 bg-[#fef08a] border-2 border-[#2c1b0f] shadow-[2px_2px_0px_#2c1b0f] px-2 py-0.5 rounded font-pixel text-[7px] text-[#2c1b0f] font-bold whitespace-nowrap animate-bounce hover:bg-yellow-200 cursor-pointer select-none"
+    >
+      TANYA SATPAM AI
+    </button>
+  {/if}
+
+  <!-- Tombol Avatar Satpam 8-Bit & Meja Piket -->
+  <button
+    type="button"
+    bind:this={avatarEl}
+    onclick={toggleChat}
+    aria-label="Buka Chat Satpam AI"
+    class="relative group cursor-pointer focus:outline-none flex flex-col items-center transition-transform hover:-translate-y-1 select-none"
+  >
+    <!-- Avatar Pixel Art 8-Bit Pak Satpam (DiceBear PixelArt) -->
+    <div class="relative w-[76px] h-[76px] rounded-t flex items-center justify-center overflow-hidden">
+      <Avatar seed="PakSatpamAI" size={76} options={satpamOptions} />
+      
+      <!-- Pin Lencana Emas 8-Bit di Topi Satpam -->
+      <div class="absolute top-[10px] left-1/2 -translate-x-1/2 w-2 h-1.5 bg-[#facc15] border border-[#78350f] shadow-[0_1px_0px_#78350f] pointer-events-none"></div>
+    </div>
+
+    <!-- Meja / Pos Piket Satpam 8-Bit -->
+    <div class="relative -mt-2 z-10 flex items-center gap-1.5 bg-[#24170e] border-2 border-[#140b05] px-2.5 py-0.5 rounded shadow-[2px_2px_0px_#140b05] group-hover:border-[#facc15] transition-colors">
+      <span class="w-1.5 h-1.5 rounded-full bg-green-400 border border-[#140b05] animate-pulse"></span>
+      <span
+        class="font-pixel text-[7px] md:text-[8px] text-yellow-300 font-bold tracking-wide"
+        style="text-shadow: 1px 1px 0 #000;"
+      >
+        SATPAM AI
+      </span>
+    </div>
+  </button>
 </div>

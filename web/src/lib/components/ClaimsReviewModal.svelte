@@ -41,40 +41,54 @@
 {#if targetItem}
   <div class="modal-overlay" transition:fade={{ duration: 200 }}>
     <div
-      class="mc-modal-box p-5 max-w-lg w-full relative flex flex-col gap-3 m-4"
+      class="mc-modal-box p-5 max-w-lg w-full relative flex flex-col gap-3 m-4 select-none"
       transition:fly={{ y: 30, duration: 300 }}
     >
-      <h2 class="font-pixel text-lg text-yellow-300 text-center mb-1" style="text-shadow: 2px 2px 0 #000;">
-        {modalTitle}
-      </h2>
+      <!-- Pixel Corner Screws / Baut Sudut 8-Bit Solid -->
+      <div class="absolute top-2.5 left-2.5 w-2.5 h-2.5 bg-[#3d2311] border border-[#d89f6b]"></div>
+      <div class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-[#3d2311] border border-[#d89f6b]"></div>
+      <div class="absolute bottom-2.5 left-2.5 w-2.5 h-2.5 bg-[#3d2311] border border-[#d89f6b]"></div>
+      <div class="absolute bottom-2.5 right-2.5 w-2.5 h-2.5 bg-[#3d2311] border border-[#d89f6b]"></div>
 
-      <div class="claims-list flex flex-col gap-3">
+      <div class="text-center pb-2 border-b-3 border-[#2c1b0f]/30">
+        <h2 class="font-pixel text-base md:text-lg text-yellow-300 tracking-wide" style="text-shadow: 2px 2px 0 #2c1b0f, 3px 3px 0 rgba(0,0,0,0.5);">
+          {modalTitle}
+        </h2>
+      </div>
+
+      <!-- Inset Claims List Panel -->
+      <div class="bg-[#9e6435] border-[3px] border-[#2c1b0f] shadow-[inset_2px_2px_0px_rgba(0,0,0,0.25)] rounded-lg p-3 flex flex-col gap-2.5 max-h-[360px] overflow-y-auto">
         {#each sortedClaims() as claim (claim.id)}
-          <div class="bg-[#fffdf7] border-4 border-[#3e2612] p-3 flex flex-col gap-2 shadow-[2px_2px_0px_rgba(0,0,0,0.2)]" transition:fly={{ x: 20, duration: 250 }}>
+          <div class="bg-[#fefce8] border-2 border-[#2c1b0f] p-3 flex flex-col gap-2 shadow-[2px_2px_0px_#140b05] rounded" transition:fly={{ x: 20, duration: 250 }}>
             <div class="flex justify-between items-center flex-wrap gap-1">
               {#if claim.status === 'pending'}
-                <span class="bg-yellow-400 border-2 border-black px-2 py-0.5 text-[10px] font-bold">PENDING</span>
+                <span class="bg-[#f59e0b] text-[#2c1b0f] border-2 border-[#140b05] px-2 py-0.5 text-[8px] font-pixel font-bold rounded">
+                  PENDING
+                </span>
               {:else if claim.status === 'approved'}
-                <span class="bg-green-400 border-2 border-black px-2 py-0.5 text-[10px] font-bold">APPROVED</span>
+                <span class="bg-[#16a34a] text-yellow-300 border-2 border-[#140b05] px-2 py-0.5 text-[8px] font-pixel font-bold rounded">
+                  APPROVED
+                </span>
               {:else}
-                <span class="bg-red-400 text-white border-2 border-black px-2 py-0.5 text-[10px] font-bold">REJECTED</span>
+                <span class="bg-[#dc2626] text-white border-2 border-[#140b05] px-2 py-0.5 text-[8px] font-pixel font-bold rounded">
+                  REJECTED
+                </span>
               {/if}
               <span
-                class="border-2 border-black px-2 py-0.5 text-[10px] font-bold
-                  {claim.confidence === 'Tinggi' ? 'conf-tinggi' : claim.confidence === 'Sedang' ? 'conf-sedang' : 'conf-rendah'}"
+                class="border-2 border-[#140b05] px-2 py-0.5 text-[8px] font-pixel font-bold rounded bg-[#0284c7] text-white"
               >
                 AI: {claim.confidence} ({claim.score}%)
               </span>
             </div>
-            <p class="text-xs text-gray-500 font-bold">{formatDate(claim.createdAt)}</p>
-            <div class="bg-gray-100 border-2 border-gray-300 p-2">
-              <p class="text-sm font-bold text-gray-800">"{claim.text}"</p>
+            <p class="text-[10px] text-[#78350f] font-bold">{formatDate(claim.createdAt)}</p>
+            <div class="bg-white border-2 border-[#2c1b0f] p-2 rounded">
+              <p class="text-xs font-bold text-stone-900">"{claim.text}"</p>
             </div>
-            <div class="bg-blue-50 border-2 border-blue-300 p-2">
-              <p class="text-[10px] text-blue-700 font-bold">AI Reasoning: {claim.reasoning}</p>
+            <div class="bg-[#fef9c3] border-2 border-[#b87d46] p-2 rounded">
+              <p class="text-[10px] text-[#78350f] font-bold">AI Reasoning: {claim.reasoning}</p>
             </div>
             {#if claim.claimantName}
-              <p class="text-[10px] text-gray-500 font-bold">{claim.claimantName} ({claim.claimantNpm || '-'})</p>
+              <p class="text-[10px] text-[#2c1b0f] font-bold">{claim.claimantName} ({claim.claimantNpm || '-'})</p>
             {/if}
           </div>
         {/each}
@@ -82,10 +96,10 @@
 
       <button
         onclick={closeModal}
-        class="mc-btn bg-gray-500 hover:bg-gray-600 text-white font-pixel text-xs py-2.5 px-4 rounded w-full mt-1"
-        style="text-shadow: 1px 1px 0 #000;"
+        type="button"
+        class="bg-[#24170e] hover:bg-[#382315] active:translate-y-0.5 text-yellow-300 font-pixel text-[10px] py-2.5 px-4 rounded w-full border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] transition-all cursor-pointer text-center mt-1"
       >
-        Tutup
+        TUTUP
       </button>
     </div>
   </div>

@@ -123,115 +123,128 @@
 
 <div class="modal-overlay" transition:fade={{ duration: 200 }}>
   <div
-    class="mc-modal-box p-6 max-w-md w-full relative flex flex-col gap-3 m-4"
+    class="mc-modal-box p-5 max-w-md w-full relative flex flex-col gap-3 m-4 select-none"
     transition:fly={{ y: 30, duration: 300 }}
   >
-    <h2 class="font-pixel text-xl text-yellow-300 text-center mb-1" style="text-shadow: 2px 2px 0 #000;">
-      FORM LAPOR BARANG
-    </h2>
+    <!-- Pixel Corner Screws / Baut Sudut 8-Bit Solid -->
+    <div class="absolute top-2.5 left-2.5 w-2.5 h-2.5 bg-[#3d2311] border border-[#d89f6b]"></div>
+    <div class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-[#3d2311] border border-[#d89f6b]"></div>
+    <div class="absolute bottom-2.5 left-2.5 w-2.5 h-2.5 bg-[#3d2311] border border-[#d89f6b]"></div>
+    <div class="absolute bottom-2.5 right-2.5 w-2.5 h-2.5 bg-[#3d2311] border border-[#d89f6b]"></div>
 
-    <div class="flex flex-col gap-1">
-      <label for="report-status" class="mc-form-label">Status</label>
-      <select
-        id="report-status"
-        bind:value={type}
-        class="mc-input font-sans font-bold"
-      >
-        <option value="lost">Barang Hilang (Lost)</option>
-        <option value="found">Nemu Barang (Found)</option>
-      </select>
+    <div class="text-center pb-2 border-b-3 border-[#2c1b0f]/30">
+      <h2 class="font-pixel text-lg md:text-xl text-yellow-300 tracking-wide" style="text-shadow: 2px 2px 0 #2c1b0f, 3px 3px 0 rgba(0,0,0,0.5);">
+        FORM LAPOR BARANG
+      </h2>
     </div>
 
-    <div class="flex flex-col gap-1">
-      <label for="report-name" class="mc-form-label">Nama Barang</label>
-      <input
-        id="report-name"
-        type="text"
-        bind:value={name}
-        class="mc-input font-sans font-bold"
-        placeholder="Contoh: Dompet Kulit"
-      />
-    </div>
+    <!-- Panel Form Terstruktur -->
+    <div class="bg-[#9e6435] border-[3px] border-[#2c1b0f] shadow-[inset_2px_2px_0px_rgba(0,0,0,0.25)] rounded-lg p-3.5 flex flex-col gap-2.5">
+      <div class="flex flex-col gap-1">
+        <label for="report-status" class="mc-form-label">STATUS</label>
+        <select
+          id="report-status"
+          bind:value={type}
+          class="mc-input font-sans text-xs font-bold bg-white text-stone-900"
+        >
+          <option value="lost">Barang Hilang (Lost)</option>
+          <option value="found">Nemu Barang (Found)</option>
+        </select>
+      </div>
 
-    <div class="flex flex-col gap-1">
-      <label for="report-location" class="mc-form-label">Lokasi Hilang/Ditemukan</label>
-      <input
-        id="report-location"
-        type="text"
-        bind:value={desc}
-        class="mc-input font-sans font-bold"
-        placeholder="Contoh: Kantin FT, Perpustakaan Lt.2"
-      />
-    </div>
-
-    <div class="flex flex-col gap-1">
-      <label for="report-secret" class="mc-form-label">
-        Ciri Khas Rahasia <span class="text-[#2e1808]/70 font-normal text-[9px]">(opsional)</span>
-      </label>
-      <textarea
-        id="report-secret"
-        bind:value={secretDetail}
-        rows="2"
-        class="mc-input font-sans font-bold resize-none"
-        placeholder="Detail yang cuma kamu yang tau, misal nomor seri, goresan"
-      ></textarea>
-    </div>
-
-    <div class="flex gap-2">
-      <div class="flex flex-col gap-1 w-1/2">
-        <label for="report-date" class="mc-form-label">Tanggal</label>
+      <div class="flex flex-col gap-1">
+        <label for="report-name" class="mc-form-label">NAMA BARANG</label>
         <input
-          id="report-date"
-          type="date"
-          bind:value={date}
-          class="mc-input font-sans font-bold"
+          id="report-name"
+          type="text"
+          bind:value={name}
+          class="mc-input font-sans text-xs font-bold placeholder-stone-400"
+          placeholder="Contoh: Dompet Kulit Cokelat"
         />
       </div>
-      <div class="flex flex-col gap-1 w-1/2">
-        <label for="report-time" class="mc-form-label">Jam</label>
+
+      <div class="flex flex-col gap-1">
+        <label for="report-location" class="mc-form-label">LOKASI HILANG / DITEMUKAN</label>
         <input
-          id="report-time"
-          type="time"
-          bind:value={time}
-          class="mc-input font-sans font-bold"
+          id="report-location"
+          type="text"
+          bind:value={desc}
+          class="mc-input font-sans text-xs font-bold placeholder-stone-400"
+          placeholder="Contoh: Kantin FT, Perpustakaan Lt.2"
         />
       </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="report-secret" class="mc-form-label">
+          CIRI KHAS RAHASIA <span class="text-[#2c1b0f]/70 font-normal text-[8px]">(opsional)</span>
+        </label>
+        <textarea
+          id="report-secret"
+          bind:value={secretDetail}
+          rows="2"
+          class="mc-input font-sans text-xs font-bold resize-none placeholder-stone-400"
+          placeholder="Detail yang hanya kamu ketahui (misal goresan, stiker)"
+        ></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <div class="flex flex-col gap-1">
+          <label for="report-date" class="mc-form-label">TANGGAL</label>
+          <input
+            id="report-date"
+            type="date"
+            bind:value={date}
+            class="mc-input font-sans text-xs font-bold"
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label for="report-time" class="mc-form-label">JAM</label>
+          <input
+            id="report-time"
+            type="time"
+            bind:value={time}
+            class="mc-input font-sans text-xs font-bold"
+          />
+        </div>
+      </div>
+
+      {#if errorMsg}
+        <div
+          class="bg-red-600 border-2 border-[#2c1b0f] text-white font-pixel text-[8px] p-2 text-center rounded shadow-[2px_2px_0px_#2c1b0f]"
+          transition:fly={{ y: -5, duration: 150 }}
+        >
+          {errorMsg}
+        </div>
+      {/if}
+
+      {#if loading}
+        <div
+          class="text-yellow-300 font-pixel text-[9px] text-center animate-pulse py-1"
+          style="text-shadow: 1px 1px 0 #000;"
+          transition:fade={{ duration: 150 }}
+        >
+          AI Sedang Memilih Icon...
+        </div>
+      {/if}
     </div>
 
-    {#if errorMsg}
-      <div
-        class="bg-red-200 border-4 border-red-600 p-2 text-red-800 text-xs font-sans font-bold text-center"
-        transition:fly={{ y: -5, duration: 200 }}
-      >
-        {errorMsg}
-      </div>
-    {/if}
-
-    {#if loading}
-      <div
-        class="text-yellow-300 font-pixel text-[10px] text-center animate-pulse"
-        style="text-shadow: 1px 1px 0 #000;"
-        transition:fade={{ duration: 200 }}
-      >
-        AI Memilih Icon...
-      </div>
-    {/if}
-
-    <div class="flex gap-2 mt-2">
+    <!-- Tombol Aksi Bawah -->
+    <div class="flex gap-2.5 mt-1">
       <button
         onclick={closeModal}
-        class="mc-btn bg-red-500 hover:bg-red-600 text-white font-pixel text-xs py-2 px-4 rounded w-1/2"
-        style="text-shadow: 1px 1px 0 #000;"
+        type="button"
+        class="bg-[#24170e] hover:bg-[#382315] active:translate-y-0.5 text-yellow-300 font-pixel text-[10px] py-2.5 px-4 rounded w-1/2 border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] transition-all cursor-pointer text-center"
       >
-        Batal
+        BATAL
       </button>
       <button
         onclick={submitReport}
         disabled={loading}
-        class="mc-btn bg-green-500 hover:bg-green-600 text-white font-pixel text-xs py-2 px-4 rounded w-1/2"
+        type="button"
+        class="bg-[#16a34a] hover:bg-[#15803d] active:translate-y-0.5 text-yellow-300 font-pixel text-[10px] py-2.5 px-4 rounded w-1/2 border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] transition-all cursor-pointer text-center"
         style="text-shadow: 1px 1px 0 #000;"
       >
-        Simpan
+        SIMPAN
       </button>
     </div>
   </div>

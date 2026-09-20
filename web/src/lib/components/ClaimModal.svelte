@@ -124,78 +124,90 @@
 {#if targetItem}
   <div class="modal-overlay" transition:fade={{ duration: 200 }}>
     <div
-      class="mc-modal-box p-6 max-w-md w-full relative flex flex-col gap-3 m-4"
+      class="mc-modal-box p-5 max-w-md w-full relative flex flex-col gap-3 m-4 select-none"
       transition:fly={{ y: 30, duration: 300 }}
     >
-      <h2 class="font-pixel text-lg text-yellow-300 text-center mb-1" style="text-shadow: 2px 2px 0 #000;">
-        {modalTitle}
-      </h2>
+      <!-- Pixel Corner Screws / Baut Sudut 8-Bit Solid -->
+      <div class="absolute top-2.5 left-2.5 w-2.5 h-2.5 bg-[#3d2311] border border-[#d89f6b]"></div>
+      <div class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-[#3d2311] border border-[#d89f6b]"></div>
+      <div class="absolute bottom-2.5 left-2.5 w-2.5 h-2.5 bg-[#3d2311] border border-[#d89f6b]"></div>
+      <div class="absolute bottom-2.5 right-2.5 w-2.5 h-2.5 bg-[#3d2311] border border-[#d89f6b]"></div>
 
-      <div class="flex flex-col gap-1">
-        <label for="claim-desc" class="mc-form-label">
-          Ceritain barang yang kamu pegang/lihat
-        </label>
-        <textarea
-          id="claim-desc"
-          bind:value={claimText}
-          rows="4"
-          disabled={finished}
-          class="mc-input font-sans font-bold resize-none"
-          {placeholder}
-        ></textarea>
+      <div class="text-center pb-2 border-b-3 border-[#2c1b0f]/30">
+        <h2 class="font-pixel text-base md:text-lg text-yellow-300 tracking-wide" style="text-shadow: 2px 2px 0 #2c1b0f, 3px 3px 0 rgba(0,0,0,0.5);">
+          {modalTitle}
+        </h2>
       </div>
 
-      {#if errorMsg}
-        <div
-          class="border-4 p-3 text-xs font-sans font-bold text-center {errorClass}"
-          transition:fly={{ y: -10, duration: 300 }}
-        >
-          {@html errorMsg}
-          {#if waLink}
-            <a
-              href={waLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="mc-btn bg-green-500 hover:bg-green-600 text-white font-pixel text-[10px] py-2 px-4 rounded block text-center mt-2"
-              style="text-decoration:none; text-shadow: 1px 1px 0 #000;"
-            >
-              Chat via WhatsApp
-            </a>
-          {/if}
+      <!-- Panel Form Inset -->
+      <div class="bg-[#9e6435] border-[3px] border-[#2c1b0f] shadow-[inset_2px_2px_0px_rgba(0,0,0,0.25)] rounded-lg p-3.5 flex flex-col gap-2.5">
+        <div class="flex flex-col gap-1">
+          <label for="claim-desc" class="mc-form-label">
+            CERITAIN CIRI KHAS BARANG YANG KAMU KETAHUI
+          </label>
+          <textarea
+            id="claim-desc"
+            bind:value={claimText}
+            rows="4"
+            disabled={finished}
+            class="mc-input font-sans text-xs font-bold resize-none placeholder-stone-400"
+            {placeholder}
+          ></textarea>
         </div>
-      {/if}
 
-      {#if loading}
-        <div
-          class="text-yellow-300 font-pixel text-[10px] text-center animate-pulse"
-          style="text-shadow: 1px 1px 0 #000;"
-          transition:fade={{ duration: 200 }}
-        >
-          AI Memverifikasi Klaim...
-        </div>
-      {/if}
+        {#if errorMsg}
+          <div
+            class="border-2 border-[#2c1b0f] p-2.5 text-xs font-sans font-bold text-center rounded shadow-[2px_2px_0px_#2c1b0f] {errorClass}"
+            transition:fly={{ y: -5, duration: 150 }}
+          >
+            {@html errorMsg}
+            {#if waLink}
+              <a
+                href={waLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="bg-[#16a34a] hover:bg-[#15803d] active:translate-y-0.5 text-yellow-300 font-pixel text-[9px] py-2 px-3 rounded block text-center mt-2 border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] transition-all"
+                style="text-decoration:none; text-shadow: 1px 1px 0 #000;"
+              >
+                CHAT VIA WHATSAPP
+              </a>
+            {/if}
+          </div>
+        {/if}
 
-      <div class="flex gap-2 mt-1">
+        {#if loading}
+          <div
+            class="text-yellow-300 font-pixel text-[9px] text-center animate-pulse py-1"
+            style="text-shadow: 1px 1px 0 #000;"
+            transition:fade={{ duration: 150 }}
+          >
+            AI Sedang Memverifikasi Klaim...
+          </div>
+        {/if}
+      </div>
+
+      <div class="flex gap-2.5 mt-1">
         {#if finished}
           <button
             onclick={closeModal}
-            class="mc-btn bg-gray-500 hover:bg-gray-600 text-white font-pixel text-xs py-2.5 px-4 rounded w-full"
-            style="text-shadow: 1px 1px 0 #000;"
+            type="button"
+            class="bg-[#24170e] hover:bg-[#382315] active:translate-y-0.5 text-yellow-300 font-pixel text-[10px] py-2.5 px-4 rounded w-full border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] transition-all cursor-pointer text-center"
           >
-            Tutup
+            TUTUP
           </button>
         {:else}
           <button
             onclick={closeModal}
-            class="mc-btn bg-red-500 hover:bg-red-600 text-white font-pixel text-xs py-2.5 px-4 rounded w-1/2"
-            style="text-shadow: 1px 1px 0 #000;"
+            type="button"
+            class="bg-[#24170e] hover:bg-[#382315] active:translate-y-0.5 text-yellow-300 font-pixel text-[10px] py-2.5 px-4 rounded w-1/2 border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] transition-all cursor-pointer text-center"
           >
-            Batal
+            BATAL
           </button>
           <button
             onclick={submitClaim}
             disabled={loading}
-            class="mc-btn bg-green-500 hover:bg-green-600 text-white font-pixel text-xs py-2.5 px-4 rounded w-1/2"
+            type="button"
+            class="bg-[#16a34a] hover:bg-[#15803d] active:translate-y-0.5 text-yellow-300 font-pixel text-[10px] py-2.5 px-4 rounded w-1/2 border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] transition-all cursor-pointer text-center"
             style="text-shadow: 1px 1px 0 #000;"
           >
             {submitLabel}

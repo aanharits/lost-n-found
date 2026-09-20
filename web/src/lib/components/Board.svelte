@@ -6,6 +6,7 @@
   import { currentScene, currentFilter, socketConnected, onlineCount, activeModal, claimTargetItemId, reviewTargetItemId } from '$lib/stores/ui.js';
   import { getSocket } from '$lib/socket.js';
   import ItemCard from './ItemCard.svelte';
+  import Avatar from './Avatar.svelte';
   import ReportModal from './ReportModal.svelte';
   import ClaimModal from './ClaimModal.svelte';
   import ClaimsReviewModal from './ClaimsReviewModal.svelte';
@@ -122,66 +123,73 @@
 
 <svelte:window onclick={onWindowClick} />
 
-<!-- Floating Minimalist Header: Status online di kiri atas & Logo profile di kanan atas -->
+<!-- Floating Header: Status online di kiri atas & Logo profile di kanan atas -->
 <div class="fixed top-3 left-3 right-3 z-30 flex justify-between items-center pointer-events-none">
-  <!-- Indikator status live minimalis -->
-  <div class="pointer-events-auto bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2 transition-all">
+  <!-- Indikator status live 8-bit -->
+  <div class="pointer-events-auto bg-[#24170e] border-[3px] border-[#140b05] shadow-[2px_2px_0px_#140b05] px-3 py-1.5 rounded flex items-center gap-2 select-none">
     <span class="relative flex h-2 w-2">
-      <span class="{$socketConnected ? 'animate-ping' : ''} absolute inline-flex h-full w-full rounded-full {$socketConnected ? 'bg-emerald-400' : 'bg-red-400'} opacity-75"></span>
-      <span class="relative inline-flex rounded-full h-2 w-2 {$socketConnected ? 'bg-emerald-500' : 'bg-red-500'}"></span>
+      <span class="{$socketConnected ? 'animate-ping' : ''} absolute inline-flex h-full w-full rounded-full {$socketConnected ? 'bg-green-400' : 'bg-red-400'} opacity-75"></span>
+      <span class="relative inline-flex rounded-full h-2 w-2 {$socketConnected ? 'bg-green-500 border border-[#140b05]' : 'bg-red-500'}"></span>
     </span>
-    <span class="font-pixel text-[8px] md:text-[9px] text-yellow-300">
-      {$onlineCount} Online
+    <span class="font-pixel text-[8px] md:text-[9px] text-yellow-300 font-bold">
+      {$onlineCount} ONLINE
     </span>
   </div>
 
-  <!-- Logo Profil Minimalis Modern di Pojok Kanan Atas -->
+  <!-- Logo Profil 8-Bit di Pojok Kanan Atas -->
   <div class="pointer-events-auto relative profile-menu-container">
     <button
       type="button"
       onclick={toggleProfile}
-      class="bg-black/60 hover:bg-black/85 backdrop-blur-md border border-white/20 hover:border-white/40 px-2.5 py-1 rounded-full shadow-lg flex items-center gap-2 transition-all cursor-pointer select-none"
+      class="bg-[#24170e] hover:bg-[#382315] border-[3px] border-[#140b05] shadow-[2px_2px_0px_#140b05] px-2.5 py-1 rounded flex items-center gap-2 transition-transform active:translate-y-0.5 cursor-pointer select-none"
       aria-label="Profil Akun"
     >
-      <!-- Avatar Circle Badge -->
-      <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 border border-black flex items-center justify-center text-black font-pixel text-[9px] font-bold shadow-inner">
-        {($currentPlayer?.name || 'U').charAt(0).toUpperCase()}
+      <!-- Avatar Badge -->
+      <div class="w-7 h-7 rounded bg-[#7d4d24] border border-[#2c1b0f] flex items-center justify-center overflow-hidden shrink-0">
+        {#if $currentPlayer?.avatarSeed}
+          <Avatar seed={$currentPlayer.avatarSeed} size={28} />
+        {:else}
+          <span class="font-pixel text-[9px] text-yellow-300 font-bold">
+            {($currentPlayer?.name || 'U').charAt(0).toUpperCase()}
+          </span>
+        {/if}
       </div>
 
-      <span class="font-pixel text-[9px] text-white max-w-[90px] md:max-w-[130px] truncate">
+      <span class="font-pixel text-[9px] text-yellow-300 max-w-[90px] md:max-w-[130px] truncate font-bold">
         {$currentPlayer?.name || 'Profil'}
       </span>
 
-      <svg
-        class="w-3 h-3 text-gray-300 transition-transform duration-200 {isProfileOpen ? 'rotate-180' : ''}"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
-      </svg>
+      <span class="text-xs text-yellow-300 font-bold transition-transform duration-200 {isProfileOpen ? 'rotate-180' : ''}">
+        &#9662;
+      </span>
     </button>
 
-    <!-- Dropdown Menu Profil -->
+    <!-- Dropdown Menu Profil: Solid 8-Bit Wood Plaque -->
     {#if isProfileOpen}
       <div
-        class="absolute right-0 mt-2 w-64 bg-[#23170e]/95 backdrop-blur-md border-4 border-[#3e2612] shadow-[4px_4px_0px_rgba(0,0,0,0.6)] p-3.5 flex flex-col gap-2.5 text-white z-50 rounded"
+        class="absolute right-0 mt-2 w-64 bg-[#b87d46] border-[4px] border-[#2c1b0f] shadow-[6px_6px_0px_rgba(0,0,0,0.6)] p-3.5 flex flex-col gap-2.5 z-50 rounded select-none"
         transition:fly={{ y: -8, duration: 150 }}
       >
         <!-- Informasi Identitas Akun -->
-        <div class="flex items-center gap-2.5 pb-2.5 border-b-2 border-[#3e2612]">
-          <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 border-2 border-black flex items-center justify-center text-black font-pixel text-xs font-bold shrink-0 shadow">
-            {($currentPlayer?.name || 'U').charAt(0).toUpperCase()}
+        <div class="flex items-center gap-2.5 pb-2.5 border-b-2 border-[#2c1b0f]/40">
+          <div class="w-10 h-10 rounded bg-[#7d4d24] border-2 border-[#2c1b0f] flex items-center justify-center overflow-hidden shrink-0 shadow-[1px_1px_0px_#140b05]">
+            {#if $currentPlayer?.avatarSeed}
+              <Avatar seed={$currentPlayer.avatarSeed} size={40} />
+            {:else}
+              <span class="font-pixel text-xs text-yellow-300 font-bold">
+                {($currentPlayer?.name || 'U').charAt(0).toUpperCase()}
+              </span>
+            {/if}
           </div>
           <div class="flex flex-col min-w-0">
-            <p class="font-pixel text-[10px] text-yellow-300 truncate">
+            <p class="font-pixel text-[10px] text-yellow-300 font-bold truncate" style="text-shadow: 1px 1px 0 #000;">
               {$currentPlayer?.name || 'Mahasiswa'}
             </p>
-            <p class="font-sans text-[11px] text-gray-300 font-bold truncate">
+            <p class="font-sans text-[11px] text-[#fef08a] font-bold truncate">
               NPM: {$currentPlayer?.npm || '-'}
             </p>
             {#if $currentPlayer?.contact}
-              <p class="font-sans text-[10px] text-emerald-400 font-bold truncate">
+              <p class="font-sans text-[10px] text-green-200 font-bold truncate">
                 WA: {$currentPlayer.contact}
               </p>
             {/if}
@@ -189,20 +197,20 @@
         </div>
 
         <!-- Status Koneksi Socket -->
-        <div class="flex justify-between items-center text-[9px] font-pixel text-gray-300 py-0.5">
-          <span>Koneksi:</span>
-          <span class="flex items-center gap-1.5 {$socketConnected ? 'text-emerald-400' : 'text-red-400'}">
-            <span class="w-1.5 h-1.5 rounded-full {$socketConnected ? 'bg-emerald-400' : 'bg-red-400'}"></span>
-            {$socketConnected ? 'Aktif' : 'Terputus'}
+        <div class="flex justify-between items-center text-[9px] font-pixel text-[#2c1b0f] font-bold py-0.5">
+          <span>STATUS:</span>
+          <span class="flex items-center gap-1.5 {$socketConnected ? 'text-green-950' : 'text-red-950'}">
+            <span class="w-2 h-2 rounded-full {$socketConnected ? 'bg-green-500 border border-[#140b05]' : 'bg-red-500'}"></span>
+            {$socketConnected ? 'TERHUBUNG' : 'OFFLINE'}
           </span>
         </div>
 
         <!-- Tombol Aksi Ganti Akun -->
         <button
           onclick={() => { closeProfile(); switchUser(); }}
-          class="mc-btn bg-amber-500 hover:bg-amber-400 text-black font-pixel text-[9px] py-2 px-3 rounded w-full text-center transition-all mt-1"
+          class="bg-[#24170e] hover:bg-[#382315] active:translate-y-0.5 text-yellow-300 font-pixel text-[9px] py-2 px-3 rounded w-full text-center border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] transition-all cursor-pointer mt-1"
         >
-          Ganti Akun
+          GANTI AKUN
         </button>
       </div>
     {/if}
@@ -215,13 +223,19 @@
   style="animation: boardFadeIn 0.35s ease forwards;"
 >
 
-  <!-- Judul dan subjudul papan -->
-  <div class="text-center mb-4 z-10">
-    <h1 class="text-3xl md:text-5xl font-pixel text-white mb-2" style="text-shadow: 4px 4px 0 #000;">
+  <!-- Judul dan subjudul papan: Warm 8-Bit Retro Typography -->
+  <div class="text-center mb-3 z-10 select-none">
+    <h1
+      class="text-3xl md:text-5xl font-pixel text-yellow-300 mb-1 tracking-wider"
+      style="text-shadow: 3px 3px 0 #2c1b0f, -2px -2px 0 #2c1b0f, 2px -2px 0 #2c1b0f, -2px 2px 0 #2c1b0f, 5px 5px 0 rgba(0,0,0,0.6);"
+    >
       L &amp; F KAMPUS
     </h1>
-    <p class="text-xl md:text-2xl text-yellow-300 font-bold" style="text-shadow: 2px 2px 0 #000;">
-      AI Image Match System
+    <p
+      class="text-xs md:text-sm font-pixel text-[#fef08a] font-bold tracking-widest"
+      style="text-shadow: 2px 2px 0 #2c1b0f, 3px 3px 0 rgba(0,0,0,0.5);"
+    >
+      AI IMAGE MATCH SYSTEM
     </p>
   </div>
 
@@ -229,44 +243,46 @@
   <div
     id="board-container"
     bind:this={boardContainer}
-    class="board-container w-full max-w-5xl flex-grow rounded-lg overflow-hidden relative"
+    class="board-container w-full max-w-5xl flex-grow rounded-xl overflow-hidden relative shadow-[8px_8px_0px_rgba(0,0,0,0.5)]"
   >
     <!-- Tombol aksi lapor dan rapihkan posisi -->
     <div class="absolute top-4 left-4 z-20 flex gap-2">
       <button
         onclick={openReportModal}
-        class="mc-btn bg-green-400 font-pixel text-[10px] md:text-xs py-2 px-4 rounded"
+        class="bg-[#16a34a] hover:bg-[#15803d] active:bg-[#166534] text-yellow-300 font-pixel text-[10px] md:text-xs py-2 px-3.5 rounded border-[3px] border-[#140b05] shadow-[0_3px_0px_#140b05] active:translate-y-0.5 active:shadow-none cursor-pointer transition-all select-none"
+        style="text-shadow: 1px 1px 0 #000;"
       >
-        + Lapor (AI)
+        + LAPOR (AI)
       </button>
       <button
         onclick={organizeBoard}
-        class="mc-btn bg-yellow-400 font-pixel text-[10px] md:text-xs py-2 px-3 rounded flex items-center gap-1"
+        class="bg-[#24170e] hover:bg-[#382315] active:bg-[#1a0f07] text-yellow-300 font-pixel text-[10px] md:text-xs py-2 px-3 rounded border-[3px] border-[#140b05] shadow-[0_3px_0px_#140b05] active:translate-y-0.5 active:shadow-none cursor-pointer transition-all select-none"
+        style="text-shadow: 1px 1px 0 #000;"
       >
-        Rapihkan
+        RAPIHKAN
       </button>
     </div>
 
-    <!-- Tombol tab filter kategori barang -->
-    <div class="absolute top-4 right-4 z-20 flex bg-white border-4 border-black shadow-[4px_4px_0_rgba(0,0,0,0.5)]">
+    <!-- Tombol tab filter kategori barang: 8-Bit Arcade Segmented Controller -->
+    <div class="absolute top-4 right-4 z-20 flex bg-[#24170e] border-[3px] border-[#140b05] shadow-[3px_3px_0_rgba(0,0,0,0.4)] rounded p-0.5 gap-0.5 select-none">
       <button
         onclick={() => setFilter('all')}
-        class="px-2 py-1 font-pixel text-[8px] md:text-[10px] border-r-4 border-black transition-colors
-          {$currentFilter === 'all' ? 'bg-blue-500 text-white' : 'bg-white hover:bg-gray-200 text-black'}"
+        class="px-2.5 py-1 font-pixel text-[8px] md:text-[9px] rounded transition-colors cursor-pointer
+          {$currentFilter === 'all' ? 'bg-[#0284c7] text-white font-bold shadow-[inset_1px_1px_0px_rgba(255,255,255,0.2)]' : 'text-[#fef08a] hover:bg-[#382315]'}"
       >
         SEMUA
       </button>
       <button
         onclick={() => setFilter('lost')}
-        class="px-2 py-1 font-pixel text-[8px] md:text-[10px] border-r-4 border-black transition-colors
-          {$currentFilter === 'lost' ? 'bg-red-500 text-white' : 'bg-white hover:bg-gray-200 text-black'}"
+        class="px-2.5 py-1 font-pixel text-[8px] md:text-[9px] rounded transition-colors cursor-pointer
+          {$currentFilter === 'lost' ? 'bg-[#dc2626] text-white font-bold shadow-[inset_1px_1px_0px_rgba(255,255,255,0.2)]' : 'text-[#fef08a] hover:bg-[#382315]'}"
       >
         HILANG
       </button>
       <button
         onclick={() => setFilter('found')}
-        class="px-2 py-1 font-pixel text-[8px] md:text-[10px] transition-colors
-          {$currentFilter === 'found' ? 'bg-green-500 text-white' : 'bg-white hover:bg-gray-200 text-black'}"
+        class="px-2.5 py-1 font-pixel text-[8px] md:text-[9px] rounded transition-colors cursor-pointer
+          {$currentFilter === 'found' ? 'bg-[#16a34a] text-yellow-300 font-bold shadow-[inset_1px_1px_0px_rgba(255,255,255,0.2)]' : 'text-[#fef08a] hover:bg-[#382315]'}"
       >
         KETEMU
       </button>

@@ -24,20 +24,25 @@
 </script>
 
 <div
-  class="item-card mc-block {item.resolved ? 'resolved-card' : ''}"
+  class="item-card {item.resolved ? 'resolved-card' : ''}"
   id={item.id}
   style="left: {item.x}px; top: {item.y}px;"
   use:draggable={{ itemId: item.id, containerId: 'board-container', onDragEnd }}
   transition:fly={{ y: -30, duration: 400 }}
 >
+  <!-- Pixel Pushpin / Paku Payung 8-Bit di Papan -->
+  <div class="absolute -top-2 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-red-600 border-2 border-[#140b05] shadow-[0_2px_0px_#140b05] z-30 pointer-events-none">
+    <div class="w-1 h-1 rounded-full bg-red-300 ml-0.5 mt-0.5"></div>
+  </div>
+
   <!-- Badge jumlah klaim yang menunggu persetujuan -->
   {#if pendingClaims.length > 0}
     <button
-      class="claim-badge"
+      class="claim-badge font-pixel"
       onclick={(e) => { e.stopPropagation(); onReviewClaims(); }}
       type="button"
     >
-      {pendingClaims.length} Klaim
+      {pendingClaims.length} KLAIM
     </button>
   {/if}
 
@@ -46,28 +51,27 @@
     <div class="resolved-ribbon font-pixel">SELESAI</div>
   {/if}
 
-  <div class="card-header font-pixel text-[10px] {headerClass}">{headerText}</div>
+  <div class="card-header font-pixel {headerClass}">{headerText}</div>
   <div class="card-image">{item.icon}</div>
-  <div class="p-2 bg-gray-100 flex-grow flex flex-col justify-between">
+  <div class="p-2.5 bg-[#fefce8] flex-grow flex flex-col justify-between">
     <div>
-      <p class="font-bold text-[15px] leading-tight truncate">{item.title}</p>
-      <p class="text-[9px] text-gray-500 font-bold mb-1">{item.date || '-'} | {item.time || '-'}</p>
-      <p class="text-xs text-gray-700 truncate leading-tight">{item.desc}</p>
+      <p class="font-bold text-[14px] leading-tight text-[#2c1b0f] truncate">{item.title}</p>
+      <p class="text-[9px] text-[#78350f] font-bold my-0.5">{item.date || '-'} | {item.time || '-'}</p>
+      <p class="text-[11px] text-[#451a03] truncate leading-tight font-medium">{item.desc}</p>
     </div>
     {#if item.resolved}
       <button
         disabled
-        class="mc-btn bg-gray-400 text-gray-600 text-xs py-1 mt-1 w-full rounded font-bold cursor-not-allowed"
-        style="box-shadow:none;"
+        class="bg-[#78716c] text-[#e7e5e4] font-pixel text-[8px] py-1.5 mt-1.5 w-full rounded border-2 border-[#44403c] cursor-not-allowed text-center select-none"
       >
-        Sudah Diklaim
+        SUDAH DIKLAIM
       </button>
     {:else}
       <button
         onclick={onClaim}
-        class="mc-btn bg-blue-300 text-black text-xs py-1 mt-1 w-full rounded font-bold"
+        class="bg-[#0284c7] hover:bg-[#0369a1] active:translate-y-0.5 text-white font-pixel text-[8px] py-1.5 mt-1.5 w-full rounded border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] cursor-pointer text-center select-none transition-all"
       >
-        Klaim Barang Ini
+        KLAIM BARANG
       </button>
     {/if}
   </div>
