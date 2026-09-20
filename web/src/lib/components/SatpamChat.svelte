@@ -101,46 +101,44 @@
     role="dialog"
     aria-label="Chat Log Satpam AI"
     tabindex="-1"
-    class="absolute bottom-[100%] left-1/2 transform -translate-x-1/2 mb-4 w-[320px] md:w-[380px] bg-[#b87d46] border-[4px] border-[#2c1b0f] shadow-[6px_6px_0px_rgba(0,0,0,0.5)] rounded-lg flex flex-col z-[300] overflow-hidden"
+    class="absolute bottom-[100%] left-1/2 transform -translate-x-1/2 mb-4 w-[320px] md:w-[390px] bg-white border-4 border-[#1c120c] shadow-[6px_6px_0px_#0c0812] rounded flex flex-col z-[300] overflow-hidden select-none"
     onclick={(e) => e.stopPropagation()}
     onkeydown={(e) => e.stopPropagation()}
     transition:fly={{ y: 15, duration: 200 }}
   >
-    <!-- Header panel chat: 8-Bit Solid Wood Theme -->
-    <div class="bg-[#24170e] text-yellow-300 px-3 py-2 font-pixel text-[9px] md:text-[10px] flex justify-between items-center border-b-3 border-[#140b05]">
+    <!-- Header panel chat: Sesuai Screenshot Biru Nintendo -->
+    <div class="bg-[#2563eb] text-white px-3 py-2 font-pixel text-[9px] md:text-[10px] flex justify-between items-center border-b-2 border-[#1c120c]">
       <div class="flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full bg-green-400 border border-[#140b05] animate-pulse"></span>
-        <span>POSKO BANTUAN SATPAM AI</span>
+        <span class="w-2 h-2 rounded-full bg-green-400 border border-[#0c0812] animate-pulse"></span>
+        <span class="font-bold tracking-wider">Chat Log Satpam AI</span>
       </div>
       <button
         onclick={toggleChat}
-        class="text-yellow-300 hover:text-red-400 font-pixel text-xs px-1.5 py-0.5 border border-transparent hover:border-yellow-300 transition-colors cursor-pointer"
+        class="text-white hover:text-red-200 font-pixel text-xs px-1.5 py-0.5 cursor-pointer"
         type="button"
         aria-label="Tutup Chat"
       >
-        [X]
+        ✕
       </button>
     </div>
 
-    <!-- Area riwayat pesan -->
+    <!-- Area riwayat pesan: Bersih, Putih Sesuai Screenshot -->
     <div
       bind:this={chatContainer}
-      class="p-3 max-h-[220px] overflow-y-auto font-sans text-xs flex flex-col gap-2.5 bg-[#fefce8] border-b-3 border-[#2c1b0f]"
+      class="p-3.5 max-h-[230px] overflow-y-auto font-sans text-xs flex flex-col gap-2.5 bg-white border-b-2 border-[#1c120c]"
     >
       {#if chatHistory.length === 0}
-        <div class="text-[#78350f] font-pixel text-[8px] text-center p-3 border-2 border-dashed border-[#b87d46] rounded leading-relaxed">
+        <div class="text-[#1c120c] font-pixel text-[8px] text-center p-3.5 border-2 border-dashed border-[#b87d46] bg-[#fefce8] rounded leading-relaxed">
           Halo! Ada barang hilang atau butuh bantuan di kampus? Ketik pertanyaan di bawah ya!
         </div>
       {:else}
         {#each chatHistory as msg, i}
           <div class="flex flex-col {msg.role === 'user' ? 'items-end' : 'items-start'}">
-            <span class="font-pixel text-[7px] mb-0.5 {msg.role === 'user' ? 'text-[#1e3a8a]' : 'text-[#78350f]'}">
+            <span class="font-pixel text-[7px] mb-0.5 font-bold {msg.role === 'user' ? 'text-[#2563eb]' : 'text-[#1c120c]'}">
               {msg.role === 'user' ? 'Kamu' : 'Satpam AI'}
             </span>
             <div
-              class="p-2 rounded border-2 font-sans text-xs font-bold max-w-[88%] shadow-[2px_2px_0px_rgba(0,0,0,0.15)] {msg.role === 'user'
-                ? 'bg-[#24170e] text-yellow-300 border-[#140b05]'
-                : 'bg-white text-[#2c1b0f] border-[#2c1b0f]'}"
+              class="p-2.5 rounded-none border-2 border-[#1c120c] font-sans text-xs font-bold max-w-[88%] shadow-[2px_2px_0px_#1c120c] leading-relaxed bg-white text-[#1c120c]"
             >
               {msg.text}
             </div>
@@ -148,8 +146,9 @@
         {/each}
         {#if chatLoading}
           <div class="flex flex-col items-start" transition:fade={{ duration: 150 }}>
-            <span class="font-pixel text-[7px] mb-0.5 text-[#78350f]">Satpam AI</span>
-            <div class="p-2 rounded border-2 border-[#2c1b0f] bg-white text-[#b87d46] font-pixel text-[8px] animate-pulse">
+            <span class="font-pixel text-[7px] mb-0.5 text-[#1c120c] font-bold">Satpam AI</span>
+            <div class="p-2 rounded-none border-2 border-[#1c120c] bg-white text-[#2563eb] font-pixel text-[8px] animate-pulse shadow-[2px_2px_0px_#1c120c] flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#2563eb] animate-ping"></span>
               Sebentar, saya cek buku catatan posko dulu...
             </div>
           </div>
@@ -157,19 +156,19 @@
       {/if}
     </div>
 
-    <!-- Input form chat -->
-    <div class="p-2.5 flex gap-2 bg-[#9e6435]">
+    <!-- Input form chat: Putih Bersih dengan Tombol Biru Sesuai Screenshot -->
+    <div class="p-2.5 flex gap-2 bg-white items-center">
       <input
         type="text"
         bind:value={chatInput}
-        placeholder="Tanya info barang / bantuan..."
-        class="w-full bg-white border-[3px] border-[#2c1b0f] focus:border-[#f59e0b] rounded py-1.5 px-2.5 text-stone-900 font-sans text-xs font-bold placeholder-stone-400 outline-none shadow-[inset_2px_2px_0px_rgba(0,0,0,0.15)]"
+        placeholder="Tanya satpam..."
+        class="w-full bg-white border-2 border-[#1c120c] focus:border-[#2563eb] rounded-none py-1.5 px-2.5 text-[#1c120c] font-sans text-xs font-bold placeholder-stone-400 outline-none shadow-[inset_1px_1px_0px_rgba(0,0,0,0.1)]"
         autocomplete="off"
         onkeypress={handleKeypress}
       />
       <button
         onclick={sendChat}
-        class="bg-[#24170e] hover:bg-[#382315] active:translate-y-0.5 text-yellow-300 font-pixel text-[9px] px-3.5 py-1.5 rounded border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] cursor-pointer shrink-0"
+        class="bg-[#2563eb] hover:bg-[#1d4ed8] active:translate-y-0.5 text-white font-pixel text-[9px] px-4 py-2 rounded-none border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] active:shadow-none cursor-pointer shrink-0 font-bold transition-all select-none"
         type="button"
       >
         KIRIM
@@ -185,7 +184,7 @@
     <button
       type="button"
       onclick={toggleChat}
-      class="absolute -top-7 left-1/2 -translate-x-1/2 bg-[#fef08a] border-2 border-[#2c1b0f] shadow-[2px_2px_0px_#2c1b0f] px-2 py-0.5 rounded font-pixel text-[7px] text-[#2c1b0f] font-bold whitespace-nowrap animate-bounce hover:bg-yellow-200 cursor-pointer select-none"
+      class="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#facc15] hover:bg-[#eab308] border border-[#854d0e] shadow-[0_2px_0_#713f12] px-3 py-1 rounded font-pixel text-[8px] text-[#140b05] font-bold whitespace-nowrap animate-bounce cursor-pointer select-none z-20"
     >
       TANYA SATPAM AI
     </button>
@@ -200,18 +199,18 @@
     class="relative group cursor-pointer focus:outline-none flex flex-col items-center transition-transform hover:-translate-y-1 select-none"
   >
     <!-- Avatar Pixel Art 8-Bit Pak Satpam (DiceBear PixelArt) -->
-    <div class="relative w-[76px] h-[76px] rounded-t flex items-center justify-center overflow-hidden">
-      <Avatar seed="PakSatpamAI" size={76} options={satpamOptions} />
+    <div class="relative w-[94px] h-[94px] rounded-t flex items-center justify-center overflow-hidden">
+      <Avatar seed="PakSatpamAI" size={94} options={satpamOptions} />
       
       <!-- Pin Lencana Emas 8-Bit di Topi Satpam -->
-      <div class="absolute top-[10px] left-1/2 -translate-x-1/2 w-2 h-1.5 bg-[#facc15] border border-[#78350f] shadow-[0_1px_0px_#78350f] pointer-events-none"></div>
+      <div class="absolute top-[12px] left-1/2 -translate-x-1/2 w-2.5 h-2 bg-[#ffd700] border border-[#78350f] shadow-[0_1px_0px_#78350f] pointer-events-none"></div>
     </div>
 
-    <!-- Meja / Pos Piket Satpam 8-Bit -->
-    <div class="relative -mt-2 z-10 flex items-center gap-1.5 bg-[#24170e] border-2 border-[#140b05] px-2.5 py-0.5 rounded shadow-[2px_2px_0px_#140b05] group-hover:border-[#facc15] transition-colors">
-      <span class="w-1.5 h-1.5 rounded-full bg-green-400 border border-[#140b05] animate-pulse"></span>
+    <!-- Meja / Pos Piket Satpam 8-Bit (Nintendo Pod Style) -->
+    <div class="relative -mt-2.5 z-10 flex items-center gap-1.5 bg-[#120f20] border border-[#2d2244] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),_2px_2px_0px_#06040a] px-3 py-1 rounded-md group-hover:bg-[#1f1730] transition-colors">
+      <span class="w-1.5 h-1.5 rounded-full bg-green-400 border border-[#0c0812] animate-pulse"></span>
       <span
-        class="font-pixel text-[7px] md:text-[8px] text-yellow-300 font-bold tracking-wide"
+        class="font-pixel text-[8px] md:text-[9px] text-[#f8fafc] font-bold tracking-wide"
         style="text-shadow: 1px 1px 0 #000;"
       >
         SATPAM AI

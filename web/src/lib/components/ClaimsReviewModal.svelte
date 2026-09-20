@@ -39,65 +39,111 @@
 </script>
 
 {#if targetItem}
-  <div class="modal-overlay" transition:fade={{ duration: 200 }}>
+  <div class="modal-overlay backdrop-blur-xs" transition:fade={{ duration: 150 }}>
     <div
-      class="mc-modal-box p-5 max-w-lg w-full relative flex flex-col gap-3 m-4 select-none"
-      transition:fly={{ y: 30, duration: 300 }}
+      class="relative max-w-lg w-full m-4 border-4 border-[#1c120c] shadow-[inset_0_2px_0_rgba(255,255,255,0.25),inset_0_-4px_0_rgba(0,0,0,0.25),6px_6px_0px_#0a060f] rounded-lg p-5 select-none flex flex-col gap-3.5"
+      style="background: #ba804e linear-gradient(180deg, #c48956 0%, #b07746 100%);"
+      transition:fly={{ y: 20, duration: 250 }}
     >
-      <!-- Pixel Corner Screws / Baut Sudut 8-Bit Solid -->
-      <div class="absolute top-2.5 left-2.5 w-2.5 h-2.5 bg-[#3d2311] border border-[#d89f6b]"></div>
-      <div class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-[#3d2311] border border-[#d89f6b]"></div>
-      <div class="absolute bottom-2.5 left-2.5 w-2.5 h-2.5 bg-[#3d2311] border border-[#d89f6b]"></div>
-      <div class="absolute bottom-2.5 right-2.5 w-2.5 h-2.5 bg-[#3d2311] border border-[#d89f6b]"></div>
-
-      <div class="text-center pb-2 border-b-3 border-[#2c1b0f]/30">
-        <h2 class="font-pixel text-base md:text-lg text-yellow-300 tracking-wide" style="text-shadow: 2px 2px 0 #2c1b0f, 3px 3px 0 rgba(0,0,0,0.5);">
-          {modalTitle}
+      <!-- Header Modal: Modern Minimalist Nintendo Title Bar -->
+      <div class="flex items-center justify-between pb-3 border-b-2 border-[#1c120c]/40">
+        <h2
+          class="font-pixel text-xs md:text-sm text-white tracking-wider font-bold"
+          style="text-shadow: 2px 2px 0 #1c120c;"
+        >
+          RIWAYAT KLAIM BARANG
         </h2>
+        <button
+          onclick={closeModal}
+          class="text-[#1c120c] hover:text-red-600 font-pixel text-xs px-2 py-0.5 rounded bg-white hover:bg-red-100 border-2 border-[#1c120c] transition-colors cursor-pointer font-bold shadow-[2px_2px_0_#1c120c] active:translate-y-0.5"
+          type="button"
+          aria-label="Tutup"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Info Singkat Barang Target -->
+      <div class="bg-[#fef9c3] border-2 border-[#1c120c] rounded p-3 flex items-center gap-3 shadow-[1px_1px_0px_#1c120c]">
+        <div class="w-10 h-10 rounded bg-white border-2 border-[#1c120c] flex items-center justify-center text-xl shrink-0">
+          {targetItem.icon}
+        </div>
+        <div class="flex flex-col min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="font-pixel text-[10px] text-[#1c120c] font-bold truncate">
+              {targetItem.title}
+            </span>
+            <span class="font-pixel text-[7px] px-1.5 py-0.5 rounded border border-[#1c120c] font-bold {targetItem.type === 'found' ? 'bg-[#16a34a] text-white' : 'bg-[#dc2626] text-white'}">
+              {targetItem.type === 'found' ? 'KETEMU' : 'HILANG'}
+            </span>
+          </div>
+          <p class="font-sans text-[11px] text-stone-700 font-bold truncate mt-0.5">
+            Total {targetItem.claims?.length || 0} Pengajuan Klaim
+          </p>
+        </div>
       </div>
 
       <!-- Inset Claims List Panel -->
-      <div class="bg-[#9e6435] border-[3px] border-[#2c1b0f] shadow-[inset_2px_2px_0px_rgba(0,0,0,0.25)] rounded-lg p-3 flex flex-col gap-2.5 max-h-[360px] overflow-y-auto">
-        {#each sortedClaims() as claim (claim.id)}
-          <div class="bg-[#fefce8] border-2 border-[#2c1b0f] p-3 flex flex-col gap-2 shadow-[2px_2px_0px_#140b05] rounded" transition:fly={{ x: 20, duration: 250 }}>
-            <div class="flex justify-between items-center flex-wrap gap-1">
-              {#if claim.status === 'pending'}
-                <span class="bg-[#f59e0b] text-[#2c1b0f] border-2 border-[#140b05] px-2 py-0.5 text-[8px] font-pixel font-bold rounded">
-                  PENDING
-                </span>
-              {:else if claim.status === 'approved'}
-                <span class="bg-[#16a34a] text-yellow-300 border-2 border-[#140b05] px-2 py-0.5 text-[8px] font-pixel font-bold rounded">
-                  APPROVED
-                </span>
-              {:else}
-                <span class="bg-[#dc2626] text-white border-2 border-[#140b05] px-2 py-0.5 text-[8px] font-pixel font-bold rounded">
-                  REJECTED
-                </span>
-              {/if}
-              <span
-                class="border-2 border-[#140b05] px-2 py-0.5 text-[8px] font-pixel font-bold rounded bg-[#0284c7] text-white"
-              >
-                AI: {claim.confidence} ({claim.score}%)
-              </span>
-            </div>
-            <p class="text-[10px] text-[#78350f] font-bold">{formatDate(claim.createdAt)}</p>
-            <div class="bg-white border-2 border-[#2c1b0f] p-2 rounded">
-              <p class="text-xs font-bold text-stone-900">"{claim.text}"</p>
-            </div>
-            <div class="bg-[#fef9c3] border-2 border-[#b87d46] p-2 rounded">
-              <p class="text-[10px] text-[#78350f] font-bold">AI Reasoning: {claim.reasoning}</p>
-            </div>
-            {#if claim.claimantName}
-              <p class="text-[10px] text-[#2c1b0f] font-bold">{claim.claimantName} ({claim.claimantNpm || '-'})</p>
-            {/if}
+      <div class="bg-[#fefce8] border-2 border-[#1c120c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)] rounded p-3 flex flex-col gap-2.5 max-h-[340px] overflow-y-auto">
+        {#if (targetItem.claims || []).length === 0}
+          <div class="text-stone-600 font-pixel text-[8px] text-center p-6 border-2 border-dashed border-[#1c120c] rounded bg-white">
+            Belum ada pengajuan klaim untuk barang ini.
           </div>
-        {/each}
+        {:else}
+          {#each sortedClaims() as claim (claim.id)}
+            <div class="bg-white border-2 border-[#1c120c] p-3 flex flex-col gap-2 shadow-[2px_2px_0px_#1c120c] rounded" transition:fly={{ x: 20, duration: 250 }}>
+              <div class="flex justify-between items-center flex-wrap gap-1.5">
+                <div class="flex items-center gap-1.5">
+                  {#if claim.status === 'pending'}
+                    <span class="bg-[#f59e0b] text-[#1c120c] px-2 py-0.5 text-[7px] font-pixel font-bold rounded border border-[#1c120c]">
+                      PENDING
+                    </span>
+                  {:else if claim.status === 'approved'}
+                    <span class="bg-[#16a34a] text-white px-2 py-0.5 text-[7px] font-pixel font-bold rounded border border-[#1c120c]">
+                      DISETUJUI
+                    </span>
+                  {:else}
+                    <span class="bg-[#dc2626] text-white px-2 py-0.5 text-[7px] font-pixel font-bold rounded border border-[#1c120c]">
+                      DITOLAK
+                    </span>
+                  {/if}
+                  <span class="px-2 py-0.5 text-[7px] font-pixel font-bold rounded bg-[#0284c7] text-white border border-[#1c120c]">
+                    AI: {claim.confidence} ({claim.score}%)
+                  </span>
+                </div>
+                <span class="text-[10px] text-stone-500 font-sans font-bold">{formatDate(claim.createdAt)}</span>
+              </div>
+
+              <!-- Isi Deskripsi Klaim -->
+              <div class="bg-slate-50 border border-[#1c120c] p-2.5 rounded text-xs font-sans text-stone-800 font-medium">
+                <span class="text-[#1c120c] text-[9px] font-pixel block mb-1 font-bold">KLAIM USER:</span>
+                "{claim.text}"
+              </div>
+
+              <!-- AI Reasoning -->
+              <div class="bg-blue-50 border border-[#2563eb] p-2 rounded text-[11px] font-sans text-[#1d4ed8] font-semibold">
+                <span class="text-[#2563eb] text-[8px] font-pixel block mb-0.5 font-bold">ANALISIS SATPAM AI:</span>
+                {claim.reasoning}
+              </div>
+
+              {#if claim.claimantName}
+                <div class="flex items-center justify-between text-[10px] text-stone-600 font-sans border-t border-stone-200 pt-1.5 mt-0.5 font-bold">
+                  <span>Oleh: <strong class="text-[#1c120c]">{claim.claimantName}</strong> ({claim.claimantNpm || '-'})</span>
+                  {#if claim.claimantContact}
+                    <span class="text-green-700 font-bold">WA: {claim.claimantContact}</span>
+                  {/if}
+                </div>
+              {/if}
+            </div>
+          {/each}
+        {/if}
       </div>
 
+      <!-- Tombol Tutup -->
       <button
         onclick={closeModal}
         type="button"
-        class="bg-[#24170e] hover:bg-[#382315] active:translate-y-0.5 text-yellow-300 font-pixel text-[10px] py-2.5 px-4 rounded w-full border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] transition-all cursor-pointer text-center mt-1"
+        class="bg-[#ffd700] hover:bg-[#fbbf24] active:translate-y-0.5 text-[#1c120c] font-pixel text-[9px] md:text-[10px] py-2.5 px-4 rounded w-full border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] active:shadow-none transition-all cursor-pointer text-center font-bold tracking-wider mt-1"
       >
         TUTUP
       </button>

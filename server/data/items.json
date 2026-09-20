@@ -112,7 +112,32 @@
     "icon": "🔑",
     "desc": "Gedung FT",
     "secretDetail": "Gantungan merah",
-    "claims": [],
+    "claims": [
+      {
+        "id": "claim1789907963517",
+        "text": "honda beat",
+        "score": 50,
+        "confidence": "Sedang",
+        "reasoning": "Ciri yang disampaikan masih bersifat umum dan belum memuat tanda pengenal unik yang spesifik.",
+        "status": "pending",
+        "claimantName": "smsks",
+        "claimantNpm": "29292",
+        "claimantContact": "29292",
+        "createdAt": "2026-09-20T12:39:23.517Z"
+      },
+      {
+        "id": "claim1789907975631",
+        "text": "hmm apa ya",
+        "score": 10,
+        "confidence": "Rendah",
+        "reasoning": "Ciri-ciri yang disampaikan tidak sesuai dengan data barang.",
+        "status": "rejected",
+        "claimantName": "smsks",
+        "claimantNpm": "29292",
+        "claimantContact": "29292",
+        "createdAt": "2026-09-20T12:39:35.631Z"
+      }
+    ],
     "resolved": false,
     "date": "2026-09-20",
     "time": "13:00",
