@@ -1,0 +1,576 @@
+@import "tailwindcss";
+
+@theme {
+  --color-mc-dirt: #8B4513;
+  --color-mc-grass: #41980a;
+  --color-mc-sky: #6cb8ff;
+  --color-mc-wood: #c08752;
+  --color-mc-stone: #7d7d7d;
+  --color-mc-shadow: rgba(0, 0, 0, 0.4);
+  --color-mc-dark-wood: #3e2612;
+
+  --font-pixel: 'Press Start 2P', cursive;
+  --font-vt: 'VT323', monospace;
+}
+
+/* === Base Styles === */
+
+body {
+  font-family: var(--font-vt);
+  background-color: var(--color-mc-sky);
+  background-image: 
+    linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0.1)), 
+    linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0.1));
+  background-size: 40px 40px;
+  background-position: 0 0, 20px 20px;
+  overflow: hidden;
+  touch-action: none;
+  margin: 0;
+  padding: 0;
+}
+
+.font-pixel {
+  font-family: var(--font-pixel);
+}
+
+/* === Blocky Minecraft Style === */
+
+.mc-block {
+  border: 4px solid #000;
+  box-shadow: inset -4px -4px 0px rgba(0,0,0,0.2), 4px 4px 0px #000;
+  background-color: #fff;
+}
+
+/* === Modal Window Styling (Consistent with Wooden Board) === */
+.mc-modal-box {
+  background-color: var(--color-mc-wood);
+  border: 8px solid var(--color-mc-dark-wood);
+  box-shadow: inset -8px -8px 0px rgba(0,0,0,0.3), 8px 8px 0px rgba(0,0,0,0.6);
+}
+
+.mc-form-label {
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--color-mc-dark-wood);
+  text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.5px;
+  display: block;
+}
+
+.mc-input {
+  background-color: #ffffff;
+  border: 4px solid var(--color-mc-dark-wood);
+  box-shadow: inset 3px 3px 0px rgba(0, 0, 0, 0.2);
+  color: #1a1a1a;
+  font-family: inherit;
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+}
+
+.mc-input:focus {
+  outline: none;
+  border-color: #000000;
+}
+
+
+.mc-btn {
+  border: 4px solid #000;
+  box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), 4px 4px 0px #000;
+  transition: all 0.1s;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.mc-btn:active {
+  box-shadow: inset -2px -2px 0px rgba(0,0,0,0.3), 2px 2px 0px #000;
+  transform: translate(2px, 2px);
+}
+
+.mc-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* === Board Container === */
+
+.board-container {
+  background-color: var(--color-mc-wood);
+  border: 8px solid var(--color-mc-dark-wood);
+  box-shadow: inset -10px -10px 0px rgba(0,0,0,0.3), 10px 10px 0px rgba(0,0,0,0.5);
+  position: relative;
+}
+
+/* === Cards Area Scrollbar === */
+
+.cards-area {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 200px;
+}
+
+.cards-area::-webkit-scrollbar { width: 14px; }
+.cards-area::-webkit-scrollbar-track { background: var(--color-mc-dark-wood); border-left: 4px solid #000; }
+.cards-area::-webkit-scrollbar-thumb { background: var(--color-mc-stone); border: 4px solid #000; border-right: none; }
+.cards-area::-webkit-scrollbar-thumb:hover { background: #a0a0a0; }
+
+/* === Item Cards === */
+
+.item-card {
+  position: absolute;
+  width: 140px;
+  height: 175px;
+  cursor: grab;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  transition: left 0.3s cubic-bezier(0.2, 0, 0, 1), top 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.item-card.is-dragging {
+  transition: none !important;
+}
+
+.item-card:hover {
+  transform: translateY(-4px);
+  box-shadow: inset -4px -4px 0px rgba(0,0,0,0.2), 4px 8px 0px #000;
+}
+
+.item-card:active {
+  cursor: grabbing;
+  z-index: 100;
+}
+
+.card-header {
+  background-color: #ff5555;
+  color: white;
+  padding: 4px;
+  text-align: center;
+  font-size: 1.2rem;
+  border-bottom: 4px solid #000;
+}
+
+.card-header.found {
+  background-color: #55ff55;
+  color: #000;
+}
+
+.card-image {
+  flex-grow: 1;
+  background-color: #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+  line-height: 1;
+  border-bottom: 4px solid #000;
+  overflow: hidden;
+}
+
+/* === Resolved Card === */
+
+.item-card.resolved-card {
+  opacity: 0.75;
+  border-color: var(--color-mc-grass);
+  box-shadow: inset -4px -4px 0px rgba(0,0,0,0.2), 4px 4px 0px var(--color-mc-grass);
+}
+
+.resolved-ribbon {
+  position: absolute;
+  top: 18px;
+  left: -6px;
+  background: var(--color-mc-grass);
+  color: #fff;
+  font-size: 9px;
+  padding: 2px 10px 2px 8px;
+  border: 3px solid #000;
+  z-index: 15;
+  box-shadow: 2px 2px 0 #000;
+}
+
+/* === Claim Badge === */
+
+.claim-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #facc15;
+  color: #000;
+  border: 3px solid #000;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+  z-index: 20;
+  box-shadow: 2px 2px 0 #000;
+  white-space: nowrap;
+  transition: transform 0.1s;
+}
+
+.claim-badge:hover {
+  transform: scale(1.1);
+}
+
+/* === Avatar === */
+
+.mc-avatar {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  cursor: pointer;
+}
+
+.mc-avatar:hover .avatar-head {
+  transform: translateY(-5px);
+  transition: transform 0.2s;
+}
+
+.avatar-head {
+  width: 80px;
+  height: 70px;
+  background-color: #ffdbac;
+  border: 4px solid #000;
+  position: absolute;
+  bottom: 30px;
+  left: 20px;
+  box-shadow: inset -4px -4px 0px rgba(0,0,0,0.1);
+}
+
+.satpam-hair {
+  width: 90px;
+  height: 30px;
+  background-color: #4a3018;
+  border: 4px solid #000;
+  position: absolute;
+  bottom: 90px;
+  left: 15px;
+  border-radius: 5px 5px 0 0;
+  box-shadow: inset -4px -2px 0px rgba(0,0,0,0.2);
+}
+
+.hair-spike-1 {
+  position: absolute;
+  width: 20px;
+  height: 15px;
+  background: #4a3018;
+  border: 4px solid #000;
+  border-bottom: none;
+  top: -10px;
+  left: -10px;
+  transform: rotate(-20deg);
+}
+
+.hair-spike-2 {
+  position: absolute;
+  width: 30px;
+  height: 20px;
+  background: #4a3018;
+  border: 4px solid #000;
+  border-bottom: none;
+  top: -15px;
+  right: -5px;
+  transform: rotate(15deg);
+}
+
+.avatar-eye {
+  width: 12px;
+  height: 12px;
+  background-color: #000;
+  position: absolute;
+  top: 15px;
+  transition: transform 0.15s ease-out;
+}
+
+.eye-left { left: 15px; }
+.eye-right { right: 15px; }
+
+/* Default lookUp animation — overridden by eye tracking */
+@keyframes lookUp {
+  0%, 20% { transform: translateY(0); }
+  40%, 100% { transform: translateY(-5px); }
+}
+
+.avatar-eye.animate-look {
+  animation: lookUp 3s infinite alternate;
+}
+
+.avatar-body {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #000;
+  position: absolute;
+  bottom: -10px;
+  left: 40px;
+  border-top: none;
+}
+
+.body-blue { background-color: #3b82f6; }
+.body-pink { background-color: #ec4899; }
+.body-red { background-color: #ef4444; }
+.body-green { background-color: #22c55e; }
+.body-amber { background-color: #f59e0b; }
+
+.avatar-mouth {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 8px;
+  background: #000;
+  opacity: 0.3;
+}
+
+/* === Female Hair === */
+
+.female-hair {
+  width: 92px;
+  height: 45px;
+  background-color: #4a3018;
+  border: 4px solid #000;
+  position: absolute;
+  bottom: 60px;
+  left: 14px;
+  border-radius: 8px 8px 0 0;
+  box-shadow: inset -4px -2px 0px rgba(0,0,0,0.2);
+}
+
+.female-hair::before,
+.female-hair::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  background-color: #4a3018;
+  border: 4px solid #000;
+  border-top: none;
+  bottom: -45px;
+}
+
+.female-hair::before {
+  left: -4px;
+  height: 45px;
+  border-radius: 0 0 3px 3px;
+}
+
+.female-hair::after {
+  right: -4px;
+  height: 40px;
+  border-radius: 0 0 3px 3px;
+}
+
+.female-bangs {
+  position: absolute;
+  width: 50px;
+  height: 18px;
+  background-color: #5a3d20;
+  border: 4px solid #000;
+  border-top: none;
+  bottom: -14px;
+  left: 10px;
+  border-radius: 0 0 4px 4px;
+  box-shadow: inset -3px -2px 0px rgba(0,0,0,0.15);
+}
+
+/* === Avatars Container === */
+
+.avatars-area {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 20px;
+  z-index: 50;
+  align-items: flex-end;
+}
+
+/* === Lobby Styles === */
+
+.lobby-scene {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  overflow-y: auto;
+  background-color: var(--color-mc-sky);
+  background-image: 
+    linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0.1)), 
+    linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0.1));
+  background-size: 40px 40px;
+  background-position: 0 0, 20px 20px;
+}
+
+.lobby-panel {
+  animation: lobbyPopIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+@keyframes lobbyPopIn {
+  0% { opacity: 0; transform: scale(0.85) translateY(20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.lobby-avatar-float {
+  animation: avatarFloat 2s ease-in-out infinite alternate;
+}
+
+@keyframes avatarFloat {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-4px); }
+}
+
+/* === Character Cards === */
+
+.char-card {
+  width: 150px;
+  padding: 12px 8px 8px;
+  border: 4px solid #000;
+  box-shadow: inset -4px -4px 0px rgba(0,0,0,0.2), 4px 4px 0px #000;
+  background-color: var(--color-mc-wood);
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.2s, opacity 0.2s, border-color 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.char-card:hover {
+  transform: scale(1.03);
+}
+
+.char-card-dim {
+  opacity: 0.5;
+  filter: grayscale(0.4);
+}
+
+.char-card-selected {
+  opacity: 1;
+  filter: none;
+  border-color: #facc15;
+  transform: scale(1.05);
+  box-shadow: inset -4px -4px 0px rgba(0,0,0,0.2), 4px 4px 0px #000, 0 0 0 3px #facc15;
+}
+
+.char-card-selected:hover {
+  transform: scale(1.07);
+}
+
+.char-card-ribbon {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  background: var(--color-mc-grass);
+  color: #fff;
+  font-size: 8px;
+  padding: 3px 0;
+  text-align: center;
+  border-bottom: 3px solid #000;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.3);
+  z-index: 5;
+}
+
+.char-avatar-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 120px;
+  width: 120px;
+}
+
+/* === Enter Button === */
+
+.lobby-enter-btn {
+  transition: all 0.15s ease;
+}
+
+.lobby-enter-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), 4px 6px 0px #000;
+}
+
+.lobby-enter-btn:active {
+  transform: translate(2px, 2px) scale(0.97);
+  box-shadow: inset -2px -2px 0px rgba(0,0,0,0.3), 2px 2px 0px #000;
+}
+
+/* === Board Scene === */
+
+.board-scene {
+  width: 100%;
+  height: 100%;
+  max-width: 64rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes boardFadeIn {
+  0% { opacity: 0; transform: scale(0.97); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* === Modal Overlay === */
+
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0,0,0,0.7);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* === Confidence Colors === */
+
+.conf-tinggi  { background: #4ade80; color: #000; }
+.conf-sedang  { background: #facc15; color: #000; }
+.conf-rendah  { background: #f87171; color: #fff; }
+
+/* === Claims List === */
+
+.claims-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.claims-list::-webkit-scrollbar { width: 10px; }
+.claims-list::-webkit-scrollbar-track { background: var(--color-mc-dark-wood); }
+.claims-list::-webkit-scrollbar-thumb { background: var(--color-mc-stone); border: 3px solid #000; }
+
+/* === Toast Notifications === */
+
+.mc-toast {
+  pointer-events: auto;
+  border: 4px solid #000;
+  box-shadow: 4px 4px 0 #000;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-family: var(--font-pixel);
+  line-height: 1.5;
+  max-width: 320px;
+}
+
+.toast-info { background-color: #38bdf8; color: #000; }
+.toast-success { background-color: #4ade80; color: #000; }
+.toast-warning { background-color: #facc15; color: #000; }
+.toast-danger { background-color: #f87171; color: #fff; }
+
+/* === Responsive === */
+
+@media (max-width: 400px) {
+  .char-card { width: 130px; }
+}
