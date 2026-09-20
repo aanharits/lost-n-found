@@ -7,6 +7,7 @@ export interface Player {
   npm: string;
   contact: string;
   gender: 'male' | 'female';
+  avatarSeed?: string;
 }
 
 // Store reaktif pemain yang disinkronkan dengan storage browser
