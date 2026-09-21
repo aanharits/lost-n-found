@@ -263,7 +263,7 @@
   style="animation: boardFadeIn 0.35s ease forwards;"
 >
 
-  <!-- Judul, subjudul papan, dan tombol kategori 8-Bit Nintendo (Tanpa Emote) -->
+  <!-- Judul dan subjudul papan: Sesuai Screenshot Terang & Colorful -->
   <div class="text-center mb-3 z-10 select-none flex flex-col items-center">
     <h1
       class="text-3xl md:text-5xl font-pixel text-white mb-1 tracking-wider"
@@ -272,35 +272,45 @@
       L &amp; F KAMPUS
     </h1>
     <p
-      class="text-xs md:text-sm font-pixel text-[#ffd700] font-bold tracking-widest mb-2.5"
+      class="text-xs md:text-sm font-pixel text-[#ffd700] font-bold tracking-widest"
       style="text-shadow: 1px 1px 0 #1c120c, 2px 2px 0 #1c120c;"
     >
       AI Image Match System
     </p>
-
-    <!-- Tombol Kategori: Bersih, Minimalist Modern 8-Bit, Tanpa Emote -->
-    <div class="flex items-center justify-center gap-1.5 md:gap-2 flex-wrap">
-      {#each CATEGORY_TABS as cat}
-        <button
-          type="button"
-          onclick={() => toggleCategoryHighlight(cat.id)}
-          class="font-pixel text-[8px] md:text-[9px] px-3 py-1.5 rounded border-2 border-[#1c120c] shadow-[2px_2px_0px_#0c0812] active:translate-y-0.5 active:shadow-none cursor-pointer font-bold tracking-wider transition-all select-none
-            {$activeHighlight?.category === cat.id
-              ? 'bg-[#ffd700] text-[#1c120c] translate-y-0.5 shadow-none'
-              : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
-        >
-          {cat.label}
-        </button>
-      {/each}
-    </div>
   </div>
 
-  <!-- Area papan kartu barang -->
-  <div
-    id="board-container"
-    bind:this={boardContainer}
-    class="board-container w-full max-w-5xl flex-grow rounded-xl overflow-hidden relative shadow-[8px_8px_0px_rgba(0,0,0,0.5)] cursor-default"
-  >
+  <!-- Area Pembungkus Papan & Panel Kategori Kiri -->
+  <div class="relative w-full max-w-5xl flex-grow flex flex-col items-center">
+    <!-- Panel Kategori Sisi Kiri (Ala Ala 8-Bit Nintendo Game Style) -->
+    <aside class="flex min-[1140px]:flex-col items-center min-[1140px]:items-start gap-1.5 select-none mb-2.5 min-[1140px]:mb-0 min-[1140px]:absolute min-[1140px]:-left-36 min-[1140px]:top-1 z-25">
+      <span
+        class="font-pixel text-[9px] md:text-[10px] text-[#ffd700] font-bold tracking-wider px-0.5"
+        style="text-shadow: 1px 1px 0 #1c120c, 2px 2px 0 #1c120c;"
+      >
+        Kategori :
+      </span>
+      <div class="flex min-[1140px]:flex-col gap-2 flex-wrap">
+        {#each CATEGORY_TABS as cat}
+          <button
+            type="button"
+            onclick={() => toggleCategoryHighlight(cat.id)}
+            class="font-pixel text-[8px] md:text-[9px] px-3 py-2 min-w-[95px] min-[1140px]:w-32 rounded border-2 border-[#1c120c] shadow-[2px_2px_0px_#0c0812] active:translate-y-0.5 active:shadow-none cursor-pointer font-bold tracking-wider transition-all select-none text-center
+              {$activeHighlight?.category === cat.id
+                ? 'bg-[#ffd700] text-[#1c120c] min-[1140px]:translate-x-1 shadow-none border-[#1c120c]'
+                : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
+          >
+            {cat.label}
+          </button>
+        {/each}
+      </div>
+    </aside>
+
+    <!-- Area papan kartu barang -->
+    <div
+      id="board-container"
+      bind:this={boardContainer}
+      class="board-container w-full flex-grow rounded-xl overflow-hidden relative shadow-[8px_8px_0px_rgba(0,0,0,0.5)] cursor-default"
+    >
     <!-- Tombol aksi lapor dan rapihkan posisi: Colorful Retro Action Buttons -->
     <div class="absolute top-4 left-4 z-20 flex gap-2">
       <button
@@ -359,6 +369,7 @@
       <SatpamChat />
     </div>
   </div>
+</div>
 </div>
 
 <!-- Modal dialogs -->
