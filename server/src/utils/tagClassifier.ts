@@ -1,26 +1,13 @@
-import axios from 'axios';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import {
   classifyWithRegex,
   ALL_REGEX_RULES,
   type TagRule,
   type TagResult,
 } from './tagRegexRules.js';
+import { callGroqJson, isGroqConfigured } from '../ai/groqClient.js';
 
 // Re-export untuk kompatibilitas modul
 export { classifyWithRegex, ALL_REGEX_RULES as REGEX_RULES, type TagRule, type TagResult };
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_MODEL = 'qwen/qwen3.8-27b';
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 export interface TagInfo {
   category: string;
@@ -54,7 +41,7 @@ export const TAG_CATALOG = {
 
 // Klasifikasi dengan LLM Groq jika tidak terdeteksi via regex
 export async function classifyWithAI(itemName: string, itemDesc: string = ''): Promise<TagInfo | null> {
-  if (!GROQ_API_KEY) return null;
+  if (!isGroqConfigured()) return null;
 
   const prompt = `Kamu adalah AI pengkategorian barang Lost & Found kampus.
 Tugasmu: Tentukan Kategori dan Tag barang berikut ini.
@@ -76,42 +63,21 @@ Kembalikan HANYA format JSON persis seperti ini:
   "label": "HP"
 }`;
 
-  try {
-    const response = await axios.post(
-      GROQ_API_URL,
-      {
-        model: GROQ_MODEL,
-        messages: [
-          { role: 'system', content: 'You are a classification assistant. Return valid JSON only.' },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.2,
-        response_format: { type: 'json_object' },
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        timeout: 4000,
-      }
-    );
+  const parsed = await callGroqJson<{ category?: string; tag?: string; label?: string }>({
+    messages: [
+      { role: 'system', content: 'You are a classification assistant. Return valid JSON only.' },
+      { role: 'user', content: prompt },
+    ],
+    temperature: 0.2,
+    timeoutMs: 4000,
+  });
 
-    const result = response.data;
-    if (result.choices && result.choices.length > 0) {
-      const text = result.choices[0].message.content;
-      const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleaned);
-      if (parsed.tag && parsed.category) {
-        return {
-          category: parsed.category,
-          tag: parsed.tag.toLowerCase().replace(/\s+/g, '_'),
-          label: parsed.label || parsed.tag.toUpperCase(),
-        };
-      }
-    }
-  } catch (error: any) {
-    console.warn('[TagClassifier] AI fallback error:', error.message);
+  if (parsed && parsed.tag && parsed.category) {
+    return {
+      category: parsed.category,
+      tag: parsed.tag.toLowerCase().replace(/\s+/g, '_'),
+      label: parsed.label || parsed.tag.toUpperCase(),
+    };
   }
 
   return null;

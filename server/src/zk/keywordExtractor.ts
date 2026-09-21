@@ -1,19 +1,6 @@
-import axios from 'axios';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { preprocessText } from './nlpPreprocess.js';
 import { normalizeKeywords, MAX_KEYWORDS } from './normalizeKeywords.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_MODEL = 'qwen/qwen3.8-27b'; // Model dari environment lokal/custom
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+import { callGroqJson } from '../ai/groqClient.js';
 
 /**
  * Stage 2 dari NLP Pipeline (Layer 2).
@@ -50,46 +37,25 @@ Format Output WAJIB:
   "keywords": ["ciri1", "ciri2"]
 }`;
 
-  try {
-    const response = await axios.post(
-      GROQ_API_URL,
+  const parsed = await callGroqJson<{ keywords?: unknown }>({
+    messages: [
       {
-        model: GROQ_MODEL,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a deterministic NLP extractor. Output valid JSON strictly containing a "keywords" array of strings.',
-          },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0, // Deterministic: Harus 0
-        response_format: { type: 'json_object' },
+        role: 'system',
+        content: 'You are a deterministic NLP extractor. Output valid JSON strictly containing a "keywords" array of strings.',
       },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        timeout: 8000,
-      }
-    );
+      { role: 'user', content: prompt },
+    ],
+    temperature: 0,
+    timeoutMs: 8000,
+  });
 
-    const result = response.data;
-    if (result.choices && result.choices.length > 0) {
-      const content = result.choices[0].message.content;
-      const parsed = JSON.parse(content);
-      
-      const extracted: string[] = Array.isArray(parsed.keywords) ? parsed.keywords : [];
-      
-      // Stage 3: Normalize
-      return normalizeKeywords(extracted);
-    }
-  } catch (error: any) {
-    console.error('[Groq Extractor] Error:', error.message);
-    if (error.response) {
-      console.error('[Groq Extractor] Detail:', error.response.data);
-    }
+  if (parsed) {
+    const extracted: string[] = Array.isArray(parsed.keywords) ? (parsed.keywords as string[]) : [];
+    // Stage 3: Normalize
+    return normalizeKeywords(extracted);
   }
+
+  console.error('[Groq Extractor] Gagal memproses respons keyword.');
 
   // Jika error, kembalikan array normalisasi kosong (penuh dengan dummy)
   return normalizeKeywords([]);

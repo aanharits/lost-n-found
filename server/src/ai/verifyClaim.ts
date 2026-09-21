@@ -1,22 +1,4 @@
-import axios from 'axios';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Muat konfigurasi .env dengan path terverifikasi
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_MODEL = 'qwen/qwen3.8-27b';
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-
-if (!GROQ_API_KEY) {
-  console.warn('[Groq] GROQ_API_KEY belum disetel di .env');
-}
+import { callGroq, callGroqJson, GROQ_MODEL } from './groqClient.js';
 
 interface VerifyResult {
   score: number;
@@ -58,43 +40,24 @@ Kembalikan HANYA JSON persis format ini:
   "reasoning": "alasan singkat dan netral TANPA membocorkan kisi-kisi detail rahasia"
 }`;
 
-  try {
-    const response = await axios.post(
-      GROQ_API_URL,
+  const parsed = await callGroqJson<VerifyResult>({
+    messages: [
       {
-        model: GROQ_MODEL,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an AI assistant for a campus Lost & Found system. You must always return valid JSON only.',
-          },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.6,
-        response_format: { type: 'json_object' },
+        role: 'system',
+        content: 'You are an AI assistant for a campus Lost & Found system. You must always return valid JSON only.',
       },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        timeout: 10000,
-      }
-    );
+      { role: 'user', content: prompt },
+    ],
+    temperature: 0.6,
+    timeoutMs: 10000,
+  });
 
-    const result = response.data;
-    if (result.choices && result.choices.length > 0) {
-      const text = result.choices[0].message.content;
-      const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleaned);
-      return {
-        score: parsed.score ?? 0,
-        confidence: parsed.confidence ?? 'Rendah',
-        reasoning: parsed.reasoning ?? 'Gagal memproses verifikasi.',
-      };
-    }
-  } catch (error: any) {
-    console.error('[Groq] Verification error:', error.message);
+  if (parsed) {
+    return {
+      score: parsed.score ?? 0,
+      confidence: parsed.confidence ?? 'Rendah',
+      reasoning: parsed.reasoning ?? 'Gagal memproses verifikasi.',
+    };
   }
 
   return {
@@ -106,32 +69,16 @@ Kembalikan HANYA JSON persis format ini:
 
 // Memproses percakapan interaktif dengan Satpam AI via Groq API
 export async function chatWithAI(prompt: string): Promise<string | null> {
-  try {
-    const response = await axios.post(
-      GROQ_API_URL,
-      {
-        model: GROQ_MODEL,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.6,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        timeout: 10000,
-      }
-    );
-
-    const result = response.data;
-    if (result.choices && result.choices.length > 0) {
-      return result.choices[0].message.content;
-    }
-  } catch (error: any) {
-    console.error('[Groq] Chat error:', error.message);
+  const result = await callGroq({
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.6,
+    timeoutMs: 10000,
+  });
+  if (!result.success) {
+    console.error('[Groq] Chat error:', result.error);
+    return null;
   }
-
-  return null;
+  return result.content;
 }
 
 // Menentukan icon emoji terbaik untuk barang yang dilaporkan menggunakan AI
@@ -140,40 +87,23 @@ export async function pickEmojiWithAI(itemName: string): Promise<string | null> 
 Kembalikan HANYA DALAM FORMAT JSON persis seperti ini:
 { "icon": "🎒" }`;
 
-  try {
-    const response = await axios.post(
-      GROQ_API_URL,
+  const parsed = await callGroqJson<{ icon?: string }>({
+    messages: [
       {
-        model: GROQ_MODEL,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an AI assistant for a campus Lost & Found system. You must always return valid JSON only.',
-          },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.6,
-        response_format: { type: 'json_object' },
+        role: 'system',
+        content: 'You are an AI assistant for a campus Lost & Found system. You must always return valid JSON only.',
       },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        timeout: 3000,
-      }
-    );
+      { role: 'user', content: prompt },
+    ],
+    temperature: 0.6,
+    timeoutMs: 3000,
+  });
 
-    const result = response.data;
-    if (result.choices && result.choices.length > 0) {
-      const text = result.choices[0].message.content;
-      const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleaned);
-      return parsed.icon || null;
-    }
-  } catch (error: any) {
-    console.warn('[Groq] Emoji picker fallback:', error.message);
+  if (!parsed) {
+    console.warn('[Groq] Emoji picker fallback: gagal memproses respons');
+    return null;
   }
-
-  return null;
+  return parsed.icon || null;
 }
+
+export { GROQ_MODEL };
