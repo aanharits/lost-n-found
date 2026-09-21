@@ -41,3 +41,21 @@ export function startDisputeWindow(io: SocketIOServer, itemId: string) {
 
   activeTimers.set(itemId, timer);
 }
+
+/**
+ * Memulihkan dispute window untuk item yang masih berstatus 'disputed'
+ * saat server di-restart. Mencegah item nyangkut selamanya karena timer
+ * bersifat in-memory.
+ */
+export function rehydrateDisputes(io: SocketIOServer): void {
+  const items = getItems();
+  const disputed = items.filter((i) => i.status === 'disputed');
+  for (const item of disputed) {
+    if (!activeTimers.has(item.id)) {
+      startDisputeWindow(io, item.id);
+    }
+  }
+  if (disputed.length > 0) {
+    console.log(`[Dispute] Rehydrated ${disputed.length} dispute window(s) from storage.`);
+  }
+}

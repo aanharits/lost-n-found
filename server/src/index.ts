@@ -7,6 +7,8 @@ import { serve } from '@hono/node-server';
 import { Server as SocketIOServer } from 'socket.io';
 import os from 'os';
 import { setupSocketHandlers } from './socket/handlers.js';
+import { rehydrateDisputes } from './zk/disputeTimer.js';
+import { flushItemsToFile } from './data/store.js';
 import api from './routes/api.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -88,8 +90,12 @@ const io = new SocketIOServer(httpServer, {
 // Hubungkan semua listener event Socket.IO
 setupSocketHandlers(io);
 
+// Pulihkan dispute window yang masih berjalan setelah restart
+rehydrateDisputes(io);
+
 // Tutup server secara bersih saat menerima sinyal terminasi
 const handleShutdown = () => {
+  flushItemsToFile();
   io.close();
   httpServer.close(() => {
     process.exit(0);
