@@ -1,6 +1,6 @@
 import type { Server as SocketIOServer, Socket } from 'socket.io';
 import { itemMoveSchema } from '../schemas/item.schema.js';
-import { getItems, setItems, saveItemsToFile } from '../data/store.js';
+import { getItems, setItems, persistItems, saveItemsToFile } from '../data/store.js';
 import { sanitizeItems } from '../data/sanitize.js';
 
 // Menangani pergeseran posisi kartu barang saat di-drag secara realtime
@@ -16,7 +16,7 @@ export function handleItemMove(io: SocketIOServer, socket: Socket, data: unknown
     item.x = posData.x;
     item.y = posData.y;
     socket.broadcast.emit('item_moved', posData);
-    saveItemsToFile(items);
+    persistItems(items);
   }
 }
 
@@ -36,7 +36,7 @@ export function handleItemsOrganize(io: SocketIOServer, socket: Socket, data: un
   });
 
   socket.broadcast.emit('items_organized', positions);
-  saveItemsToFile(items);
+  persistItems(items);
 }
 
 // Menangani reset demo items menjadi kosong dan broadcast data bersih

@@ -70,11 +70,16 @@ export function loadItems(): Item[] {
   return items;
 }
 
-// Menyimpan daftar item ke file disk items.json
+// Menyimpan daftar item ke file disk items.json (langsung, sinkron)
 export function saveItemsToFile(itemsList?: Item[]): void {
   if (itemsList !== undefined) {
     items = itemsList;
   }
+  writeToDisk();
+}
+
+// Menulis state saat ini ke disk secara sinkron
+function writeToDisk(): void {
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -83,6 +88,35 @@ export function saveItemsToFile(itemsList?: Item[]): void {
   } catch (err: any) {
     console.error('[Store] Failed to save items.json:', err.message);
   }
+}
+
+const PERSIST_DEBOUNCE_MS = 500;
+let persistTimer: NodeJS.Timeout | null = null;
+
+// Menjadwalkan penulisan disk yang di-debounce agar event loop tidak terblokir
+// saat banyak mutasi beruntun (mis. drag kartu). Panggil flushItemsToFile()
+// saat shutdown untuk memastikan tidak ada perubahan yang hilang.
+export function persistItems(itemsList?: Item[]): void {
+  if (itemsList !== undefined) {
+    items = itemsList;
+  }
+  if (persistTimer) {
+    clearTimeout(persistTimer);
+  }
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    writeToDisk();
+  }, PERSIST_DEBOUNCE_MS);
+  if (persistTimer.unref) persistTimer.unref();
+}
+
+// Memaksa penulisan disk segera (membatalkan debounce yang tertunda)
+export function flushItemsToFile(): void {
+  if (persistTimer) {
+    clearTimeout(persistTimer);
+    persistTimer = null;
+  }
+  writeToDisk();
 }
 
 // Mengambil referensi data item saat ini

@@ -1,4 +1,4 @@
-import { getItems, saveItemsToFile } from '../data/store.js';
+import { getItems, persistItems } from '../data/store.js';
 
 /**
  * Layer 3: Gale-Shapley Dispute Resolution (Sederhana untuk PoC).
@@ -22,7 +22,7 @@ export function resolveDisputes(itemId: string): string | null {
   
   if (pendingClaims.length === 0) {
     item.status = 'resolved'; // Tetap resolved meski tidak ada pemenang dari sisa pending
-    saveItemsToFile(items);
+    persistItems(items);
     return null;
   }
 
@@ -43,7 +43,7 @@ export function resolveDisputes(itemId: string): string | null {
 
   // Update status barang
   item.status = 'resolved';
-  saveItemsToFile(items);
+  persistItems(items);
 
   return winner.id;
 }

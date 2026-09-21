@@ -1,6 +1,6 @@
 import type { Server as SocketIOServer, Socket } from 'socket.io';
 import { claimSubmitSchema } from '../schemas/claim.schema.js';
-import { getItems, saveItemsToFile, type Claim } from '../data/store.js';
+import { getItems, persistItems, type Claim } from '../data/store.js';
 import { startDisputeWindow } from '../zk/disputeTimer.js';
 import fs from 'fs';
 import path from 'path';
@@ -101,7 +101,7 @@ export async function handleClaimSubmit(io: SocketIOServer, socket: Socket, data
   const claimEntry = buildClaimEntry(claimantName, claimantNpm, claimantContact);
   item.claims.push(claimEntry);
 
-  saveItemsToFile(items);
+  persistItems(items);
 
   // Mulai Dispute Window (Gale-Shapley Timer)
   startDisputeWindow(io, item.id);
