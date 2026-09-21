@@ -25,14 +25,19 @@
   function toggleCategoryHighlight(catId: string) {
     if ($activeHighlight?.category === catId) {
       activeHighlight.set(null);
+      currentFilter.set('all');
     } else {
+      currentFilter.set('all');
+      const matching = $items.filter(
+        (i) => i.category?.toLowerCase() === catId.toLowerCase()
+      );
       activeHighlight.set({
         category: catId,
-        itemIds: [],
+        itemIds: matching.map((i) => i.id),
         source: 'filter',
       });
       // Cari item pertama dengan kategori ini dan scroll ke posisinya
-      const firstItem = $items.find(i => i.category === catId);
+      const firstItem = matching[0];
       if (firstItem) {
         setTimeout(() => {
           const el = document.getElementById(firstItem.id);
@@ -42,14 +47,40 @@
     }
   }
 
-  // Filter daftar barang sesuai tab yang dipilih (all, lost, found)
-  let filteredItems = $derived(
-    $items.filter((item) => $currentFilter === 'all' || item.type === $currentFilter)
-  );
+  // Seluruh kartu tetap berada di papan agar posisi spasial rapi;
+  // filter barang hilang & ketemu menggunakan sistem penyorotan (highlighting) & peredupan (dimming)
+  let filteredItems = $derived($items);
 
-  // Mengubah filter kategori tampilan barang
+  // Menyorot barang berdasarkan tipe hilang / ketemu (dengan konsep highlighting & dimming)
   function setFilter(type: 'all' | 'lost' | 'found') {
+    if (type === 'all') {
+      currentFilter.set('all');
+      activeHighlight.set(null);
+      return;
+    }
+
+    // Jika tipe yang sama sudah aktif disorot, klik lagi untuk unhighlight (batal sorot)
+    if ($activeHighlight?.itemType === type) {
+      currentFilter.set('all');
+      activeHighlight.set(null);
+      return;
+    }
+
     currentFilter.set(type);
+    const matching = $items.filter((item) => item.type === type);
+    activeHighlight.set({
+      itemType: type,
+      itemIds: matching.map((i) => i.id),
+      source: 'filter',
+    });
+
+    // Geser kamera papan ke kartu pertama yang disorot
+    if (matching.length > 0) {
+      setTimeout(() => {
+        const el = document.getElementById(matching[0].id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 150);
+    }
   }
 
   // Merapikan posisi seluruh kartu dalam susunan grid rapi dan broadcast ke user lain
@@ -63,9 +94,7 @@
     const columns = Math.max(1, Math.floor(availableWidth / (cardWidth + gapX)));
 
     items.update((current) => {
-      const filtered = current.filter(
-        (item) => $currentFilter === 'all' || item.type === $currentFilter
-      );
+      const filtered = current;
 
       const posMap = new Map<string, { x: number; y: number }>();
       filtered.forEach((item, index) => {
@@ -141,9 +170,10 @@
       isProfileOpen = false;
     }
 
-    // Jika sedang aktif highlight dan user klik di luar tombol, batalkan sorotan (unhighlight)
-    if ($activeHighlight && !target.closest('button')) {
+    // Jika sedang aktif highlight dan user klik di luar tombol dan kartu, batalkan sorotan (unhighlight)
+    if ($activeHighlight && !target.closest('button') && !target.closest('.item-card')) {
       activeHighlight.set(null);
+      currentFilter.set('all');
     }
   }
 
@@ -299,10 +329,14 @@
         <!-- Tampilan Layar Hijau Dot-Matrix Game Boy -->
         <div class="bg-[#8bac0f] border border-[#306230] rounded p-1 flex flex-col items-center justify-center shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]">
           <span class="font-pixel text-[8px] text-[#0f380f] font-bold tracking-wider leading-none">
-            Kategori :
+            {$activeHighlight?.itemType ? 'Status :' : 'Kategori :'}
           </span>
           <span class="font-pixel text-[6.5px] text-[#306230] font-bold mt-0.5 tracking-tight truncate max-w-full">
-            {$activeHighlight?.category ? $activeHighlight.category.toUpperCase() : 'SEMUA'}
+            {$activeHighlight?.category
+              ? $activeHighlight.category.toUpperCase()
+              : ($activeHighlight?.itemType
+                ? ($activeHighlight.itemType === 'lost' ? 'HILANG' : 'KETEMU')
+                : 'SEMUA')}
           </span>
         </div>
       </div>
@@ -369,23 +403,26 @@
     <!-- Tombol tab filter kategori barang: Controller Pod Sesuai Screenshot -->
     <div class="absolute top-4 right-4 z-20 flex bg-white border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] rounded overflow-hidden select-none">
       <button
+        type="button"
         onclick={() => setFilter('all')}
         class="px-3 py-1 font-pixel text-[8px] md:text-[9px] transition-all cursor-pointer font-bold
-          {$currentFilter === 'all' ? 'bg-[#2563eb] text-white' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
+          {!$activeHighlight?.itemType ? 'bg-[#2563eb] text-white' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
       >
         SEMUA
       </button>
       <button
+        type="button"
         onclick={() => setFilter('lost')}
         class="px-3 py-1 font-pixel text-[8px] md:text-[9px] transition-all cursor-pointer font-bold border-l-2 border-r-2 border-[#1c120c]
-          {$currentFilter === 'lost' ? 'bg-[#dc2626] text-white' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
+          {$activeHighlight?.itemType === 'lost' ? 'bg-[#dc2626] text-white ring-1 ring-inset ring-red-400' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
       >
         HILANG
       </button>
       <button
+        type="button"
         onclick={() => setFilter('found')}
         class="px-3 py-1 font-pixel text-[8px] md:text-[9px] transition-all cursor-pointer font-bold
-          {$currentFilter === 'found' ? 'bg-[#16a34a] text-white' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
+          {$activeHighlight?.itemType === 'found' ? 'bg-[#16a34a] text-white ring-1 ring-inset ring-green-400' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
       >
         KETEMU
       </button>

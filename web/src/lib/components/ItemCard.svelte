@@ -24,13 +24,14 @@
   const headerText = $derived(item.type === 'found' ? 'KETEMU' : 'HILANG');
   const pendingClaims = $derived((item.claims || []).filter((c) => c.status === 'pending'));
 
-  // Cek apakah kartu sedang disorot oleh Satpam AI atau filter tag
+  // Cek apakah kartu sedang disorot oleh Satpam AI atau filter tag / status hilang-ketemu
   const isHighlighted = $derived(
     !!$activeHighlight &&
     (
       ($activeHighlight.itemIds && $activeHighlight.itemIds.includes(item.id)) ||
       ($activeHighlight.tag && item.tag === $activeHighlight.tag) ||
-      ($activeHighlight.category && item.category?.toLowerCase() === $activeHighlight.category?.toLowerCase())
+      ($activeHighlight.category && item.category?.toLowerCase() === $activeHighlight.category?.toLowerCase()) ||
+      ($activeHighlight.itemType && item.type === $activeHighlight.itemType)
     )
   );
 

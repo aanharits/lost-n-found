@@ -4,10 +4,11 @@ import { chatWithAI } from '../ai/verifyClaim.js';
 import { getItems, type Item } from '../data/store.js';
 import { classifyWithRegex } from '../utils/tagClassifier.js';
 
-// Mendeteksi apakah user sedang menanyakan kategori, tag, atau barang spesifik
+// Mendeteksi apakah user sedang menanyakan kategori, tag, status hilang/ketemu, atau barang spesifik
 export function detectHighlightIntent(message: string, currentItems: Item[]): {
   highlightCategory: string | null;
   highlightTag: string | null;
+  highlightType: 'lost' | 'found' | null;
   highlightItemIds: string[];
 } {
   const lower = message.toLowerCase();
@@ -17,6 +18,13 @@ export function detectHighlightIntent(message: string, currentItems: Item[]): {
   else if (lower.includes('pakaian') || lower.includes('baju') || lower.includes('aksesoris')) cat = 'Pakaian & Aksesoris';
   else if (lower.includes('personal') || lower.includes('pribadi')) cat = 'Personal';
   else if (lower.includes('dokumen') || lower.includes('kartu')) cat = 'Dokumen & Kartu';
+
+  let itemType: 'lost' | 'found' | null = null;
+  if (/\b(hilang|kehilangan|lost)\b/i.test(lower) && !/\b(ketemu|ditemukan|menemukan|found)\b/i.test(lower)) {
+    itemType = 'lost';
+  } else if (/\b(ketemu|ditemukan|menemukan|found)\b/i.test(lower) && !/\b(hilang|kehilangan|lost)\b/i.test(lower)) {
+    itemType = 'found';
+  }
 
   const tagInfo = classifyWithRegex(lower);
   const tag = tagInfo ? tagInfo.tag : null;
@@ -29,8 +37,15 @@ export function detectHighlightIntent(message: string, currentItems: Item[]): {
     return false;
   });
 
-  // Jika tidak cocok via tag tapi menyebutkan nama barang tertentu di papan
-  if (matchingItems.length === 0 && lower.length > 2) {
+  // Jika ada filter tipe (hilang / ketemu)
+  if (matchingItems.length > 0 && itemType) {
+    matchingItems = matchingItems.filter((i) => i.type === itemType);
+  } else if (matchingItems.length === 0 && itemType && !tag && !cat) {
+    matchingItems = currentItems.filter((i) => i.type === itemType);
+  }
+
+  // Jika tidak cocok via tag/kategori/tipe tapi menyebutkan nama barang tertentu di papan
+  if (matchingItems.length === 0 && lower.length > 2 && !itemType) {
     matchingItems = currentItems.filter((i) =>
       i.title.toLowerCase().includes(lower.trim()) || lower.includes(i.title.toLowerCase())
     );
@@ -39,6 +54,7 @@ export function detectHighlightIntent(message: string, currentItems: Item[]): {
   return {
     highlightCategory: cat,
     highlightTag: tag,
+    highlightType: itemType,
     highlightItemIds: matchingItems.map((i) => i.id),
   };
 }
@@ -89,6 +105,7 @@ export async function handleChatMessage(socket: Socket, data: unknown): Promise<
     reply: reply || 'Waduh, koneksi otakku lagi nge-lag nih. Coba lagi ya!',
     highlightTag: highlightInfo.highlightTag,
     highlightCategory: highlightInfo.highlightCategory,
+    highlightType: highlightInfo.highlightType,
     highlightItemIds: highlightInfo.highlightItemIds,
   });
 }

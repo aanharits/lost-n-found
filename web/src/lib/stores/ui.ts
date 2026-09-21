@@ -27,6 +27,7 @@ export const claimAttemptCount = writable<number>(0);
 export interface HighlightState {
   category?: string | null;
   tag?: string | null;
+  itemType?: 'lost' | 'found' | null;
   itemIds: string[];
   source?: 'satpam' | 'filter' | 'direct';
 }

@@ -15,6 +15,12 @@ Fitur **Tag System & Board Highlight** dirancang untuk mengatasi penumpukan bara
    - Meredupkan (*dimming*) kartu lain di papan menjadi abu-abu transparan (opacity 22%, grayscale 85%).
    - Menggeser kamera papan (*auto-scroll/focus*) langsung ke kartu yang dituju.
 5. **Gamepad Nintendo Retro Kategori di Sisi Kiri:** Tombol kategori bersih (`GADGET`, `PAKAIAN`, `PERSONAL`, `DOKUMEN`) dikemas dalam bentuk gamepad konsol retro Nintendo yang diletakkan di sisi kiri papan. Dilengkapi layar mini LCD Game Boy dot-matrix dengan tulisan `Kategori : [SEMUA / KATEGORI AKTIF]`, tombol karet `SELECT`/`START`, lubang speaker 8-bit, serta bodi bernuansa *warm cream* (`#fefce8`). Untuk membatalkan sorotan (unhighlight), pengguna cukup mengklik kembali tombol kategori aktif atau mengklik area papan di mana saja secara intuitif.
+6. **Highlighting Status Barang (Hilang & Ketemu):** Sistem filter status di pojok kanan atas (`SEMUA`, `HILANG`, `KETEMU`) kini juga menerapkan konsep penyorotan interaktif yang sama:
+   - Kartu barang tidak dihilangkan dari papan, sehingga koordinat spasial papan tetap utuh dan rapi.
+   - Mengklik tombol `HILANG` atau `KETEMU` akan langsung menyorot kartu yang relevan dengan animasi denyut keemasan dan meredupkan kartu lainnya.
+   - Mengklik kembali tombol aktif atau area kosong papan akan membatalkan sorotan (*toggle unhighlight*).
+   - Layar LCD Gamepad Nintendo di kiri papan secara otomatis menampilkan status aktif (`Status : HILANG` / `Status : KETEMU`).
+   - Satpam AI mengenali pertanyaan seputar status barang (misal: *"ada barang apa aja yang hilang"*) dan langsung menyorot kartu di papan.
 
 ---
 

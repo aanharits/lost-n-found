@@ -95,6 +95,7 @@
       reply: string;
       highlightTag?: string | null;
       highlightCategory?: string | null;
+      highlightType?: 'lost' | 'found' | null;
       highlightItemIds?: string[];
     }
 
@@ -116,13 +117,15 @@
     const hasHighlight = !!(
       (replyData.highlightItemIds && replyData.highlightItemIds.length > 0) ||
       replyData.highlightTag ||
-      replyData.highlightCategory
+      replyData.highlightCategory ||
+      replyData.highlightType
     );
 
     if (hasHighlight) {
       activeHighlight.set({
         category: replyData.highlightCategory || null,
         tag: replyData.highlightTag || null,
+        itemType: replyData.highlightType || null,
         itemIds: replyData.highlightItemIds || [],
         source: "satpam",
       });
