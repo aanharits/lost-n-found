@@ -1,12 +1,11 @@
 import type { Server as SocketIOServer, Socket } from 'socket.io';
 import { itemAddSchema, emojiPickSchema } from '../schemas/item.schema.js';
-import { getItems, saveItemsToFile, type Item } from '../data/store.js';
+import { getItems, persistItems, type Item } from '../data/store.js';
 import { sanitizeItem } from '../data/sanitize.js';
 import { pickEmojiWithAI } from '../ai/verifyClaim.js';
 import { extractKeywordsWithAI } from '../zk/keywordExtractor.js';
 import { stringToFieldElement } from '../zk/fieldElement.js';
-// @ts-ignore
-import { buildPoseidon } from 'circomlibjs';
+import { poseidonCommitment } from '../zk/poseidon.js';
 
 import { autoClassifyItem } from '../utils/tagClassifier.js';
 
@@ -36,11 +35,9 @@ export async function handleItemAdd(io: SocketIOServer, socket: Socket, data: un
     const keywords = await extractKeywordsWithAI(inputData.secretDetail || '');
     
     // 2. Hash menggunakan Poseidon untuk membuat Commitment
-    const poseidon = await buildPoseidon();
-    const commitments = keywords.map(kw => {
-       const field = stringToFieldElement(kw);
-       return poseidon.F.toString(poseidon([field]));
-    });
+    const commitments = await Promise.all(
+      keywords.map((kw) => poseidonCommitment(stringToFieldElement(kw)))
+    );
 
     // 3. Bangun objek Item baru HANYA dengan hash (tanpa secretDetail mentah)
     const newItem: Item = {
@@ -66,7 +63,7 @@ export async function handleItemAdd(io: SocketIOServer, socket: Socket, data: un
     // Simpan item baru ke penyimpanan internal
     const items = getItems();
     items.push(newItem);
-    saveItemsToFile(items);
+    persistItems(items);
 
     // Broadcast item baru
     io.emit('item_added', sanitizeItem(newItem as any));
