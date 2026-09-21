@@ -14,7 +14,7 @@ Fitur **Tag System & Board Highlight** dirancang untuk mengatasi penumpukan bara
    - Menyorot (*highlight*) kartu barang terkait dengan **animasi pulsing border keemasan & floating bounce**.
    - Meredupkan (*dimming*) kartu lain di papan menjadi abu-abu transparan (opacity 22%, grayscale 85%).
    - Menggeser kamera papan (*auto-scroll/focus*) langsung ke kartu yang dituju.
-5. **Pills Filter Cepat & Tombol Batal:** Terdapat deretan tombol filter kategori bergaya konsol Nintendo di atas papan serta tombol `[ ✕ BATAL ]` untuk mengatur sorotan kembali ke tampilan normal kapan saja.
+5. **Tombol Kategori Bersih & Unhighlight Mudah:** Terdapat tombol kategori bersih bergaya konsol retro Nintendo di bawah judul papan (`GADGET`, `PAKAIAN`, `PERSONAL`, `DOKUMEN`) tanpa emote. Untuk membatalkan sorotan (unhighlight), pengguna cukup mengklik kembali tombol kategori aktif atau mengklik area papan di mana saja secara intuitif.
 
 ---
 

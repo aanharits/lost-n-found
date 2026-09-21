@@ -14,12 +14,12 @@
 
   let boardContainer: HTMLElement;
 
-  // Kategori sesuai desain tim untuk filter visual cepat di papan
+  // Kategori sesuai desain tim (tanpa emote, clean retro nintendo)
   const CATEGORY_TABS = [
-    { id: 'Gadget', label: 'GADGET', icon: '📱' },
-    { id: 'Pakaian & Aksesoris', label: 'PAKAIAN', icon: '🧥' },
-    { id: 'Personal', label: 'PERSONAL', icon: '🔑' },
-    { id: 'Dokumen & Kartu', label: 'DOKUMEN', icon: '🪪' },
+    { id: 'Gadget', label: 'GADGET' },
+    { id: 'Pakaian & Aksesoris', label: 'PAKAIAN' },
+    { id: 'Personal', label: 'PERSONAL' },
+    { id: 'Dokumen & Kartu', label: 'DOKUMEN' },
   ];
 
   function toggleCategoryHighlight(catId: string) {
@@ -72,7 +72,7 @@
         const col = index % columns;
         const row = Math.floor(index / columns);
         const x = 20 + col * (cardWidth + gapX);
-        const y = 105 + row * (cardHeight + gapY);
+        const y = 70 + row * (cardHeight + gapY);
         posMap.set(item.id, { x, y });
 
         // Update DOM inline style langsung agar kartu beranimasi seketika
@@ -136,8 +136,14 @@
   }
 
   function onWindowClick(e: MouseEvent) {
-    if (isProfileOpen && !(e.target as HTMLElement).closest('.profile-menu-container')) {
+    const target = e.target as HTMLElement;
+    if (isProfileOpen && !target.closest('.profile-menu-container')) {
       isProfileOpen = false;
+    }
+
+    // Jika sedang aktif highlight dan user klik di luar tombol, batalkan sorotan (unhighlight)
+    if ($activeHighlight && !target.closest('button')) {
+      activeHighlight.set(null);
     }
   }
 
@@ -257,8 +263,8 @@
   style="animation: boardFadeIn 0.35s ease forwards;"
 >
 
-  <!-- Judul dan subjudul papan: Sesuai Screenshot Terang & Colorful -->
-  <div class="text-center mb-3 z-10 select-none">
+  <!-- Judul, subjudul papan, dan tombol kategori 8-Bit Nintendo (Tanpa Emote) -->
+  <div class="text-center mb-3 z-10 select-none flex flex-col items-center">
     <h1
       class="text-3xl md:text-5xl font-pixel text-white mb-1 tracking-wider"
       style="text-shadow: 3px 3px 0 #1c120c, 5px 5px 0 rgba(0,0,0,0.3);"
@@ -266,18 +272,34 @@
       L &amp; F KAMPUS
     </h1>
     <p
-      class="text-xs md:text-sm font-pixel text-[#ffd700] font-bold tracking-widest"
+      class="text-xs md:text-sm font-pixel text-[#ffd700] font-bold tracking-widest mb-2.5"
       style="text-shadow: 1px 1px 0 #1c120c, 2px 2px 0 #1c120c;"
     >
       AI Image Match System
     </p>
+
+    <!-- Tombol Kategori: Bersih, Minimalist Modern 8-Bit, Tanpa Emote -->
+    <div class="flex items-center justify-center gap-1.5 md:gap-2 flex-wrap">
+      {#each CATEGORY_TABS as cat}
+        <button
+          type="button"
+          onclick={() => toggleCategoryHighlight(cat.id)}
+          class="font-pixel text-[8px] md:text-[9px] px-3 py-1.5 rounded border-2 border-[#1c120c] shadow-[2px_2px_0px_#0c0812] active:translate-y-0.5 active:shadow-none cursor-pointer font-bold tracking-wider transition-all select-none
+            {$activeHighlight?.category === cat.id
+              ? 'bg-[#ffd700] text-[#1c120c] translate-y-0.5 shadow-none'
+              : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
+        >
+          {cat.label}
+        </button>
+      {/each}
+    </div>
   </div>
 
   <!-- Area papan kartu barang -->
   <div
     id="board-container"
     bind:this={boardContainer}
-    class="board-container w-full max-w-5xl flex-grow rounded-xl overflow-hidden relative shadow-[8px_8px_0px_rgba(0,0,0,0.5)]"
+    class="board-container w-full max-w-5xl flex-grow rounded-xl overflow-hidden relative shadow-[8px_8px_0px_rgba(0,0,0,0.5)] cursor-default"
   >
     <!-- Tombol aksi lapor dan rapihkan posisi: Colorful Retro Action Buttons -->
     <div class="absolute top-4 left-4 z-20 flex gap-2">
@@ -318,52 +340,6 @@
       >
         KETEMU
       </button>
-    </div>
-
-    <!-- Banner Sorotan Aktif (Dipicu oleh Satpam AI atau Klik Filter Tag) -->
-    {#if $activeHighlight}
-      <div
-        class="absolute top-3.5 left-1/2 -translate-x-1/2 z-25 flex items-center gap-2 bg-[#ffd700] border-2 border-[#1c120c] shadow-[3px_3px_0px_#0a060f] px-3 py-1.5 rounded-full select-none"
-        transition:fly={{ y: -10, duration: 200 }}
-      >
-        <span class="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
-        <span class="font-pixel text-[8px] md:text-[9px] text-[#1c120c] font-bold tracking-wide">
-          MENYOROT: {($activeHighlight.tag || $activeHighlight.category || 'BARANG').toUpperCase().replace(/_/g, ' ')}
-        </span>
-        <button
-          type="button"
-          onclick={() => activeHighlight.set(null)}
-          class="bg-[#dc2626] hover:bg-[#b91c1c] active:translate-y-0.5 text-white font-pixel text-[7px] md:text-[8px] px-1.5 py-0.5 rounded border border-[#1c120c] shadow-[1px_1px_0px_#1c120c] cursor-pointer font-bold transition-all"
-        >
-          ✕ BATAL
-        </button>
-      </div>
-    {/if}
-
-    <!-- Baris Pill Filter Kategori 8-Bit Nintendo Game Style -->
-    <div class="absolute top-15 left-4 z-20 flex gap-1.5 overflow-x-auto max-w-[calc(100%-32px)] py-1 select-none">
-      {#each CATEGORY_TABS as cat}
-        <button
-          type="button"
-          onclick={() => toggleCategoryHighlight(cat.id)}
-          class="font-pixel text-[8px] md:text-[9px] px-2.5 py-1 rounded border-2 border-[#1c120c] shadow-[1px_1px_0px_#1c120c] cursor-pointer whitespace-nowrap transition-all font-bold flex items-center gap-1
-            {$activeHighlight?.category === cat.id
-              ? 'bg-[#ffd700] text-[#1c120c] translate-y-0.5 shadow-none'
-              : 'bg-[#fefce8] text-[#1c120c] hover:bg-[#fef08a]'}"
-        >
-          <span>{cat.icon}</span>
-          <span>{cat.label}</span>
-        </button>
-      {/each}
-      {#if $activeHighlight}
-        <button
-          type="button"
-          onclick={() => activeHighlight.set(null)}
-          class="font-pixel text-[8px] md:text-[9px] px-2 py-1 rounded border-2 border-[#1c120c] bg-white text-red-600 hover:bg-red-50 shadow-[1px_1px_0px_#1c120c] cursor-pointer whitespace-nowrap font-bold"
-        >
-          RESET
-        </button>
-      {/if}
     </div>
 
     <!-- Area render kartu barang -->
