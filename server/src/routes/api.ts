@@ -1,12 +1,13 @@
 import { Hono } from 'hono';
-import { verifyClaimApiSchema } from '../schemas/claim.schema.js';
+
 import { getItems } from '../data/store.js';
-import { verifyClaimWithAI } from '../ai/verifyClaim.js';
+import { extractKeywordsWithAI } from '../zk/keywordExtractor.js';
 
 const api = new Hono();
 
-// Endpoint REST untuk verifikasi klaim barang tanpa mengekspos secretDetail ke client
-api.post('/verify-claim', async (c) => {
+// Endpoint untuk mengekstrak keyword dari teks bebas pengguna
+// Endpoint ini dipanggil oleh frontend sebelum melakukan generate proof ZKP
+api.post('/extract', async (c) => {
   let body: unknown;
   try {
     body = await c.req.json();
@@ -14,34 +15,19 @@ api.post('/verify-claim', async (c) => {
     return c.json({ error: 'Body request harus berupa JSON valid' }, 400);
   }
 
-  const parsed = verifyClaimApiSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return c.json({ error: 'Invalid payload', details: parsed.error.flatten() }, 400);
+  // Validasi payload
+  const { text } = body as any;
+  if (typeof text !== 'string') {
+    return c.json({ error: 'Payload harus memiliki properti "text" berupa string' }, 400);
   }
 
-  const { itemId, claimText } = parsed.data;
-  const items = getItems();
-  const item = items.find((i) => i.id === itemId);
-
-  if (!item) {
-    return c.json({ error: 'Item tidak ditemukan' }, 404);
+  try {
+    const keywords = await extractKeywordsWithAI(text);
+    return c.json({ keywords });
+  } catch (error: any) {
+    console.error('[API Extract] Error:', error);
+    return c.json({ error: 'Gagal mengekstrak keyword' }, 500);
   }
-
-  // Jalankan verifikasi AI dengan mencocokkan teks klaim terhadap detail rahasia
-  const result = await verifyClaimWithAI(
-    item.secretDetail,
-    claimText,
-    item.title,
-    item.desc
-  );
-
-  // Kembalikan hanya hasil evaluasi skor dan alasan tanpa detail rahasia
-  return c.json({
-    score: result.score,
-    confidence: result.confidence,
-    reasoning: result.reasoning,
-  });
 });
 
 export default api;
