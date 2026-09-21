@@ -27,19 +27,60 @@ Sistem ini dirancang untuk mengotomatisasi pengelompokan barang dan memudahkan p
 
 ---
 
-## 3. High-Level Flow
+## 3. System Flow
 
-### A. Auto-Classification on Report
-1. Pengguna mengirim laporan barang tanpa perlu memilih kategori.
-2. Sistem backend memproses judul dan deskripsi laporan.
-3. Pola kata kunci dicocokkan terlebih dahulu untuk klasifikasi instan.
-4. Jika tidak ditemukan kecocokan, model AI digunakan untuk menentukan kategori dan sub-tag yang paling sesuai.
-5. Informasi kategori dan tag disimpan bersama laporan dan diperbarui ke seluruh klien secara realtime.
+### A. Report & Auto-Classification Flow
+```
+User Submits Report
+        │
+        ▼
+Server Classification Engine
+        │
+   ┌────┴────────────────────────┐
+   ▼                             ▼
+Pattern Matching (Regex)      AI Fallback (LLM)
+(Fast dictionary check)       (Uncommon keywords)
+   │                             │
+   └──────────────┬──────────────┘
+                  ▼
+      Assign Category & Sub-Tag
+                  │
+                  ▼
+   Save Item & Broadcast to Clients
+```
 
-### B. Board Highlighting & Focus
-1. **Pemicu**: Pengguna memilih kategori di Gamepad, memilih status (Hilang/Ketemu), atau menerima saran dari percakapan Satpam AI.
-2. **Efek Visual**: Kartu yang relevan disorot dengan efek visual aktif, sedangkan kartu lainnya diredupkan. Layar secara otomatis bergeser (*smooth scroll*) ke kartu pertama yang cocok.
-3. **Pembatalan Sorotan**: Mengklik kembali opsi yang sedang aktif atau mengklik area kosong pada papan akan mengembalikan seluruh kartu ke tampilan normal.
+### B. Board Highlighting & Focus Flow
+```
+User Trigger (Gamepad / Status Button / Satpam Chat)
+        │
+        ▼
+Highlight Store Updates Active Target
+        │
+   ┌────┴────────────────────────┐
+   ▼                             ▼
+Target Cards Highlighted      Other Cards Dimmed
+(Gold glow & pulse effect)    (Reduced opacity & grayscale)
+   │                             │
+   └──────────────┬──────────────┘
+                  ▼
+   Auto-Scroll to First Matched Item
+```
+
+### C. Satpam AI Assistant Flow
+```
+User Asks Satpam in Natural Language
+        │
+        ▼
+Intent Detection & Query Processing
+        │
+   ┌────┴────────────────────────┐
+   ▼                             ▼
+Generate Conversational Reply   Extract Highlight Criteria
+   │                             │
+   └──────────────┬──────────────┘
+                  ▼
+   Deliver Response & Focus Board Cards
+```
 
 ---
 
