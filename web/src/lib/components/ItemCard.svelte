@@ -38,9 +38,6 @@
   const isDimmed = $derived(
     !!$activeHighlight && !isHighlighted
   );
-
-  // Format nama tag untuk lencana kartu (cukup nama tag saja)
-  const tagLabel = $derived((item.tag || 'Lainnya').toUpperCase().replace(/_/g, ' '));
 </script>
 
 <div
@@ -72,13 +69,8 @@
   {/if}
 
   <div class="card-header font-pixel {headerClass}">{headerText}</div>
-  <div class="card-image relative">
-    <TagIcon tag={item.tag} fallback={item.icon} size={46} />
-    {#if item.tag}
-      <span class="tag-pill font-pixel">
-        {tagLabel}
-      </span>
-    {/if}
+  <div class="card-image flex items-center justify-center">
+    <TagIcon tag={item.tag} fallback={item.icon} size={48} />
   </div>
   <div class="p-2.5 bg-[#fefce8] flex-grow flex flex-col justify-between">
     <div>

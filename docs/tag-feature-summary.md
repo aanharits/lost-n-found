@@ -8,7 +8,7 @@
 Fitur **Tag System & Board Highlight** dirancang untuk mengatasi penumpukan barang pada papan Lost & Found kampus dengan pengalaman pengguna (*User Experience*) tanpa hambatan (**Zero-Friction UX**):
 
 1. **Auto-Tagging (0 Friction):** Pelapor barang **tidak perlu** memilih kategori atau tag secara manual di form pelaporan. Sistem di background secara otomatis mengklasifikasikan barang menggunakan kamus Regex akurat (0ms) dengan AI Fallback (Groq API).
-2. **Lencana Tag Minimalis 8-Bit:** Pada setiap kartu barang di papan, lencana tag ditampilkan secara ringkas (contoh: `[ HP ]`, `[ LAPTOP ]`, `[ KUNCI ]`, `[ DOMPET ]`) tanpa redundansi nama barang.
+2. **Tampilan Kartu Bersih & Fokus Visual (Clean Minimalist UI):** Label teks tag yang menumpuk di atas kartu barang telah dihilangkan dari interface pengguna agar kartu yang berukuran kecil tetap lega, rapi, dan estetis. Kartu berfokus murni pada ilustrasi aset ikon SVG 8-bit yang terpusat dan jelas.
 3. **Modular SVG Icon System:** Menggantikan emoji bawaan dengan sistem ikon SVG 8-bit bergaya retro pixel art. Komponen dibuat modular sehingga ketika tim desain mengirimkan file SVG final, aset dapat langsung ditimpa tanpa mengubah kode logika.
 4. **Interactive Board Highlighting & Dimming:** Ketika mahasiswa menanyakan barang atau kategori ke **Satpam AI** (misal: *"di tag gadget ada barang apa aja"*), sistem secara otomatis:
    - Menyorot (*highlight*) kartu barang terkait dengan **animasi pulsing border keemasan & floating bounce**.
