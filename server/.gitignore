@@ -1,3 +1,12 @@
 node_modules/
 dist/
 .env
+
+# ZKP Intermediate Files
+zk/build/*.ptau
+zk/build/circuit_00*.zkey
+zk/build/*.sym
+zk/build/*.r1cs
+
+# Ignore database items (opsional, tapi disarankan)
+# data/items.json

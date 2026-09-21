@@ -10,16 +10,20 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "hono": "^4.7.0",
     "@hono/node-server": "^1.14.0",
-    "socket.io": "^4.8.0",
+    "axios": "^1.7.0",
+    "circomlib": "^2.0.5",
+    "circomlibjs": "^0.1.7",
     "dotenv": "^16.4.0",
-    "zod": "^3.24.0",
-    "axios": "^1.7.0"
+    "hono": "^4.7.0",
+    "js-sha3": "^0.13.0",
+    "snarkjs": "^0.7.6",
+    "socket.io": "^4.8.0",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0",
     "tsx": "^4.19.0",
-    "@types/node": "^22.0.0"
+    "typescript": "^5.7.0"
   }
 }
