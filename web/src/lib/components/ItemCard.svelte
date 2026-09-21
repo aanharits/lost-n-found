@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Item } from '$lib/stores/items.js';
-  import { activeHighlight } from '$lib/stores/ui.js';
+  import { highlight, isItemHighlighted } from '$lib/stores/highlight.js';
   import { draggable } from '$lib/actions/draggable.js';
   import { fly } from 'svelte/transition';
   import TagIcon from './TagIcon.svelte';
@@ -25,19 +25,8 @@
   const pendingClaims = $derived((item.claims || []).filter((c) => c.status === 'pending'));
 
   // Evaluasi status highlight kartu
-  const isHighlighted = $derived(
-    !!$activeHighlight &&
-    (
-      ($activeHighlight.itemIds && $activeHighlight.itemIds.includes(item.id)) ||
-      ($activeHighlight.tag && item.tag === $activeHighlight.tag) ||
-      ($activeHighlight.category && item.category?.toLowerCase() === $activeHighlight.category?.toLowerCase()) ||
-      ($activeHighlight.itemType && item.type === $activeHighlight.itemType)
-    )
-  );
-
-  const isDimmed = $derived(
-    !!$activeHighlight && !isHighlighted
-  );
+  const isHighlighted = $derived(isItemHighlighted(item, $highlight));
+  const isDimmed = $derived(!!$highlight && !isHighlighted);
 </script>
 
 <div

@@ -3,7 +3,8 @@
   import { fly, fade } from 'svelte/transition';
   import { items, type Item } from '$lib/stores/items.js';
   import { currentPlayer } from '$lib/stores/player.js';
-  import { currentScene, currentFilter, socketConnected, onlineCount, activeModal, claimTargetItemId, reviewTargetItemId, activeHighlight } from '$lib/stores/ui.js';
+  import { currentScene, socketConnected, onlineCount, activeModal, claimTargetItemId, reviewTargetItemId } from '$lib/stores/ui.js';
+  import { highlight } from '$lib/stores/highlight.js';
   import { getSocket } from '$lib/socket.js';
   import ItemCard from './ItemCard.svelte';
   import Avatar from './Avatar.svelte';
@@ -15,40 +16,7 @@
 
   let boardContainer: HTMLElement;
 
-  // Seluruh kartu tetap di-render; filtering menggunakan highlighting & dimming
-  let filteredItems = $derived($items);
 
-  // Filter status (all, lost, found) via highlight
-  function setFilter(type: 'all' | 'lost' | 'found') {
-    if (type === 'all') {
-      currentFilter.set('all');
-      activeHighlight.set(null);
-      return;
-    }
-
-    // Toggle unhighlight jika status yang sama diklik ulang
-    if ($activeHighlight?.itemType === type) {
-      currentFilter.set('all');
-      activeHighlight.set(null);
-      return;
-    }
-
-    currentFilter.set(type);
-    const matching = $items.filter((item) => item.type === type);
-    activeHighlight.set({
-      itemType: type,
-      itemIds: matching.map((i) => i.id),
-      source: 'filter',
-    });
-
-    // Auto-scroll ke kartu pertama yang disorot
-    if (matching.length > 0) {
-      setTimeout(() => {
-        const el = document.getElementById(matching[0].id);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 150);
-    }
-  }
 
   // Susun ulang posisi kartu ke dalam grid rapi
   function organizeBoard() {
@@ -138,9 +106,8 @@
     }
 
     // Jika sedang aktif highlight dan user klik di luar tombol dan kartu, batalkan sorotan (unhighlight)
-    if ($activeHighlight && !target.closest('button') && !target.closest('.item-card')) {
-      activeHighlight.set(null);
-      currentFilter.set('all');
+    if ($highlight && !target.closest('button') && !target.closest('.item-card')) {
+      highlight.clear();
     }
   }
 
@@ -307,25 +274,25 @@
     <div class="absolute top-4 right-4 z-20 flex bg-white border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] rounded overflow-hidden select-none">
       <button
         type="button"
-        onclick={() => setFilter('all')}
+        onclick={() => highlight.toggleStatus('all')}
         class="px-3 py-1 font-pixel text-[8px] md:text-[9px] transition-all cursor-pointer font-bold
-          {!$activeHighlight?.itemType ? 'bg-[#2563eb] text-white' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
+          {!$highlight?.itemType ? 'bg-[#2563eb] text-white' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
       >
         SEMUA
       </button>
       <button
         type="button"
-        onclick={() => setFilter('lost')}
+        onclick={() => highlight.toggleStatus('lost')}
         class="px-3 py-1 font-pixel text-[8px] md:text-[9px] transition-all cursor-pointer font-bold border-l-2 border-r-2 border-[#1c120c]
-          {$activeHighlight?.itemType === 'lost' ? 'bg-[#dc2626] text-white ring-1 ring-inset ring-red-400' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
+          {$highlight?.itemType === 'lost' ? 'bg-[#dc2626] text-white ring-1 ring-inset ring-red-400' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
       >
         HILANG
       </button>
       <button
         type="button"
-        onclick={() => setFilter('found')}
+        onclick={() => highlight.toggleStatus('found')}
         class="px-3 py-1 font-pixel text-[8px] md:text-[9px] transition-all cursor-pointer font-bold
-          {$activeHighlight?.itemType === 'found' ? 'bg-[#16a34a] text-white ring-1 ring-inset ring-green-400' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
+          {$highlight?.itemType === 'found' ? 'bg-[#16a34a] text-white ring-1 ring-inset ring-green-400' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
       >
         KETEMU
       </button>
@@ -333,7 +300,7 @@
 
     <!-- Area render kartu barang -->
     <div id="cards-area" class="cards-area">
-      {#each filteredItems as item (item.id)}
+      {#each $items as item (item.id)}
         <ItemCard
           {item}
           onClaim={() => openClaimModal(item.id)}

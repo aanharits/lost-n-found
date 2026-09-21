@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getSocket } from "$lib/socket.js";
   import { items } from "$lib/stores/items.js";
-  import { activeHighlight } from "$lib/stores/ui.js";
+  import { highlight, scrollToCard } from "$lib/stores/highlight.js";
   import Avatar from "./Avatar.svelte";
   import { fly, fade } from "svelte/transition";
 
@@ -122,25 +122,12 @@
     );
 
     if (hasHighlight) {
-      activeHighlight.set({
-        category: replyData.highlightCategory || null,
-        tag: replyData.highlightTag || null,
-        itemType: replyData.highlightType || null,
-        itemIds: replyData.highlightItemIds || [],
-        source: "satpam",
+      highlight.fromSatpam({
+        category: replyData.highlightCategory,
+        tag: replyData.highlightTag,
+        itemType: replyData.highlightType,
+        itemIds: replyData.highlightItemIds,
       });
-
-      // Geser kamera papan otomatis ke kartu pertama yang disorot
-      if (replyData.highlightItemIds && replyData.highlightItemIds.length > 0) {
-        setTimeout(() => {
-          const targetEl = document.getElementById(
-            replyData.highlightItemIds![0],
-          );
-          if (targetEl) {
-            targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
-          }
-        }, 350);
-      }
     }
 
     chatHistory = [
@@ -228,12 +215,7 @@
                   type="button"
                   onclick={() => {
                     if (msg.firstItemId) {
-                      const el = document.getElementById(msg.firstItemId);
-                      if (el)
-                        el.scrollIntoView({
-                          behavior: "smooth",
-                          block: "center",
-                        });
+                      scrollToCard(msg.firstItemId, 0);
                     }
                     chatOpen = false;
                   }}

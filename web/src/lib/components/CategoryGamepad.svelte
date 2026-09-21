@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { items } from '$lib/stores/items.js';
-  import { activeHighlight, currentFilter } from '$lib/stores/ui.js';
+  import { highlight } from '$lib/stores/highlight.js';
 
   // Daftar tab kategori
   export const CATEGORY_TABS = [
@@ -9,32 +8,6 @@
     { id: 'Personal', label: 'PERSONAL' },
     { id: 'Dokumen & Kartu', label: 'DOKUMEN' },
   ];
-
-  // Toggle highlight kategori
-  function toggleCategoryHighlight(catId: string) {
-    if ($activeHighlight?.category === catId) {
-      activeHighlight.set(null);
-      currentFilter.set('all');
-    } else {
-      currentFilter.set('all');
-      const matching = $items.filter(
-        (i) => i.category?.toLowerCase() === catId.toLowerCase()
-      );
-      activeHighlight.set({
-        category: catId,
-        itemIds: matching.map((i) => i.id),
-        source: 'filter',
-      });
-      // Auto-scroll ke item pertama yang cocok
-      const firstItem = matching[0];
-      if (firstItem) {
-        setTimeout(() => {
-          const el = document.getElementById(firstItem.id);
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 150);
-      }
-    }
-  }
 </script>
 
 <!-- Gamepad Nintendo 8-Bit -->
@@ -55,13 +28,13 @@
     <!-- Layar dot-matrix hijau -->
     <div class="bg-[#8bac0f] border border-[#306230] rounded p-1 flex flex-col items-center justify-center shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]">
       <span class="font-pixel text-[8px] text-[#0f380f] font-bold tracking-wider leading-none">
-        {$activeHighlight?.itemType ? 'Status :' : 'Kategori :'}
+        {$highlight?.itemType ? 'Status :' : 'Kategori :'}
       </span>
       <span class="font-pixel text-[6.5px] text-[#306230] font-bold mt-0.5 tracking-tight truncate max-w-full">
-        {$activeHighlight?.category
-          ? $activeHighlight.category.toUpperCase()
-          : ($activeHighlight?.itemType
-            ? ($activeHighlight.itemType === 'lost' ? 'HILANG' : 'KETEMU')
+        {$highlight?.category
+          ? $highlight.category.toUpperCase()
+          : ($highlight?.itemType
+            ? ($highlight.itemType === 'lost' ? 'HILANG' : 'KETEMU')
             : 'SEMUA')}
       </span>
     </div>
@@ -72,9 +45,9 @@
     {#each CATEGORY_TABS as cat}
       <button
         type="button"
-        onclick={() => toggleCategoryHighlight(cat.id)}
+        onclick={() => highlight.toggleCategory(cat.id)}
         class="font-pixel text-[8px] py-1.5 px-2 w-full rounded border-2 border-[#1c120c] shadow-[2px_2px_0px_#1c120c] active:translate-y-0.5 active:shadow-none cursor-pointer font-bold tracking-wider transition-all select-none text-center
-          {$activeHighlight?.category === cat.id
+          {$highlight?.category === cat.id
             ? 'bg-[#ffd700] text-[#1c120c] translate-x-1 shadow-none border-[#1c120c] ring-1 ring-[#facc15]'
             : 'bg-white text-[#1c120c] hover:bg-[#fff9db]'}"
       >
