@@ -23,8 +23,9 @@ export interface Item {
   category?: string;
   tag?: string;
   desc: string;
+  commitments: string[];
   claims: Claim[];
-  resolved: boolean;
+  status: 'open' | 'disputed' | 'resolved';
   date: string;
   time: string;
   reporterName: string;

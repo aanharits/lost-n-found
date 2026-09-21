@@ -102,7 +102,7 @@
       desc: desc.trim(),
       secretDetail: secretDetail.trim(),
       claims: [],
-      resolved: false,
+      status: 'open',
       date,
       time,
       reporterName: player?.name || '',

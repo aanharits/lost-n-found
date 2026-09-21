@@ -98,19 +98,43 @@ export function initSocket(): Socket {
     itemId: string;
     itemTitle: string;
     claim: any;
-    resolved: boolean;
+    status: 'open' | 'disputed' | 'resolved';
     claims: any[];
     reporterContact?: string;
   }) => {
     items.update((current) =>
       current.map((item) => {
         if (item.id === data.itemId) {
-          return { ...item, claims: data.claims, resolved: data.resolved };
+          return { ...item, claims: data.claims, status: data.status };
         }
         return item;
       })
     );
     showToast(`Update klaim untuk "${data.itemTitle}" (${data.claim.status})`, 'warning');
+  });
+
+  // Menerima hasil akhir dispute window (pemenang ditentukan)
+  socket.on('dispute_resolved', (data: {
+    itemId: string;
+    itemTitle: string;
+    status: 'open' | 'disputed' | 'resolved';
+    claims: any[];
+    winnerId: string | null;
+  }) => {
+    items.update((current) =>
+      current.map((item) => {
+        if (item.id === data.itemId) {
+          return { ...item, claims: data.claims, status: data.status };
+        }
+        return item;
+      })
+    );
+    showToast(
+      data.winnerId
+        ? `Pemenang klaim "${data.itemTitle}" telah ditentukan.`
+        : `Masa sanggah "${data.itemTitle}" berakhir.`,
+      data.winnerId ? 'success' : 'info'
+    );
   });
 
   // Memperbarui jumlah user online
