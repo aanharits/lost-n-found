@@ -4,7 +4,7 @@ import { chatWithAI } from '../ai/verifyClaim.js';
 import { getItems, type Item } from '../data/store.js';
 import { classifyWithRegex } from '../utils/tagClassifier.js';
 
-// Mendeteksi apakah user sedang menanyakan kategori, tag, status hilang/ketemu, atau barang spesifik
+// Deteksi target highlight (kategori, tag, status, atau judul barang) dari pesan chat
 export function detectHighlightIntent(message: string, currentItems: Item[]): {
   highlightCategory: string | null;
   highlightTag: string | null;
@@ -30,21 +30,21 @@ export function detectHighlightIntent(message: string, currentItems: Item[]): {
   const tag = tagInfo ? tagInfo.tag : null;
   if (!cat && tagInfo) cat = tagInfo.category;
 
-  // Filter barang yang cocok berdasarkan tag atau kategori
+  // Filter berdasarkan tag atau kategori
   let matchingItems = currentItems.filter((i) => {
     if (tag && i.tag === tag) return true;
     if (cat && i.category?.toLowerCase() === cat.toLowerCase()) return true;
     return false;
   });
 
-  // Jika ada filter tipe (hilang / ketemu)
+  // Filter tambahan berdasarkan status (hilang / ketemu)
   if (matchingItems.length > 0 && itemType) {
     matchingItems = matchingItems.filter((i) => i.type === itemType);
   } else if (matchingItems.length === 0 && itemType && !tag && !cat) {
     matchingItems = currentItems.filter((i) => i.type === itemType);
   }
 
-  // Jika tidak cocok via tag/kategori/tipe tapi menyebutkan nama barang tertentu di papan
+  // Fallback pencocokan berdasarkan judul barang di papan
   if (matchingItems.length === 0 && lower.length > 2 && !itemType) {
     matchingItems = currentItems.filter((i) =>
       i.title.toLowerCase().includes(lower.trim()) || lower.includes(i.title.toLowerCase())
@@ -59,7 +59,7 @@ export function detectHighlightIntent(message: string, currentItems: Item[]): {
   };
 }
 
-// Menyusun prompt instruksi kepribadian dan konteks percakapan untuk Satpam AI
+// Builder prompt konteks papan untuk LLM Satpam AI
 function buildSatpamPrompt(message: string, boardData: string, historyContext: string): string {
   return `Kamu adalah "Satpam AI", wujudmu karakter satpam kotak-kotak 8-bit retro di aplikasi Lost & Found kampus. 
 Kamu ramah, asik, suka membantu mahasiswa dengan bahasa santai ala mahasiswa kampus.
@@ -76,7 +76,7 @@ Tugas: Balas pesan terakhir Mahasiswa ("${message}").
 - Maksimal 2-3 kalimat singkat, to the point.`;
 }
 
-// Menangani pesan obrolan masuk dan membalas melalui respon AI Satpam beserta metadata sorotan
+// Handler event pesan obrolan Satpam AI
 export async function handleChatMessage(socket: Socket, data: unknown): Promise<void> {
   const parsed = chatMessageSchema.safeParse(data);
   if (!parsed.success) {
@@ -87,10 +87,9 @@ export async function handleChatMessage(socket: Socket, data: unknown): Promise<
   const { message, boardData, historyContext } = parsed.data;
   const currentItems = getItems();
 
-  // Deteksi sorotan tag/kategori dari pesan mahasiswa
   const highlightInfo = detectHighlightIntent(message, currentItems);
 
-  // Buat boardData yang menyertakan informasi Tag & Kategori jika belum ada
+  // Serialisasi data papan dengan metadata tag & kategori jika belum tersedia
   let enrichedBoardData = boardData;
   if (!enrichedBoardData || enrichedBoardData === 'Papan sedang kosong') {
     enrichedBoardData = currentItems

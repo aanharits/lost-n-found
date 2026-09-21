@@ -9,7 +9,7 @@ import {
   type TagResult,
 } from './tagRegexRules.js';
 
-// Re-export untuk kompatibilitas penuh & kemudahan pemanggilan
+// Re-export untuk kompatibilitas modul
 export { classifyWithRegex, ALL_REGEX_RULES as REGEX_RULES, type TagRule, type TagResult };
 
 const __filename = fileURLToPath(import.meta.url);
@@ -28,7 +28,7 @@ export interface TagInfo {
   label: string;
 }
 
-// Definisi taxonomi kategori dan sub-tag sesuai spesifikasi desain tim
+// Taksonomi kategori dan sub-tag resmi
 export const TAG_CATALOG = {
   gadget: {
     name: 'Gadget',
@@ -52,7 +52,7 @@ export const TAG_CATALOG = {
   },
 } as const;
 
-// Deteksi tag via AI Groq jika teks tidak terdeteksi via Regex
+// Klasifikasi dengan LLM Groq jika tidak terdeteksi via regex
 export async function classifyWithAI(itemName: string, itemDesc: string = ''): Promise<TagInfo | null> {
   if (!GROQ_API_KEY) return null;
 
@@ -117,23 +117,23 @@ Kembalikan HANYA format JSON persis seperti ini:
   return null;
 }
 
-// Fungsi utama klasifikasi gabungan: Regex Cepat -> AI Fallback -> Default Lainnya
+// Pipeline klasifikasi utama: Regex -> AI Fallback -> Default
 export async function autoClassifyItem(itemName: string, itemDesc: string = ''): Promise<TagInfo> {
   const combined = `${itemName} ${itemDesc}`;
   
-  // 1. Cek via Regex Lokal (Instan 0ms)
+  // 1. Pencocokan pola regex lokal (0ms)
   const regexResult = classifyWithRegex(combined);
   if (regexResult) {
     return regexResult;
   }
 
-  // 2. Cek via AI Groq jika kata kunci tidak umum
+  // 2. Fallback AI jika tidak ada kecocokan regex
   const aiResult = await classifyWithAI(itemName, itemDesc);
   if (aiResult) {
     return aiResult;
   }
 
-  // 3. Fallback Default
+  // 3. Fallback default jika tidak terklasifikasi
   return {
     category: 'Lainnya',
     tag: 'lainnya',

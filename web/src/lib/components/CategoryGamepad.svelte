@@ -2,7 +2,7 @@
   import { items } from '$lib/stores/items.js';
   import { activeHighlight, currentFilter } from '$lib/stores/ui.js';
 
-  // Daftar tab kategori barang
+  // Daftar tab kategori
   export const CATEGORY_TABS = [
     { id: 'Gadget', label: 'GADGET' },
     { id: 'Pakaian & Aksesoris', label: 'PAKAIAN' },
@@ -10,7 +10,7 @@
     { id: 'Dokumen & Kartu', label: 'DOKUMEN' },
   ];
 
-  // Fungsi toggle penyorotan kategori (highlight & dimming)
+  // Toggle highlight kategori
   function toggleCategoryHighlight(catId: string) {
     if ($activeHighlight?.category === catId) {
       activeHighlight.set(null);
@@ -25,7 +25,7 @@
         itemIds: matching.map((i) => i.id),
         source: 'filter',
       });
-      // Cari item pertama dengan kategori ini dan scroll ke posisinya
+      // Auto-scroll ke item pertama yang cocok
       const firstItem = matching[0];
       if (firstItem) {
         setTimeout(() => {
@@ -37,13 +37,13 @@
   }
 </script>
 
-<!-- Panel Kategori Sisi Kiri (Desain Gamepad Nintendo 8-Bit Lucu dengan Layar LCD) -->
+<!-- Gamepad Nintendo 8-Bit -->
 <aside
   class="select-none mb-3 min-[1140px]:mb-0 min-[1140px]:absolute min-[1140px]:-left-40 min-[1140px]:top-0 z-25 w-[142px] bg-[#fefce8] border-4 border-[#1c120c] shadow-[inset_0_2px_0_rgba(255,255,255,0.9),inset_-2px_-2px_0_rgba(0,0,0,0.12),4px_4px_0px_#0c0812] rounded-2xl p-2 flex flex-col gap-2"
 >
-  <!-- Layar Mini LCD Game Boy -->
+  <!-- LCD Game Boy -->
   <div class="bg-[#1e293b] border-2 border-[#1c120c] rounded-lg p-1.5 flex flex-col gap-1 shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)]">
-    <!-- Status Bar Baterai LCD -->
+    <!-- Status baterai -->
     <div class="flex items-center justify-between px-0.5">
       <div class="flex items-center gap-1">
         <span class="w-1.5 h-1.5 rounded-full bg-red-500 border border-black animate-pulse"></span>
@@ -52,7 +52,7 @@
       <span class="font-pixel text-[5px] text-slate-400 tracking-tighter">8-BIT</span>
     </div>
 
-    <!-- Tampilan Layar Hijau Dot-Matrix Game Boy -->
+    <!-- Layar dot-matrix hijau -->
     <div class="bg-[#8bac0f] border border-[#306230] rounded p-1 flex flex-col items-center justify-center shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]">
       <span class="font-pixel text-[8px] text-[#0f380f] font-bold tracking-wider leading-none">
         {$activeHighlight?.itemType ? 'Status :' : 'Kategori :'}
@@ -67,7 +67,7 @@
     </div>
   </div>
 
-  <!-- Tombol Tombol Gamepad Kategori -->
+  <!-- Tombol kategori -->
   <div class="flex flex-col gap-1.5 w-full">
     {#each CATEGORY_TABS as cat}
       <button
@@ -83,7 +83,7 @@
     {/each}
   </div>
 
-  <!-- Detail Retro: Tombol Karet Select / Start & Speaker Grille -->
+  <!-- Tombol Select/Start & Speaker -->
   <div class="flex items-center justify-between px-1 pt-1 border-t border-[#e2dcbb] mt-0.5">
     <div class="flex gap-1.5 items-center">
       <div class="flex flex-col items-center">
@@ -95,7 +95,7 @@
         <span class="text-[5px] font-pixel text-[#78716c] mt-0.5">START</span>
       </div>
     </div>
-    <!-- Lubang Speaker 8-bit -->
+    <!-- Speaker grille -->
     <div class="flex gap-1 items-center pr-0.5">
       <div class="w-0.5 h-2.5 bg-[#cbd5e1] border border-[#1c120c] rounded-full -rotate-25"></div>
       <div class="w-0.5 h-2.5 bg-[#cbd5e1] border border-[#1c120c] rounded-full -rotate-25"></div>

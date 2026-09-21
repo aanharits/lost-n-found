@@ -1,8 +1,5 @@
 /**
- * Kamus dan Engine Klasifikasi Regex Barang Lost & Found
- * 
- * Modul ini menangani deteksi kategori dan tag barang secara instan (0ms)
- * berbasis pola kata kunci (Bahasa Indonesia, istilah kampus, slang, dan brand populer).
+ * Kamus aturan regex klasifikasi barang Lost & Found
  */
 
 export interface TagRule {
@@ -18,9 +15,7 @@ export interface TagResult {
   label: string;
 }
 
-// ==========================================
-// 1. KATEGORI: GADGET
-// ==========================================
+// 1. Gadget
 export const GADGET_REGEX_RULES: TagRule[] = [
   {
     tag: 'hp',
@@ -60,9 +55,7 @@ export const GADGET_REGEX_RULES: TagRule[] = [
   },
 ];
 
-// ==========================================
-// 2. KATEGORI: PAKAIAN & AKSESORIS
-// ==========================================
+// 2. Pakaian & Aksesoris
 export const PAKAIAN_REGEX_RULES: TagRule[] = [
   {
     tag: 'kacamata',
@@ -108,9 +101,7 @@ export const PAKAIAN_REGEX_RULES: TagRule[] = [
   },
 ];
 
-// ==========================================
-// 3. KATEGORI: PERSONAL
-// ==========================================
+// 3. Personal
 export const PERSONAL_REGEX_RULES: TagRule[] = [
   {
     tag: 'kunci',
@@ -156,9 +147,7 @@ export const PERSONAL_REGEX_RULES: TagRule[] = [
   },
 ];
 
-// ==========================================
-// 4. KATEGORI: DOKUMEN & KARTU
-// ==========================================
+// 4. Dokumen & Kartu
 export const DOKUMEN_REGEX_RULES: TagRule[] = [
   {
     tag: 'ktm',
@@ -192,7 +181,7 @@ export const DOKUMEN_REGEX_RULES: TagRule[] = [
   },
 ];
 
-// Gabungan seluruh aturan regex untuk pencarian sekuensial
+// Gabungan seluruh aturan regex
 export const ALL_REGEX_RULES: TagRule[] = [
   ...GADGET_REGEX_RULES,
   ...PAKAIAN_REGEX_RULES,
@@ -200,10 +189,7 @@ export const ALL_REGEX_RULES: TagRule[] = [
   ...DOKUMEN_REGEX_RULES,
 ];
 
-/**
- * Mencocokkan teks barang dengan aturan regex (kecepatan 0ms)
- * Mengembalikan TagResult jika cocok, atau null jika tidak ditemukan.
- */
+// Evaluasi teks terhadap daftar regex rule (0ms)
 export function classifyWithRegex(text: string): TagResult | null {
   for (const rule of ALL_REGEX_RULES) {
     if (rule.regex.test(text)) {

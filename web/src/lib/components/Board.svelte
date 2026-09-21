@@ -15,11 +15,10 @@
 
   let boardContainer: HTMLElement;
 
-  // Seluruh kartu tetap berada di papan agar posisi spasial rapi;
-  // filter barang hilang & ketemu menggunakan sistem penyorotan (highlighting) & peredupan (dimming)
+  // Seluruh kartu tetap di-render; filtering menggunakan highlighting & dimming
   let filteredItems = $derived($items);
 
-  // Menyorot barang berdasarkan tipe hilang / ketemu (dengan konsep highlighting & dimming)
+  // Filter status (all, lost, found) via highlight
   function setFilter(type: 'all' | 'lost' | 'found') {
     if (type === 'all') {
       currentFilter.set('all');
@@ -27,7 +26,7 @@
       return;
     }
 
-    // Jika tipe yang sama sudah aktif disorot, klik lagi untuk unhighlight (batal sorot)
+    // Toggle unhighlight jika status yang sama diklik ulang
     if ($activeHighlight?.itemType === type) {
       currentFilter.set('all');
       activeHighlight.set(null);
@@ -42,7 +41,7 @@
       source: 'filter',
     });
 
-    // Geser kamera papan ke kartu pertama yang disorot
+    // Auto-scroll ke kartu pertama yang disorot
     if (matching.length > 0) {
       setTimeout(() => {
         const el = document.getElementById(matching[0].id);
@@ -51,7 +50,7 @@
     }
   }
 
-  // Merapikan posisi seluruh kartu dalam susunan grid rapi dan broadcast ke user lain
+  // Susun ulang posisi kartu ke dalam grid rapi
   function organizeBoard() {
     const cardWidth = 140;
     const cardHeight = 175;
@@ -277,18 +276,18 @@
     </p>
   </div>
 
-  <!-- Area Pembungkus Papan & Panel Kategori Kiri -->
+  <!-- Kontainer utama board -->
   <div class="relative w-full max-w-5xl flex-grow flex flex-col items-center">
-    <!-- Panel Kategori Sisi Kiri (Gamepad Nintendo 8-Bit) -->
+    <!-- Gamepad kontrol kategori -->
     <CategoryGamepad />
 
-    <!-- Area papan kartu barang -->
+    <!-- Area papan kartu -->
     <div
       id="board-container"
       bind:this={boardContainer}
       class="board-container w-full flex-grow rounded-xl overflow-hidden relative shadow-[8px_8px_0px_rgba(0,0,0,0.5)] cursor-default"
     >
-    <!-- Tombol aksi lapor dan rapihkan posisi: Colorful Retro Action Buttons -->
+    <!-- Tombol aksi (lapor & rapihkan) -->
     <div class="absolute top-4 left-4 z-20 flex gap-2">
       <button
         onclick={openReportModal}
@@ -304,7 +303,7 @@
       </button>
     </div>
 
-    <!-- Tombol tab filter kategori barang: Controller Pod Sesuai Screenshot -->
+    <!-- Filter status hilang / ketemu -->
     <div class="absolute top-4 right-4 z-20 flex bg-white border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] rounded overflow-hidden select-none">
       <button
         type="button"

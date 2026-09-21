@@ -134,6 +134,30 @@
         "claimantNpm": "29292",
         "claimantContact": "29292",
         "createdAt": "2026-09-20T12:39:23.517Z"
+      },
+      {
+        "id": "claim1789992964483",
+        "text": "ada gantungan warna ijo",
+        "score": 35,
+        "confidence": "Rendah",
+        "reasoning": "Ciri-ciri yang disampaikan tidak sesuai dengan data barang.",
+        "status": "rejected",
+        "claimantName": "farhan",
+        "claimantNpm": "222",
+        "claimantContact": "111",
+        "createdAt": "2026-09-21T12:16:04.483Z"
+      },
+      {
+        "id": "claim1789992971644",
+        "text": "warna merah",
+        "score": 55,
+        "confidence": "Sedang",
+        "reasoning": "Ciri yang disampaikan masih bersifat umum dan belum memuat tanda pengenal unik yang spesifik.",
+        "status": "pending",
+        "claimantName": "farhan",
+        "claimantNpm": "222",
+        "claimantContact": "111",
+        "createdAt": "2026-09-21T12:16:11.644Z"
       }
     ],
     "resolved": false,
@@ -211,8 +235,33 @@
     "tag": "hp",
     "desc": "tangdur",
     "secretDetail": "ada wallpaper emyu",
-    "claims": [],
-    "resolved": false,
+    "claims": [
+      {
+        "id": "claim1789992832274",
+        "text": "wallpaper barbie",
+        "score": 35,
+        "confidence": "Rendah",
+        "reasoning": "Ciri-ciri yang disampaikan tidak sesuai dengan data barang.",
+        "status": "rejected",
+        "claimantName": "farhan",
+        "claimantNpm": "222",
+        "claimantContact": "111",
+        "createdAt": "2026-09-21T12:13:52.274Z"
+      },
+      {
+        "id": "claim1789992841387",
+        "text": "wallpaper emyu",
+        "score": 95,
+        "confidence": "Tinggi",
+        "reasoning": "Detail yang disampaikan pengklaim sangat spesifik dan cocok dengan data barang.",
+        "status": "approved",
+        "claimantName": "farhan",
+        "claimantNpm": "222",
+        "claimantContact": "111",
+        "createdAt": "2026-09-21T12:14:01.387Z"
+      }
+    ],
+    "resolved": true,
     "date": "2026-09-21",
     "time": "19:08",
     "reporterName": "farhan",
