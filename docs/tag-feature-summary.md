@@ -14,7 +14,7 @@ Fitur **Tag System & Board Highlight** dirancang untuk mengatasi penumpukan bara
    - Menyorot (*highlight*) kartu barang terkait dengan **animasi pulsing border keemasan & floating bounce**.
    - Meredupkan (*dimming*) kartu lain di papan menjadi abu-abu transparan (opacity 22%, grayscale 85%).
    - Menggeser kamera papan (*auto-scroll/focus*) langsung ke kartu yang dituju.
-5. **Tombol Kategori Bersih & Unhighlight Mudah:** Terdapat tombol kategori bersih bergaya konsol retro Nintendo di bawah judul papan (`GADGET`, `PAKAIAN`, `PERSONAL`, `DOKUMEN`) tanpa emote. Untuk membatalkan sorotan (unhighlight), pengguna cukup mengklik kembali tombol kategori aktif atau mengklik area papan di mana saja secara intuitif.
+5. **Gamepad Nintendo Retro Kategori di Sisi Kiri:** Tombol kategori bersih (`GADGET`, `PAKAIAN`, `PERSONAL`, `DOKUMEN`) dikemas dalam bentuk gamepad konsol retro Nintendo yang diletakkan di sisi kiri papan. Dilengkapi layar mini LCD Game Boy dot-matrix dengan tulisan `Kategori : [SEMUA / KATEGORI AKTIF]`, tombol karet `SELECT`/`START`, lubang speaker 8-bit, serta bodi bernuansa *warm cream* (`#fefce8`). Untuk membatalkan sorotan (unhighlight), pengguna cukup mengklik kembali tombol kategori aktif atau mengklik area papan di mana saja secara intuitif.
 
 ---
 
