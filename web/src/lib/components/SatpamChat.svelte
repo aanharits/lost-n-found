@@ -75,7 +75,10 @@
 
     // Sertakan tag dan kategori dalam data papan untuk Satpam AI
     const boardData = $items
-      .map((i) => `[${i.type.toUpperCase()} | ${i.category || 'Umum'} • ${i.tag || 'Lainnya'}] ${i.title} - Lokasi: ${i.desc}`)
+      .map(
+        (i) =>
+          `[${i.type.toUpperCase()} | ${i.category || "Umum"} • ${i.tag || "Lainnya"}] ${i.title} - Lokasi: ${i.desc}`,
+      )
       .join(" | ");
     const historyContext = chatHistory
       .slice(-6)
@@ -98,7 +101,9 @@
     // Menunggu balasan respon dari AI dengan batas timeout 12 detik
     const replyData = await new Promise<ChatReplyData>((resolve) => {
       const timeout = setTimeout(() => {
-        resolve({ reply: "Waduh, koneksi otakku lagi nge-lag nih. Coba lagi ya!" });
+        resolve({
+          reply: "Waduh, koneksi otakku lagi nge-lag nih. Coba lagi ya!",
+        });
       }, 12000);
 
       socket.once("chat_reply", (data: ChatReplyData) => {
@@ -119,15 +124,17 @@
         category: replyData.highlightCategory || null,
         tag: replyData.highlightTag || null,
         itemIds: replyData.highlightItemIds || [],
-        source: 'satpam',
+        source: "satpam",
       });
 
       // Geser kamera papan otomatis ke kartu pertama yang disorot
       if (replyData.highlightItemIds && replyData.highlightItemIds.length > 0) {
         setTimeout(() => {
-          const targetEl = document.getElementById(replyData.highlightItemIds![0]);
+          const targetEl = document.getElementById(
+            replyData.highlightItemIds![0],
+          );
           if (targetEl) {
-            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
           }
         }, 350);
       }
@@ -219,7 +226,11 @@
                   onclick={() => {
                     if (msg.firstItemId) {
                       const el = document.getElementById(msg.firstItemId);
-                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      if (el)
+                        el.scrollIntoView({
+                          behavior: "smooth",
+                          block: "center",
+                        });
                     }
                     chatOpen = false;
                   }}
@@ -312,12 +323,6 @@
       <span
         class="w-1.5 h-1.5 rounded-full bg-green-400 border border-[#0c0812] animate-pulse"
       ></span>
-      <span
-        class="font-pixel text-[8px] md:text-[9px] text-[#f8fafc] font-bold tracking-wide"
-        style="text-shadow: 1px 1px 0 #000;"
-      >
-        SATPAM AI
-      </span>
     </div>
   </button>
 </div>
