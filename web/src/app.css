@@ -201,6 +201,48 @@ body {
   overflow: hidden;
 }
 
+/* === Tag Badge Pill on Card Image === */
+.tag-pill {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: #1c120c;
+  color: #facc15;
+  font-size: 7px;
+  font-weight: bold;
+  padding: 1px 5px;
+  border: 1px solid #3d2314;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  box-shadow: 1px 1px 0px #0c0812;
+  z-index: 5;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* === Highlighted Card (Satpam AI or Tag Filter Focus) === */
+.item-card.highlighted-card {
+  z-index: 80 !important;
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 3px #facc15, 0 0 20px rgba(250, 204, 21, 0.75), 6px 8px 0px #140b05 !important;
+  animation: nintendoHighlightPulse 1.2s infinite ease-in-out !important;
+}
+
+.item-card.dimmed-card {
+  opacity: 0.22 !important;
+  filter: grayscale(85%) contrast(80%) !important;
+  pointer-events: none !important;
+  transition: opacity 0.35s ease, filter 0.35s ease !important;
+}
+
+@keyframes nintendoHighlightPulse {
+  0%, 100% {
+    transform: translateY(-4px) scale(1.02);
+  }
+  50% {
+    transform: translateY(-9px) scale(1.04);
+  }
+}
+
 /* === Resolved Card === */
 
 .item-card.resolved-card {

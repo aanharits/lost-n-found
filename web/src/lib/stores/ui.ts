@@ -23,3 +23,16 @@ export const socketConnected = writable<boolean>(false);
 
 // Store penghitung percobaan klaim untuk batas kesempatan
 export const claimAttemptCount = writable<number>(0);
+
+export interface HighlightState {
+  category?: string | null;
+  tag?: string | null;
+  itemIds: string[];
+  source?: 'satpam' | 'filter' | 'direct';
+}
+
+// Store sorotan aktif oleh Satpam AI atau filter tag di papan
+export const activeHighlight = writable<HighlightState | null>(null);
+
+// Store filter kategori tag (all, Gadget, Pakaian & Aksesoris, Personal, Dokumen & Kartu)
+export const activeCategoryFilter = writable<string>('all');

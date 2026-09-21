@@ -4,8 +4,10 @@ import { getItems, saveItemsToFile, type Item } from '../data/store.js';
 import { sanitizeItem } from '../data/sanitize.js';
 import { pickEmojiWithAI } from '../ai/verifyClaim.js';
 
+import { autoClassifyItem } from '../utils/tagClassifier.js';
+
 // Menangani pembuatan postingan barang baru dengan validasi dan sanitasi data
-export function handleItemAdd(io: SocketIOServer, socket: Socket, data: unknown): void {
+export async function handleItemAdd(io: SocketIOServer, socket: Socket, data: unknown): Promise<void> {
   const parsed = itemAddSchema.safeParse(data);
   if (!parsed.success) {
     console.warn('[Item] Add validation failed:', parsed.error.flatten());
@@ -13,7 +15,15 @@ export function handleItemAdd(io: SocketIOServer, socket: Socket, data: unknown)
   }
 
   const newItem = parsed.data as Item;
-  console.log(`[Item] New report from ${newItem.reporterName || 'Anon'}: ${newItem.title}`);
+
+  // Auto-klasifikasi category & tag jika belum ada
+  if (!newItem.tag || !newItem.category) {
+    const classified = await autoClassifyItem(newItem.title, newItem.desc);
+    newItem.category = classified.category;
+    newItem.tag = classified.tag;
+  }
+
+  console.log(`[Item] New report from ${newItem.reporterName || 'Anon'}: ${newItem.title} [${newItem.category} • ${newItem.tag}]`);
 
   // Simpan item baru ke penyimpanan internal
   const items = getItems();

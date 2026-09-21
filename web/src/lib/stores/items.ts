@@ -20,6 +20,8 @@ export interface Item {
   type: 'lost' | 'found';
   title: string;
   icon: string;
+  category?: string;
+  tag?: string;
   desc: string;
   claims: Claim[];
   resolved: boolean;

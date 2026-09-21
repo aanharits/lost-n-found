@@ -3,7 +3,7 @@
   import { fly, fade } from 'svelte/transition';
   import { items, type Item } from '$lib/stores/items.js';
   import { currentPlayer } from '$lib/stores/player.js';
-  import { currentScene, currentFilter, socketConnected, onlineCount, activeModal, claimTargetItemId, reviewTargetItemId } from '$lib/stores/ui.js';
+  import { currentScene, currentFilter, socketConnected, onlineCount, activeModal, claimTargetItemId, reviewTargetItemId, activeHighlight } from '$lib/stores/ui.js';
   import { getSocket } from '$lib/socket.js';
   import ItemCard from './ItemCard.svelte';
   import Avatar from './Avatar.svelte';
@@ -13,6 +13,34 @@
   import SatpamChat from './SatpamChat.svelte';
 
   let boardContainer: HTMLElement;
+
+  // Kategori sesuai desain tim untuk filter visual cepat di papan
+  const CATEGORY_TABS = [
+    { id: 'Gadget', label: 'GADGET', icon: '📱' },
+    { id: 'Pakaian & Aksesoris', label: 'PAKAIAN', icon: '🧥' },
+    { id: 'Personal', label: 'PERSONAL', icon: '🔑' },
+    { id: 'Dokumen & Kartu', label: 'DOKUMEN', icon: '🪪' },
+  ];
+
+  function toggleCategoryHighlight(catId: string) {
+    if ($activeHighlight?.category === catId) {
+      activeHighlight.set(null);
+    } else {
+      activeHighlight.set({
+        category: catId,
+        itemIds: [],
+        source: 'filter',
+      });
+      // Cari item pertama dengan kategori ini dan scroll ke posisinya
+      const firstItem = $items.find(i => i.category === catId);
+      if (firstItem) {
+        setTimeout(() => {
+          const el = document.getElementById(firstItem.id);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 150);
+      }
+    }
+  }
 
   // Filter daftar barang sesuai tab yang dipilih (all, lost, found)
   let filteredItems = $derived(
@@ -44,7 +72,7 @@
         const col = index % columns;
         const row = Math.floor(index / columns);
         const x = 20 + col * (cardWidth + gapX);
-        const y = 70 + row * (cardHeight + gapY);
+        const y = 105 + row * (cardHeight + gapY);
         posMap.set(item.id, { x, y });
 
         // Update DOM inline style langsung agar kartu beranimasi seketika
@@ -290,6 +318,52 @@
       >
         KETEMU
       </button>
+    </div>
+
+    <!-- Banner Sorotan Aktif (Dipicu oleh Satpam AI atau Klik Filter Tag) -->
+    {#if $activeHighlight}
+      <div
+        class="absolute top-3.5 left-1/2 -translate-x-1/2 z-25 flex items-center gap-2 bg-[#ffd700] border-2 border-[#1c120c] shadow-[3px_3px_0px_#0a060f] px-3 py-1.5 rounded-full select-none"
+        transition:fly={{ y: -10, duration: 200 }}
+      >
+        <span class="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+        <span class="font-pixel text-[8px] md:text-[9px] text-[#1c120c] font-bold tracking-wide">
+          MENYOROT: {($activeHighlight.tag || $activeHighlight.category || 'BARANG').toUpperCase().replace(/_/g, ' ')}
+        </span>
+        <button
+          type="button"
+          onclick={() => activeHighlight.set(null)}
+          class="bg-[#dc2626] hover:bg-[#b91c1c] active:translate-y-0.5 text-white font-pixel text-[7px] md:text-[8px] px-1.5 py-0.5 rounded border border-[#1c120c] shadow-[1px_1px_0px_#1c120c] cursor-pointer font-bold transition-all"
+        >
+          ✕ BATAL
+        </button>
+      </div>
+    {/if}
+
+    <!-- Baris Pill Filter Kategori 8-Bit Nintendo Game Style -->
+    <div class="absolute top-15 left-4 z-20 flex gap-1.5 overflow-x-auto max-w-[calc(100%-32px)] py-1 select-none">
+      {#each CATEGORY_TABS as cat}
+        <button
+          type="button"
+          onclick={() => toggleCategoryHighlight(cat.id)}
+          class="font-pixel text-[8px] md:text-[9px] px-2.5 py-1 rounded border-2 border-[#1c120c] shadow-[1px_1px_0px_#1c120c] cursor-pointer whitespace-nowrap transition-all font-bold flex items-center gap-1
+            {$activeHighlight?.category === cat.id
+              ? 'bg-[#ffd700] text-[#1c120c] translate-y-0.5 shadow-none'
+              : 'bg-[#fefce8] text-[#1c120c] hover:bg-[#fef08a]'}"
+        >
+          <span>{cat.icon}</span>
+          <span>{cat.label}</span>
+        </button>
+      {/each}
+      {#if $activeHighlight}
+        <button
+          type="button"
+          onclick={() => activeHighlight.set(null)}
+          class="font-pixel text-[8px] md:text-[9px] px-2 py-1 rounded border-2 border-[#1c120c] bg-white text-red-600 hover:bg-red-50 shadow-[1px_1px_0px_#1c120c] cursor-pointer whitespace-nowrap font-bold"
+        >
+          RESET
+        </button>
+      {/if}
     </div>
 
     <!-- Area render kartu barang -->
