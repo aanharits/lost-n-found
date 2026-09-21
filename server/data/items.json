@@ -1,1 +1,385 @@
-[]
+[
+  {
+    "id": "item1790002539252",
+    "type": "lost",
+    "title": "Dompet",
+    "icon": "👛",
+    "category": "Personal",
+    "tag": "dompet",
+    "desc": "hilang di kantin",
+    "commitments": [
+      "1163940702880857868584909585011574813328453321549600583757484870625060762914",
+      "17842175209219767383853158203023023288802969941100076018298919956234147189629",
+      "7115581852292531745213612413275537209611539130401230196753713257554155659260"
+    ],
+    "claims": [
+      {
+        "id": "claim1790002899328",
+        "text": "ZKP Proof Verified (Hidden)",
+        "score": 100,
+        "confidence": "Tinggi",
+        "reasoning": "Zero-Knowledge Proof Valid",
+        "status": "approved",
+        "claimantName": "ghiyash",
+        "claimantNpm": "2354363",
+        "claimantContact": "08243242532",
+        "createdAt": "2026-09-21T15:01:39.328Z"
+      }
+    ],
+    "status": "resolved",
+    "date": "2026-09-21",
+    "time": "21:54",
+    "reporterName": "AAN KOBEL",
+    "reporterNpm": "594032492",
+    "reporterContact": "08132344",
+    "x": 27,
+    "y": 76
+  },
+  {
+    "id": "item1790003000054",
+    "type": "lost",
+    "title": "handphone",
+    "icon": "📱",
+    "category": "Gadget",
+    "tag": "hp",
+    "desc": "kelas j1",
+    "commitments": [
+      "10654851291809139858649456140840251812844692191991116058690081183445912458122",
+      "18786897623427439571913353310579063165860900024851276191547776268662699618522",
+      "17197481404932731875420664742767075742696641170085695118611249969262270884573"
+    ],
+    "claims": [
+      {
+        "id": "claim1790003024303",
+        "text": "ZKP Proof Verified (Hidden)",
+        "score": 100,
+        "confidence": "Tinggi",
+        "reasoning": "Zero-Knowledge Proof Valid",
+        "status": "approved",
+        "claimantName": "ghiyash",
+        "claimantNpm": "2354363",
+        "claimantContact": "08243242532",
+        "createdAt": "2026-09-21T15:03:44.303Z"
+      }
+    ],
+    "status": "resolved",
+    "date": "2026-09-21",
+    "time": "22:02",
+    "reporterName": "AAN KOBEL",
+    "reporterNpm": "594032492",
+    "reporterContact": "08132344",
+    "x": 191,
+    "y": 72
+  },
+  {
+    "id": "item1790003072492",
+    "type": "lost",
+    "title": "tumbler",
+    "icon": "🥤",
+    "category": "Personal",
+    "tag": "tempat_makan",
+    "desc": "perpus",
+    "commitments": [
+      "8598865463648154620089096827864554601941017944858635261298789534721609216779",
+      "17992724784973472433945363782581618278503788022022699725685325947958004054596",
+      "20843551594286478989629750272661871222926411681702911560098334101005154670006"
+    ],
+    "claims": [
+      {
+        "id": "claim1790003261208",
+        "text": "ZKP Proof Verified (Hidden)",
+        "score": 100,
+        "confidence": "Tinggi",
+        "reasoning": "Zero-Knowledge Proof Valid",
+        "status": "approved",
+        "claimantName": "ghiyash",
+        "claimantNpm": "2354363",
+        "claimantContact": "08243242532",
+        "createdAt": "2026-09-21T15:07:41.208Z"
+      }
+    ],
+    "status": "resolved",
+    "date": "2026-09-21",
+    "time": "22:04",
+    "reporterName": "ghiyash",
+    "reporterNpm": "2354363",
+    "reporterContact": "08243242532",
+    "x": 351,
+    "y": 68
+  },
+  {
+    "id": "item1790003644644",
+    "type": "lost",
+    "title": "charger",
+    "icon": "🔌",
+    "category": "Gadget",
+    "tag": "casan",
+    "desc": "taman",
+    "commitments": [
+      "17197481404932731875420664742767075742696641170085695118611249969262270884573",
+      "7793834580763230373044482253373172888063380510334091892804916622877711429270",
+      "18382620003107439476349123678041896804168362846237715358735973237547888534889"
+    ],
+    "claims": [
+      {
+        "id": "claim1790003672260",
+        "text": "ZKP Proof Verified (Hidden)",
+        "score": 100,
+        "confidence": "Tinggi",
+        "reasoning": "Zero-Knowledge Proof Valid",
+        "status": "approved",
+        "claimantName": "ghiyash",
+        "claimantNpm": "2354363",
+        "claimantContact": "08243242532",
+        "createdAt": "2026-09-21T15:14:32.260Z"
+      }
+    ],
+    "status": "resolved",
+    "date": "2026-09-21",
+    "time": "22:13",
+    "reporterName": "aann yogs",
+    "reporterNpm": "1243432423",
+    "reporterContact": "08392047023",
+    "x": 512,
+    "y": 71
+  },
+  {
+    "id": "item1790004712519",
+    "type": "found",
+    "title": "headset",
+    "icon": "🎧",
+    "category": "Gadget",
+    "tag": "tws",
+    "desc": "perpus",
+    "commitments": [
+      "9645076542127977091858658005829594339587158954950003071358604969379591379364",
+      "20201889461729282352301783852884545547006587285313215967089350193103252641988",
+      "2405049377845129086385447275889355974749501049157219294757135127027557713123"
+    ],
+    "claims": [
+      {
+        "id": "claim1790004971783",
+        "text": "ZKP Proof Verified (Hidden)",
+        "score": 100,
+        "confidence": "Tinggi",
+        "reasoning": "Zero-Knowledge Proof Valid",
+        "status": "approved",
+        "claimantName": "ghiyash",
+        "claimantNpm": "2354363",
+        "claimantContact": "08243242532",
+        "createdAt": "2026-09-21T15:36:11.783Z"
+      }
+    ],
+    "status": "resolved",
+    "date": "2026-09-21",
+    "time": "22:31",
+    "reporterName": "aann yogs",
+    "reporterNpm": "1243432423",
+    "reporterContact": "08392047023",
+    "x": 678,
+    "y": 71
+  },
+  {
+    "id": "item1790004808954",
+    "type": "lost",
+    "title": "tws",
+    "icon": "🎧",
+    "category": "Gadget",
+    "tag": "tws",
+    "desc": "tangga darurat",
+    "commitments": [
+      "18786897623427439571913353310579063165860900024851276191547776268662699618522",
+      "407120329954984268779855271815067922260188007565224695378234271082419582058",
+      "10740221460572089623416270502073910624080831540157572803726660583564185806101"
+    ],
+    "claims": [
+      {
+        "id": "claim1790005027752",
+        "text": "ZKP Proof Verified (Hidden)",
+        "score": 100,
+        "confidence": "Tinggi",
+        "reasoning": "Zero-Knowledge Proof Valid",
+        "status": "approved",
+        "claimantName": "aann yogs",
+        "claimantNpm": "1243432423",
+        "claimantContact": "08392047023",
+        "createdAt": "2026-09-21T15:37:07.752Z"
+      }
+    ],
+    "status": "resolved",
+    "date": "2026-09-21",
+    "time": "22:32",
+    "reporterName": "aann yogs",
+    "reporterNpm": "1243432423",
+    "reporterContact": "08392047023",
+    "x": 844,
+    "y": 73
+  },
+  {
+    "id": "item1790005466152",
+    "type": "lost",
+    "title": "handphone",
+    "icon": "📱",
+    "category": "Gadget",
+    "tag": "hp",
+    "desc": "Lantai 3",
+    "commitments": [
+      "18786897623427439571913353310579063165860900024851276191547776268662699618522",
+      "7184179228562331322248931083946620336968872175439853277147052732210977485903",
+      "6257741373229456392678616386654469718825965813612791984308278969649861923994"
+    ],
+    "claims": [
+      {
+        "id": "claim1790005494863",
+        "text": "ZKP Proof Verified (Hidden)",
+        "score": 100,
+        "confidence": "Tinggi",
+        "reasoning": "Zero-Knowledge Proof Valid",
+        "status": "approved",
+        "claimantName": "ghiyash",
+        "claimantNpm": "2354363",
+        "claimantContact": "08243242532",
+        "createdAt": "2026-09-21T15:44:54.863Z"
+      }
+    ],
+    "status": "resolved",
+    "date": "2026-09-21",
+    "time": "22:43",
+    "reporterName": "aann yogs",
+    "reporterNpm": "1243432423",
+    "reporterContact": "08392047023",
+    "x": 30,
+    "y": 274
+  },
+  {
+    "id": "item1790005672458",
+    "type": "lost",
+    "title": "dompet",
+    "icon": "👛",
+    "category": "Personal",
+    "tag": "dompet",
+    "desc": "kantin",
+    "commitments": [
+      "10851787417442982628709380416562982534439911721329284063381900011745205707749",
+      "17842175209219767383853158203023023288802969941100076018298919956234147189629",
+      "7115581852292531745213612413275537209611539130401230196753713257554155659260"
+    ],
+    "claims": [
+      {
+        "id": "claim1790005684393",
+        "text": "ZKP Proof Verified (Hidden)",
+        "score": 100,
+        "confidence": "Tinggi",
+        "reasoning": "Zero-Knowledge Proof Valid",
+        "status": "approved",
+        "claimantName": "ghiyash",
+        "claimantNpm": "2354363",
+        "claimantContact": "08243242532",
+        "createdAt": "2026-09-21T15:48:04.393Z"
+      }
+    ],
+    "status": "resolved",
+    "date": "2026-09-21",
+    "time": "22:47",
+    "reporterName": "aann yogs",
+    "reporterNpm": "1243432423",
+    "reporterContact": "08392047023",
+    "x": 195,
+    "y": 284
+  },
+  {
+    "id": "item1790006401163",
+    "type": "lost",
+    "title": "celana",
+    "icon": "👖",
+    "category": "Pakaian & Aksesoris",
+    "tag": "kaos_kaki",
+    "desc": "kamar mandi lantai 2",
+    "commitments": [
+      "12659546866282643061831284367141475862809065913742510095175160031545655174129",
+      "68387533254858876229596748923253847871989586793564166173022726175819155480",
+      "12600776289497486054515167541315334483377765667948630920612301028957226828087"
+    ],
+    "claims": [
+      {
+        "id": "claim1790006420406",
+        "text": "ZKP Proof Verified (Hidden)",
+        "score": 100,
+        "confidence": "Tinggi",
+        "reasoning": "Zero-Knowledge Proof Valid",
+        "status": "approved",
+        "claimantName": "ghiyash",
+        "claimantNpm": "2354363",
+        "claimantContact": "08243242532",
+        "createdAt": "2026-09-21T16:00:20.406Z"
+      }
+    ],
+    "status": "resolved",
+    "date": "2026-09-21",
+    "time": "22:59",
+    "reporterName": "aann yogs",
+    "reporterNpm": "1243432423",
+    "reporterContact": "08392047023",
+    "x": 522,
+    "y": 285
+  },
+  {
+    "id": "item1790006455354",
+    "type": "found",
+    "title": "baju",
+    "icon": "👕",
+    "category": "Pakaian & Aksesoris",
+    "tag": "lainnya",
+    "desc": "lapangan",
+    "commitments": [
+      "16461480624312113114390443266181580034630982337938007881432369269028617023459",
+      "10654851291809139858649456140840251812844692191991116058690081183445912458122",
+      "7115581852292531745213612413275537209611539130401230196753713257554155659260"
+    ],
+    "claims": [],
+    "status": "open",
+    "date": "2026-09-21",
+    "time": "23:00",
+    "reporterName": "aann yogs",
+    "reporterNpm": "1243432423",
+    "reporterContact": "08392047023",
+    "x": 362,
+    "y": 282
+  },
+  {
+    "id": "item1790006551712",
+    "type": "found",
+    "title": "baju",
+    "icon": "👕",
+    "category": "Pakaian & Aksesoris",
+    "tag": "jaket",
+    "desc": "lapangan",
+    "commitments": [
+      "16461480624312113114390443266181580034630982337938007881432369269028617023459",
+      "10654851291809139858649456140840251812844692191991116058690081183445912458122",
+      "5908465719064890577633837596222438236275882820492427877005853484857872376057"
+    ],
+    "claims": [
+      {
+        "id": "claim1790006596133",
+        "text": "ZKP Proof Verified (Hidden)",
+        "score": 100,
+        "confidence": "Tinggi",
+        "reasoning": "Zero-Knowledge Proof Valid",
+        "status": "approved",
+        "claimantName": "ghiyash",
+        "claimantNpm": "2354363",
+        "claimantContact": "08243242532",
+        "createdAt": "2026-09-21T16:03:16.133Z"
+      }
+    ],
+    "status": "resolved",
+    "date": "2026-09-21",
+    "time": "23:02",
+    "reporterName": "aann yogs",
+    "reporterNpm": "1243432423",
+    "reporterContact": "08392047023",
+    "x": 451.94341901854415,
+    "y": 201.55888230920704
+  }
+]
