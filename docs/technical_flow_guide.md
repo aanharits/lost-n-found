@@ -3,6 +3,9 @@
 > **Scope:** Panduan teknis konkret untuk menyelesaikan 4 problem utama yang ditemukan di analisis arsitektur.
 > Baca [`analisis_tri_layer_lock.md`](./analisis_tri_layer_lock.md) dulu sebelum dokumen ini.
 
+> [!NOTE]
+> **Status dokumen:** Dokumen ini adalah **cetak biru desain** (bagaimana masalah diselesaikan secara konsep). Sebagian nama fungsi, path file, dan model LLM di contoh kode **berbeda dari implementasi final**. Bagian yang sudah disinkronkan dengan kode aktual ditandai dengan blok `Catatan implementasi`. Lokasi file final ada di `server/src/zk/`, bukan `server/src/utils/`.
+
 ---
 
 ## Problem Map
@@ -72,6 +75,8 @@ template OwnershipProof() {
 component main {public [hash_1, hash_2, hash_3]} = OwnershipProof();
 ```
 
+> **Catatan implementasi:** Circuit final ada di `server/zk/circuits/ownership_proof.circom`. Baris `include` aktual adalah `include "../../node_modules/circomlib/circuits/poseidon.circom";`. Sisa logika template identik dengan di atas. Konstanta jumlah keyword didefinisikan sebagai `MAX_KEYWORDS = 3` di `server/src/zk/normalizeKeywords.ts` dan harus selalu sinkron dengan circuit.
+
 **Catatan untuk juri:** Simplifikasi ini justru **lebih secure** — threshold parsial membuka attack surface di mana attacker hanya perlu menebak sebagian keyword. AND penuh = zero partial credit.
 
 ---
@@ -94,16 +99,19 @@ Padahal pengklaim tahu kedua keyword.
 Ini adalah **canonical ordering**. Aturannya: sebelum di-hash, keywords selalu di-sort A-Z. Implementasi wajib sama persis di sisi pelapor (saat report) dan pengklaim (saat claim).
 
 ```typescript
-// utils/normalizeKeywords.ts
-// ⚠️ FILE INI HARUS DIPAKAI DI KEDUA SISI — backend & frontend
+// server/src/zk/normalizeKeywords.ts
+// ⚠️ Konsepnya harus sama di kedua sisi — backend (report) & frontend (claim).
+// Catatan: saat ini belum ada file shared di frontend; logika field element
+// di-inline langsung di ClaimModal.svelte (lihat Problem 3).
 
 /**
  * Normalisasi array keyword menjadi canonical form:
  * 1. Lowercase semua
  * 2. Trim whitespace
- * 3. Sort A-Z
- * 4. Deduplikasi
- * 5. Pad ke panjang tetap (MAX_KEYWORDS) dengan string dummy
+ * 3. Filter kosong & buang placeholder dummy
+ * 4. Sort A-Z
+ * 5. Deduplikasi
+ * 6. Pad ke panjang tetap (MAX_KEYWORDS) dengan string dummy
  *    supaya circuit selalu terima input jumlah sama
  */
 export const MAX_KEYWORDS = 3;
@@ -112,7 +120,7 @@ export const DUMMY_KEYWORD = "__empty__";
 export function normalizeKeywords(keywords: string[]): string[] {
   const cleaned = keywords
     .map((k) => k.toLowerCase().trim())
-    .filter((k) => k.length > 0);
+    .filter((k) => k.length > 0 && k !== DUMMY_KEYWORD);
 
   const unique = [...new Set(cleaned)];
   const sorted = unique.sort(); // A-Z alphabetical
@@ -169,7 +177,7 @@ commitment disimpan di server
 **Untuk typo** (misal "stcker" vs "stiker"): ini **tidak bisa** diselesaikan di layer ZKP. Typo harus diselesaikan di Layer 2 (LLM extractor) sebelum masuk ke normalization. ZKP bukan spell-checker.
 
 ```typescript
-// utils/fieldElement.ts
+// server/src/zk/fieldElement.ts
 import { keccak256 } from "js-sha3";
 
 export const BN254_FIELD_SIZE = BigInt(
@@ -183,6 +191,8 @@ export function stringToFieldElement(input: string): bigint {
   return BigInt("0x" + hashHex) % BN254_FIELD_SIZE;
 }
 ```
+
+> **Catatan implementasi:** Di sisi backend, `stringToFieldElement` mengembalikan `bigint`. Di sisi frontend, versi yang di-inline di `ClaimModal.svelte` mengembalikan `string` (memakai `keccak_256` dari `js-sha3`, bukan `keccak256`) agar cocok sebagai input JSON circuit. Nilai numeriknya identik (sama-sama `BigInt(hex) % BN254_FIELD_SIZE`).
 
 ---
 
@@ -221,117 +231,80 @@ Bukan pilih antara LLM atau NLP deterministik — **gabungkan keduanya** dalam u
 ### Stage 1: NLP Deterministik (Pre-processing)
 
 ```typescript
-// utils/nlpPreprocess.ts
+// server/src/zk/nlpPreprocess.ts
 
 // Stopword Bahasa Indonesia — extend sesuai kebutuhan
-const STOPWORDS_ID = new Set([
-  "ada", "di", "dan", "yang", "ini", "itu", "ke", "dari",
-  "dengan", "untuk", "pada", "adalah", "kami", "saya", "nya",
-  "si", "sang", "para", "tersebut", "juga", "sudah", "belum",
-  "bisa", "kalau", "jika", "sama", "aja", "deh", "sih", "tuh",
-  "kayak", "kayaknya", "kira", "mungkin", "seperti", "mirip",
-  "anak", "mas", "pak", "bu", "kak"
+const INDONESIAN_STOPWORDS = new Set([
+  "ada", "itu", "ini", "sama", "yang", "di", "ke", "dari",
+  "pada", "dalam", "untuk", "dengan", "dan", "atau", "tapi",
+  "karena", "sebab", "jika", "kalau", "biar", "supaya",
+  "kayaknya", "sepertinya", "mungkin", "paling", "banget",
+  "sekali", "juga", "cuma", "hanya", "terus", "lalu",
+  "kemudian", "setelah", "sebelum", "waktu", "saat",
+  "saya", "aku", "kamu", "dia", "mereka", "kita", "kami",
+  "tas", "dompet", "hp", "handphone", "botol", "minum",
+  "warna", "warnanya", "bentuk", "bentuknya", "merk", "merknya",
+  "kelihatan", "kelihatannya", "soalnya", "keliatannya", "keliatan",
+  "punya", "kalo", "yg", "dgn", "utk", "udah", "sudah", "belum"
 ]);
 
 export function preprocessText(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")  // hapus karakter non-alfanumerik
-    .split(/\s+/)
-    .filter((word) => word.length > 2 && !STOPWORDS_ID.has(word))
-    .join(" ");
+  if (!text) return "";
+  const cleaned = text.toLowerCase().replace(/[^a-z\s]/g, " ");
+  const tokens = cleaned.split(/\s+/).filter(Boolean);
+  return tokens.filter((token) => !INDONESIAN_STOPWORDS.has(token)).join(" ");
 }
 ```
+
+> **Catatan implementasi:** Implementasi aktual **tidak** memfilter berdasarkan panjang kata (contoh dokumen lama memakai `word.length > 2`), melainkan hanya membuang stopword eksplisit. Regex juga `[^a-z\s]` sehingga angka ikut dibuang.
 
 ### Stage 2: LLM Structured Extractor (Groq API)
 
 **Ini adalah prompt yang harus di-pin dan tidak boleh berubah setelah sistem live:**
 
 ```typescript
-// utils/keywordExtractor.ts
-import axios from "axios";
+// server/src/zk/keywordExtractor.ts
+// Groq kini dipanggil lewat helper terpusat server/src/ai/groqClient.ts
+// (callGroqJson). Model & prompt asli ada di bawah.
 
-const EXTRACTOR_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"; // pin versi model
-const EXTRACTOR_SYSTEM_PROMPT = `Kamu adalah sistem ekstraksi keyword untuk barang hilang/temuan.
-Tugasmu: ekstrak kata kunci fisik yang bisa diverifikasi dari deskripsi barang.
+const EXTRACTOR_MODEL = "qwen/qwen3.8-27b"; // dipin di ai/groqClient.ts (GROQ_MODEL)
+const EXTRACTOR_SYSTEM_PROMPT = "You are a deterministic NLP extractor. Output valid JSON strictly containing a \"keywords\" array of strings.";
 
-ATURAN KETAT:
-1. Output HANYA JSON: {"keywords": ["...", "..."]}
-2. Maksimal 3 keyword
-3. Hanya noun/adjektif fisik (warna, bahan, nama merek, ornamen, stiker, dll)
-4. Tidak boleh: kata kerja, kata sifat emosional, kata umum (besar, kecil, bagus)
-5. Lowercase semua
-6. Tidak ada duplikat
-7. Kalau input tidak ada ciri fisik spesifik, kembalikan: {"keywords": []}
+// Prompt user (ringkas) yang dipakai keywordExtractor.ts:
+// "Kamu adalah AI NLP Extractor. Tugasmu mengekstrak maksimal MAX_KEYWORDS
+//  kata kunci berupa ciri fisik spesifik benda dari teks.
+//  ATURAN: HANYA ambil objek/warna/motif/brand/bahan spesifik; jangan ubah kata;
+//  output HANYA JSON: { \"keywords\": [\"ciri1\", \"ciri2\"] }"
 
-CONTOH:
-Input: "ada stiker anak geologi di belakang sama jas hujan plastik warna biru"
-Output: {"keywords": ["biru", "geologi", "plastik"]}
-
-Input: "helmnya saya yang hilang kemarin"
-Output: {"keywords": []}`;
-
-export async function extractKeywordsWithLLM(
-  preprocessedText: string
-): Promise<string[]> {
-  try {
-    const response = await axios.post(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        model: EXTRACTOR_MODEL,
-        messages: [
-          { role: "system", content: EXTRACTOR_SYSTEM_PROMPT },
-          { role: "user", content: preprocessedText },
-        ],
-        temperature: 0,              // ⚠️ WAJIB 0 untuk determinisme
-        response_format: { type: "json_object" },
-        seed: 42,                    // seed untuk reproducibility (jika didukung)
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        timeout: 8000,
-      }
-    );
-
-    const content = response.data.choices[0].message.content;
-    const parsed = JSON.parse(content);
-    return Array.isArray(parsed.keywords) ? parsed.keywords : [];
-  } catch {
-    return []; // fallback: kosong, tidak crash
-  }
-}
+// Panggilan aktual (via groqClient):
+//   callGroqJson({ messages, temperature: 0, timeoutMs: 8000 })
+// temperature WAJIB 0 untuk determinisme.
 ```
+
+> **Catatan implementasi:** Dokumen lama menyebut model `meta-llama/llama-4-scout-17b-16e-instruct` dan parameter `seed: 42`. Implementasi final memakai model **`qwen/qwen3.8-27b`** (didefinisikan sebagai `GROQ_MODEL` di `server/src/ai/groqClient.ts`) dan **tidak** memakai `seed`. Prompt asli berbeda dari contoh lama; lihat prompt di `server/src/zk/keywordExtractor.ts`.
 
 ### Stage 3: Final Normalization (deterministik)
 
 ```typescript
-// Pipeline lengkap — entry point yang dipakai di report & claim
-import { preprocessText } from "./nlpPreprocess";
-import { extractKeywordsWithLLM } from "./keywordExtractor";
-import { normalizeKeywords } from "./normalizeKeywords";
+// SKETSA PIPELINE (belum menjadi satu fungsi bernama getCanonicalKeywords).
+// Implementasi aktual: extractKeywordsWithAI() di zk/keywordExtractor.ts
+// sudah menjalankan Stage 1 (preprocessText) -> Stage 2 (LLM) -> Stage 3
+// (normalizeKeywords) secara internal dan mengembalikan array canonical.
 
-export async function getCanonicalKeywords(rawInput: string): Promise<string[]> {
-  // Stage 1: NLP pre-processing
-  const preprocessed = preprocessText(rawInput);
+import { preprocessText } from "./zk/nlpPreprocess";
+import { extractKeywordsWithAI } from "./zk/keywordExtractor";
+import { normalizeKeywords } from "./zk/normalizeKeywords";
 
-  // Stage 2: LLM extraction (handle sinonim & bahasa informal)
-  const extracted = await extractKeywordsWithLLM(preprocessed);
-
-  // Stage 3: Final normalization (sort, dedup, pad)
-  return normalizeKeywords(extracted);
-}
-
-// Pemakaian di report phase:
-// const keywords = await getCanonicalKeywords("ada stiker geologi di belakang helm");
-// → ["__empty__", "geologi", "stiker"]
-
-// Pemakaian di claim phase (input berbeda, output harus sama):
-// const keywords = await getCanonicalKeywords("helmnya ada sticker anak geologi");
-// → ["__empty__", "geologi", "stiker"]  ← identik ✅
+// Pemakaian aktual di report phase (server/src/handlers/report.handler.ts):
+//   const keywords = await extractKeywordsWithAI(inputData.secretDetail || '');
+//
+// Pemakaian aktual di claim phase (frontend ClaimModal.svelte):
+//   fetch('/api/extract') -> extractKeywordsWithAI di backend -> keywords
+//   (CATATAN: claim.handler.ts sendiri TIDAK menjalankan pipeline ini,
+//    ia hanya memverifikasi proof ZKP.)
 ```
+
+> **Catatan implementasi:** Fungsi terpadu `getCanonicalKeywords()` yang disebut di dokumen lama **tidak ada** di kode final. Peran itu dipegang `extractKeywordsWithAI()` (yang di dalamnya memanggil `preprocessText` → Groq → `normalizeKeywords`). Jalur report memanggilnya langsung; jalur claim memanggilnya lewat endpoint `POST /api/extract` dari frontend, bukan dari `claim.handler.ts`.
 
 ---
 
@@ -359,7 +332,7 @@ Pelapor: "ada stiker geologi dan jas hujan plastik biru"
          [Poseidon Hash masing-masing]
          [H1, H2, H3]
                     ↓
-         Server simpan: { commitment: [H1, H2, H3], itemId }
+         Server simpan: { commitments: [H1, H2, H3], itemId }
          Keyword asli DIBUANG setelah hashing
 
 ══════════════════════════════════════════════════════════
@@ -368,16 +341,15 @@ Pelapor: "ada stiker geologi dan jas hujan plastik biru"
 
 Pengklaim: "helmnya ada sticker anak Geologi sama jas ujan biru"
                     ↓
-         [Stage 1: NLP Preprocess]
-         "sticker geologi ujan biru"
+         [Frontend POST /api/extract]
+         Backend menjalankan Stage 1 + 2 + 3
+         (preprocess → LLM → normalize)
                     ↓
-         [Stage 2: LLM Extract]
          ["biru", "geologi", "plastik"]  ← LLM tahu "sticker"="stiker"
-                    ↓                        dan inferensi konteks "jas ujan"
-         [Stage 3: normalize]
-         sort A-Z + pad → ["biru", "geologi", "plastik"]
+         (keyword canonical diterima frontend;          dan "jas ujan"
+          keyword TIDAK dikirim balik saat claim)
                     ↓
-         [stringToFieldElement]
+         [stringToFieldElement - inline di ClaimModal.svelte]
          [F("biru"), F("geologi"), F("plastik")]
                     ↓
          [snarkjs.groth16.fullProve()]
@@ -385,7 +357,7 @@ Pengklaim: "helmnya ada sticker anak Geologi sama jas ujan biru"
            secret_1: F("biru"),
            secret_2: F("geologi"),
            secret_3: F("plastik"),
-           hash_1: H1,  ← dari server
+           hash_1: H1,  ← dari `commitments` item (store server)
            hash_2: H2,
            hash_3: H3
          }
@@ -394,37 +366,44 @@ Pengklaim: "helmnya ada sticker anak Geologi sama jas ujan biru"
          (keyword TIDAK dikirim)
                     ↓
          [Server: snarkjs.groth16.verify()]
-         Valid → masuk queue Gale-Shapley ✅
+         Valid → item status jadi `disputed`, masuk Dispute Window (1 menit) ✅
          Invalid → Reject ❌
 ```
 
 ---
 
-## Struktur File Rekomendasi
+## Struktur File Aktual (vs Rekomendasi Awal)
+
+> **Catatan implementasi:** Struktur di bawah adalah yang **benar-benar ada** di repo. Berbeda dari rekomendasi awal (folder `utils/` dan shared utils frontend) yang tidak pernah dibuat.
 
 ```
 server/src/
-├── utils/
-│   ├── normalizeKeywords.ts   ← Problem 1, 2, 3
+├── zk/
+│   ├── normalizeKeywords.ts   ← Problem 1, 2, 3 (MAX_KEYWORDS, DUMMY_KEYWORD)
 │   ├── fieldElement.ts        ← Problem 3
 │   ├── nlpPreprocess.ts       ← Problem 4 Stage 1
-│   └── keywordExtractor.ts    ← Problem 4 Stage 2
+│   ├── keywordExtractor.ts    ← Problem 4 Stage 2 (via ai/groqClient)
+│   ├── poseidon.ts            ← singleton Poseidon (commitment)
+│   ├── disputeTimer.ts        ← Layer 3 dispute window
+│   └── resolveDisputes.ts     ← Layer 3 FCFS resolver
+├── ai/
+│   ├── groqClient.ts          ← client Groq terpusat
+│   └── verifyClaim.ts         ← chat/emoji AI (bukan verifikasi ZKP)
 ├── handlers/
-│   ├── report.handler.ts      ← pakai getCanonicalKeywords()
-│   └── claim.handler.ts       ← pakai getCanonicalKeywords()
-└── zk/
-    └── verification_key.json  ← output trusted setup
+│   ├── report.handler.ts      ← memanggil extractKeywordsWithAI + poseidon
+│   └── claim.handler.ts       ← verifikasi proof ZKP (tanpa pipeline NLP)
+└── data/store.ts              ← data item + commitments
 
 web/src/lib/
-├── utils/
-│   ├── normalizeKeywords.ts   ← SAMA PERSIS dengan server (shared logic)
-│   └── fieldElement.ts        ← SAMA PERSIS dengan server
-└── actions/
-    └── zkpProver.ts           ← fullProve() wrapper
+├── components/ClaimModal.svelte  ← fullProve() + stringToFieldElement (inline)
+└── socket.ts                     ← socket event handler
 ```
 
 > [!IMPORTANT]
-> `normalizeKeywords.ts` dan `fieldElement.ts` harus **100% identik** antara versi server dan frontend. Cara terbaik: jadikan satu package shared (`packages/shared/`) atau copy paste manual dan pastikan tidak ada perbedaan satu karakter pun.
+> **Shared package belum diimplementasikan.** Rekomendasi awal (`web/src/lib/utils/normalizeKeywords.ts`, `fieldElement.ts`, `actions/zkpProver.ts`) **tidak ada**. Saat ini:
+> - Logika `stringToFieldElement` di frontend di-inline di `ClaimModal.svelte:107-116`.
+> - Normalisasi keyword di sisi klaim dilakukan oleh **backend** via `/api/extract` (frontend tidak menormalisasi sendiri).
+> - Karena itu, `normalizeKeywords.ts`/`fieldElement.ts` backend dan inline frontend **tidak** berupa file shared tunggal. Menjadikannya `packages/shared/` tetap rekomendasi yang baik untuk mencegah drift.
 
 > [!WARNING]
 > LLM extractor (Stage 2) tidak bisa dijamin 100% deterministik meskipun temperature=0. Untuk kasus edge yang LLM-nya berbeda output, sistem akan menghasilkan false negative (pengklaim yang sebenarnya tahu keyword tapi gagal). Ini acceptable trade-off untuk PoC hackathon — lebih baik false negative daripada false positive (orang yang tidak tahu lolos).

@@ -13,8 +13,10 @@ Ini menyelesaikan problem *exact string match* dengan tepat. Circuit dengan mult
 ```
 Public:  [Hash_1, Hash_2, Hash_3]
 Private: [kata_1, kata_2, kata_3]
-Constraint: SHA256(kata_1)==Hash_1 AND SHA256(kata_2)==Hash_2 ...
+Constraint: Poseidon(kata_1)==Hash_1 AND Poseidon(kata_2)==Hash_2 ...
 ```
+
+> **Catatan implementasi:** Contoh di atas memakai `SHA256` sebagai ilustrasi konsep. Implementasi final proyek ini memakai **Poseidon** (lihat `server/zk/circuits/ownership_proof.circom`) karena jauh lebih murah sebagai constraint di dalam circuit ZKP.
 
 ### ⚠️ Problem Baru yang Muncul
 
@@ -29,6 +31,8 @@ totalMatch <== match1 + match2 + match3;
 // threshold: totalMatch >= 2 → valid
 // Tapi ">=" di circuit butuh range proof → constraint meledak
 ```
+
+> **Keputusan final:** Untuk PoC ini, threshold 2-dari-3 **tidak dipakai**. Circuit `ownership_proof.circom` memakai **AND penuh**: ketiga keyword harus cocok semua (`hash_1 === h1.out AND hash_2 === h2.out AND hash_3 === h3.out`). Slot keyword yang tidak terpakai diisi *dummy* `__empty__` secara konsisten di kedua sisi, sehingga tidak diperlukan *range proof*.
 
 **Masalah 2: Order Sensitivity**
 

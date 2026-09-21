@@ -27,16 +27,24 @@ Untuk memastikan keamanan ZKP, kita membuang penyimpanan teks mentah rahasia di 
 Sistem ZKP membutuhkan input *string* yang identik agar *Hash*-nya sama. Kita menggunakan AI untuk melakukan standardisasi kalimat pelapor dan pengklaim.
 
 ### A. `server/src/zk/nlpPreprocess.ts`
-- **Fungsi:** `cleanText(text: string)`
+- **Fungsi:** `preprocessText(text: string)`
 - **Cara Kerja:** Merupakan *middleware* string. Mengubah teks menjadi *lowercase*, membuang tanda baca, dan menghapus *stopword* bahasa Indonesia (contoh: "yang", "dan", "di", "itu"). Ini mencegah AI kebingungan.
 
-### B. `server/src/zk/keywordExtractor.ts`
-- **Fungsi:** `extractKeywordsWithAI(text: string)`
-- **Cara Kerja:** Menembak API Groq menggunakan model `qwen/qwen3.8-27b` dengan `temperature: 0`. AI dipaksa melalui *prompt* yang sangat ketat untuk mengeluarkan **tepat 3 kata baku** yang menggambarkan ciri fisik unik barang.
+### B. `server/src/zk/normalizeKeywords.ts`
+- **Fungsi:** `normalizeKeywords(keywords: string[])`
+- **Cara Kerja:** Mengubah array keyword menjadi **canonical form** yang deterministik dan harus identik di kedua sisi (pelapor & pengklaim). Pipeline: *lowercase* → *trim* → filter kosong → deduplikasi → **sort A-Z** → *pad* ke `MAX_KEYWORDS` (3) dengan *dummy* `__empty__`. Konstanta `MAX_KEYWORDS` juga didefinisikan di sini dan harus selalu sinkron dengan circuit `.circom`. Inilah yang menyelesaikan masalah *order sensitivity* (urutan keyword) yang dibahas di `analisis_tri_layer_lock.md`.
 
-### C. `server/src/routes/api.ts`
+### C. `server/src/zk/keywordExtractor.ts`
+- **Fungsi:** `extractKeywordsWithAI(text: string)`
+- **Cara Kerja:** Menembak API Groq menggunakan model `qwen/qwen3.8-27b` dengan `temperature: 0`. AI dipaksa melalui *prompt* yang sangat ketat untuk mengeluarkan **tepat 3 kata baku** yang menggambarkan ciri fisik unik barang. Hasil mentahnya dilewatkan `preprocessText` (Stage 1) lalu `normalizeKeywords` (Stage 3).
+
+### D. `server/src/ai/groqClient.ts`
+- **Fungsi:** `callGroq()` / `callGroqJson()`
+- **Cara Kerja:** Client Groq terpusat yang dipakai bersama oleh `verifyClaim.ts`, `tagClassifier.ts`, dan `keywordExtractor.ts`. Memuat `GROQ_API_KEY` dari `.env` satu kali, menangani timeout, membersihkan *code fence* markdown, dan *error handling* secara seragam.
+
+### E. `server/src/routes/api.ts`
 - **Fungsi Baru:** `POST /api/extract`
-- **Cara Kerja:** Berfungsi sebagai *Proxy AI* untuk frontend. Saat pengklaim mengetik ciri barang, frontend akan menembak API ini. API ini akan memanggil `extractKeywordsWithAI` dan mengembalikan 3 keyword baku. Ini mencegah tereksposnya API Key Groq ke browser pengguna.
+- **Cara Kerja:** Berfungsi sebagai *Proxy AI* untuk frontend. Saat pengklaim mengetik ciri barang, frontend akan menembak API ini. API ini akan memanggil `extractKeywordsWithAI` dan mengembalikan 3 keyword baku. Ini mencegah tereksposnya API Key Groq ke browser pengguna. Server berjalan di port **3001** (lihat `server/.env`).
 
 ---
 
@@ -47,8 +55,8 @@ Ini adalah otak utama dimana ZKP bekerja mengamankan kerahasiaan.
 ### A. `server/src/handlers/report.handler.ts` (Fase Pelaporan)
 - **Cara Kerja Baru:** 
   1. Saat pelapor men-submit barang lewat *socket*, backend menerima field `secretDetail`.
-  2. Teks tersebut dikirim ke `extractKeywordsWithAI` untuk mendapatkan 3 keyword baku.
-  3. Menggunakan library `circomlibjs`, ketiga keyword di-hash menggunakan fungsi **Poseidon**.
+  2. Teks tersebut dikirim ke `extractKeywordsWithAI` untuk mendapatkan 3 keyword baku (setelah melewati `preprocessText` + `normalizeKeywords`).
+  3. Menggunakan library `circomlibjs` (via helper `zk/poseidon.ts` yang meng-cache instance Poseidon sekali saja), ketiga keyword di-hash menggunakan fungsi **Poseidon**.
   4. Hanya Hash tersebut yang dimasukkan ke `commitments`, lalu `secretDetail` **dibuang** (tidak disimpan di `items.json`).
 
 ### B. `server/src/handlers/claim.handler.ts` (Fase Klaim)
@@ -67,6 +75,7 @@ Karena ZKP tidak mengikat identitas (satu barang bisa diklaim banyak orang denga
 ### A. `server/src/zk/disputeTimer.ts`
 - **Fungsi:** `startDisputeWindow(io, itemId)`
 - **Cara Kerja:** Begitu ada klaim pertama yang valid secara ZKP, timer **1 Menit** mulai berjalan. Selama 1 menit ini, orang lain boleh ikut mengirimkan *Proof* ZKP jika mereka merasa itu barangnya. Setelah 1 menit habis, fungsi ini otomatis mengeksekusi `resolveDisputes()`.
+- **Fungsi Tambahan:** `rehydrateDisputes(io)` dipanggil saat server *startup* untuk memulihkan timer bagi item yang masih berstatus `disputed` (karena timer bersifat *in-memory* dan hilang saat restart).
 
 ### B. `server/src/zk/resolveDisputes.ts`
 - **Fungsi:** `resolveDisputes(itemId)`
@@ -79,4 +88,4 @@ Karena ZKP tidak mengikat identitas (satu barang bisa diklaim banyak orang denga
 
 - **`server/src/data/sanitize.ts`**: Fungsi sanitasi disederhanakan karena tidak ada lagi field `secretDetail` yang bisa bocor secara tidak sengaja ke klien.
 - **`.gitignore` (Server)**: Diperbarui untuk mengabaikan file raksasa `*.ptau` dan intermediate `.zkey` peninggalan *Trusted Setup*. Hanya menyisakan `circuit_final.zkey` dan `ownership_proof.wasm` agar aman di-push ke Github.
-- **Reset Database**: `server/data/items.json` telah dikosongkan agar kompatibel murni dengan arsitektur Hash Poseidon ZKP yang baru.
+- **Reset Database**: `server/data/items.json` pernah dikosongkan saat migrasi agar kompatibel murni dengan arsitektur Hash Poseidon ZKP yang baru. (Saat ini file tersebut kembali berisi data uji coba, jadi jangan dijadikan acuan "kosong".)

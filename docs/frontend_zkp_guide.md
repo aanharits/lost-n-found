@@ -14,8 +14,10 @@ Tim backend sudah membuatkan 2 file sakti hasil kompilasi sirkuit:
 2. `circuit_final.zkey` (Kunci Prover)
 
 **Tugasmu:**
-Pindahkan/Copy kedua file ini dari folder `server/zk/build/` ke folder **`public/`** di dalam *project* Frontend-mu (kalau kamu pakai Vite/Next.js/React, taruh di folder `public`).
-Tujuannya agar browser pengguna bisa men-download file ini secara statis lewat URL (misal: `http://localhost:5173/ownership_proof.wasm`).
+Pindahkan/Copy kedua file ini dari folder `server/zk/build/` ke folder **`static/zk/`** di dalam *project* Frontend ini (SvelteKit memakai folder `static/`, bukan `public/`).
+Tujuannya agar browser pengguna bisa men-download file ini secara statis lewat URL (misal: `http://localhost:5173/zk/ownership_proof.wasm`).
+
+> **Catatan:** File statis SvelteKit di `static/zk/` akan diakses dengan prefix `/zk/` (contoh: `/zk/circuit_final.zkey`). Jangan letakkan langsung di root.
 
 ---
 
@@ -42,7 +44,8 @@ Panggil endpoint AI di backend untuk mengubah kalimat panjang menjadi 3 keyword 
 const rawClaimText = "didalam tasnya ada boneka doraemon warnanya biru";
 
 // 2. Minta backend mengekstraknya jadi array 3 kata
-const response = await fetch('http://localhost:3000/api/extract', {
+const base = import.meta.env.PUBLIC_SERVER_URL || 'http://localhost:3001';
+const response = await fetch(`${base}/api/extract`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ text: rawClaimText })
@@ -72,11 +75,18 @@ const secret_1 = stringToFieldElement(data.keywords[0]);
 const secret_2 = stringToFieldElement(data.keywords[1]);
 const secret_3 = stringToFieldElement(data.keywords[2]);
 
-// 4. Generate Proof menggunakan file statis di folder public
+// 4. Generate Proof menggunakan file statis di folder static/zk
+// PENTING: circuit butuh 6 input — 3 secret (private) DAN 3 hash (public)
+// yang diambil dari commitments barang (targetItem.commitments).
 const { proof, publicSignals } = await snarkjs.groth16.fullProve(
-  { secret_1, secret_2, secret_3 }, // Input Rahasia
-  "/ownership_proof.wasm",          // Path ke file WASM
-  "/circuit_final.zkey"             // Path ke file ZKEY
+  {
+    secret_1, secret_2, secret_3,           // Input RAHASIA (tidak dikirim ke server)
+    hash_1: targetItem.commitments[0],      // Public input dari server
+    hash_2: targetItem.commitments[1],
+    hash_3: targetItem.commitments[2]
+  },
+  "/zk/ownership_proof.wasm",               // Path ke file WASM di static/zk
+  "/zk/circuit_final.zkey"                  // Path ke file ZKEY di static/zk
 );
 ```
 

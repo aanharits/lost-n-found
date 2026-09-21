@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| **Versi** | 1.0 |
-| **Status** | Draft — Internal Tim |
+| **Versi** | 1.1 |
+| **Status** | Sinkron dengan implementasi aktual |
 | **Tanggal** | 21 September 2026 |
-| **Branch** | `feat/zkp` |
+| **Branch** | `integration-test` |
 | **Repo** | `lost-n-found` |
 
 ---
@@ -214,13 +214,12 @@ Pipeline ini berjalan di **kedua sisi** — saat pelapor mendaftarkan ciri, dan 
 **Kapan aktif:** Ketika **≥2 pengklaim berhasil lolos verifikasi ZKP** untuk barang yang sama.
 
 **Cara kerja:**
-- Saat klaim ke-2 masuk, item ditandai `DISPUTED` dan dispute window dibuka (misal 24 jam).
-- Semua klaim yang masuk selama window dikumpulkan beserta hasil `zkpValid`-nya.
-- Klaim dengan `zkpValid = false` langsung didiskualifikasi.
-- Saat window tutup, algoritma Gale-Shapley dijalankan:
-  - **Preferensi item terhadap pengklaim:** urutan timestamp submit (siapa yang klaim lebih awal lebih diutamakan), AI score sebagai tiebreaker.
+- Saat klaim **pertama** masuk, item ditandai `disputed` dan dispute window dibuka (1 menit pada implementasi PoC; lihat `disputeTimer.ts`).
+- Semua klaim yang masuk selama window dikumpulkan (masing-masing sudah lolos verifikasi ZKP sebelum dicatat).
+- Saat window tutup, algoritma Gale-Shapley versi PoC dijalankan:
+  - **Preferensi item terhadap pengklaim:** urutan timestamp submit (siapa yang klaim lebih awal lebih diutamakan) — **First-Come First-Served (FCFS)**.
   - **Preferensi pengklaim terhadap item:** urutan item yang diklaim berdasarkan waktu submit.
-- Hasil: **1 pemenang per item** dengan sifat matematis *stable matching*.
+- Hasil: **1 pemenang per item** (`approved`), sisanya `rejected`, item menjadi `resolved`.
 
 ---
 
@@ -234,7 +233,7 @@ Pipeline ini berjalan di **kedua sisi** — saat pelapor mendaftarkan ciri, dan 
    - Nama barang
    - Lokasi hilang/ditemukan
    - Deskripsi ciri rahasia (teks bebas, contoh: "ada stiker geologi dan jas hujan plastik biru")
-3. Frontend mengirim deskripsi mentah ke Backend (`POST /items`).
+3. Frontend mengirim deskripsi mentah ke Backend via **socket event `item_add`** (bukan HTTP).
 4. Backend memproses ciri rahasia:
    a. Stage 1: NLP Preprocess → "stiker geologi hujan plastik biru"
    b. Stage 2: LLM Extract (Groq) → ["biru", "geologi", "plastik"]
@@ -242,7 +241,7 @@ Pipeline ini berjalan di **kedua sisi** — saat pelapor mendaftarkan ciri, dan 
 5. Backend mengkonversi keyword → field element (keccak256 mod BN254)
 6. Backend menghitung commitment = Poseidon(field_element) per keyword
 7. Backend HANYA menyimpan commitment ke `items.json`. Teks asli dan keyword dibuang.
-8. Item muncul di board real-time (via Socket.IO broadcast)
+8. Item muncul di board real-time (via `io.emit('item_added')`)
 ```
 
 ### 5.2 Claim Phase (Pengklaim Mengajukan Klaim)
@@ -250,40 +249,39 @@ Pipeline ini berjalan di **kedua sisi** — saat pelapor mendaftarkan ciri, dan 
 ```
 1. Pengklaim klik "Klaim Barang Ini" di UI
 2. Pengklaim mengisi deskripsi ciri yang dia ketahui (teks bebas)
-3. Frontend fetch commitment dari server untuk item tersebut
+3. Frontend sudah memegang `commitments` item dari store `items` (hasil `items_init` saat koneksi) — tidak ada fetch terpisah.
 4. Frontend menembak endpoint backend khusus (`POST /api/extract`) untuk mendapatkan keyword dari deskripsinya (tanpa mengekspos Groq API key di browser).
 5. Frontend menerima array keyword dari backend.
-6. Frontend mengkonversi keyword → field element dan menjalankan `snarkjs.groth16.fullProve()` di browser:
+6. Frontend mengkonversi keyword → field element dan menjalankan `snarkjs.groth16.fullProve()` di browser (saat ini di main thread, lihat catatan §7):
    Input circuit:
    - Private: [field_element(keyword_1), field_element(keyword_2), field_element(keyword_3)]
-   - Public:  [H1, H2, H3] dari server
+   - Public:  [hash_1, hash_2, hash_3] dari `commitments` server
    Output: { proof, publicSignals }
-7. Frontend kirim ke backend: { proof, publicSignals } — keyword TIDAK dikirim.
+7. Frontend kirim ke backend via **socket event `claim_submit`**: { proof, publicSignals } — keyword TIDAK dikirim.
 8. Backend verifikasi:
-   a. Cek publicSignals[0..2] cocok dengan commitment item di database
+   a. Cek publicSignals[0..2] cocok dengan `commitments` item di database
    b. `snarkjs.groth16.verify(vKey, publicSignals, proof)`
 9. Hasil:
-   - Valid + klaim pertama → item status CLAIMED / DISPUTED
-   - Invalid              → klaim ditolak langsung
+   - Valid + klaim pertama → item status menjadi `disputed`
+   - Invalid              → `claim_error` dikirim, klaim ditolak langsung
 ```
 
 ### 5.3 Dispute Resolution Phase (Gale-Shapley)
 
 ```
-1. Dispute window buka saat item status DISPUTED
-2. Sistem menjalankan timer in-memory (setInterval) selama window (misal: 5 menit untuk demo Hackathon).
+1. Dispute window buka saat item status `disputed` (dipicu klaim valid pertama)
+2. Sistem menjalankan timer in-memory (`setTimeout` di `disputeTimer.ts`) selama window (1 menit untuk PoC Hackathon).
 3. Klaim baru yang masuk selama window tetap diterima dan diverifikasi ZKP
 4. Saat window tutup, timer men-trigger eksekusi:
-   a. Ambil semua klaim dengan status PENDING untuk item tersebut
-   b. Filter: hanya klaim dengan zkpValid = true yang lanjut
-   c. Jalankan resolveDisputes() — algoritma Gale-Shapley
-   d. Tentukan 1 pemenang berdasarkan preferensi item (timestamp awal, AI score tiebreaker)
-5. Update database:
-   - Klaim pemenang → status MATCHED
-   - Klaim lainnya  → status REJECTED
-   - Item           → status RESOLVED (atau UNMATCHED jika tidak ada yang valid)
-6. Simpan ke dispute_resolutions untuk audit trail
-7. Notifikasi via Socket.IO ke semua pengguna yang terlibat
+   a. Ambil semua klaim dengan status `pending` untuk item tersebut
+   b. Jalankan `resolveDisputes()` — algoritma Gale-Shapley versi PoC (FCFS)
+   c. Tentukan 1 pemenang: klaim `pending` dengan `createdAt` paling awal
+5. Update database (`items.json`):
+   - Klaim pemenang → status `approved`
+   - Klaim lainnya  → status `rejected`
+   - Item           → status `resolved` (bahkan jika tidak ada pemenang dari sisa pending)
+6. (Tidak ada tabel audit terpisah — riwayat klaim tersimpan inline di field `claims` item.)
+7. Notifikasi via Socket.IO (`dispute_resolved`) ke semua pengguna
 ```
 
 ---
@@ -308,26 +306,26 @@ Pipeline ini berjalan di **kedua sisi** — saat pelapor mendaftarkan ciri, dan 
 | FR-02.2 | Circuit harus menggunakan AND constraint (semua keyword harus cocok) — bukan threshold parsial. |
 | FR-02.3 | Commitment per keyword dihitung menggunakan Poseidon Hash (bukan SHA256 biasa) karena efisien di ZK circuit. |
 | FR-02.4 | Backend hanya menyimpan commitment (hash), bukan keyword plaintext. |
-| FR-02.5 | Salt per item harus di-generate random dan disimpan publik (boleh dibaca pengklaim untuk keperluan prove). |
+| FR-02.5 | ~~Salt per item~~ **Tidak diimplementasikan** — circuit menghitung `Poseidon(secret_i)` tanpa salt. (Direncanakan untuk versi produksi.) |
 
 ### FR-03: Proof Generation & Verification
 
 | ID | Requirement |
 |---|---|
-| FR-03.1 | Frontend harus menjalankan `snarkjs.groth16.fullProve()` di Web Worker (tidak boleh blocking UI). |
+| FR-03.1 | Frontend harus menjalankan `snarkjs.groth16.fullProve()`. **Implementasi saat ini di main thread (belum Web Worker)** — lihat NFR-03. |
 | FR-03.2 | Yang dikirim ke backend hanya `{ proof, publicSignals }` — keyword asli tidak boleh dikirim. |
 | FR-03.3 | Backend harus memvalidasi bahwa `publicSignals` cocok dengan commitment item sebelum memanggil `verify()`. |
-| FR-03.4 | Verification key (`verification_key.json`) harus di-load satu kali saat server start, bukan per-request. |
+| FR-03.4 | Verification key (`verification_key.json`) di-load sekali saat module `claim.handler.ts` pertama diimpor (setara sekali per proses server), bukan per-request. |
 
 ### FR-04: Dispute Resolution
 
 | ID | Requirement |
 |---|---|
-| FR-04.1 | Jika klaim ke-2+ masuk untuk item yang sama, item harus berubah status menjadi `DISPUTED`. |
-| FR-04.2 | Dispute window default adalah 5 menit dari klaim pertama yang masuk (di-tuning untuk live demo). |
-| FR-04.3 | Scheduler in-memory (setInterval) bertugas mengeksekusi logika saat window ditutup. |
-| FR-04.4 | Klaim dengan `zkpValid = false` harus otomatis didiskualifikasi dari Gale-Shapley. |
-| FR-04.5 | Hasil dispute harus disimpan ke tabel `dispute_resolutions` sebagai audit trail. |
+| FR-04.1 | Jika klaim pertama yang valid masuk untuk item, item harus berubah status menjadi `disputed`. |
+| FR-04.2 | Dispute window default adalah **1 menit** dari klaim pertama yang masuk (di-tuning untuk live demo). |
+| FR-04.3 | Scheduler in-memory (`setTimeout`, bukan `setInterval`) bertugas mengeksekusi logika saat window ditutup. |
+| FR-04.4 | Semua klaim yang tercatat sudah lolos verifikasi ZKP, jadi tidak ada field `zkpValid` terpisah yang perlu difilter. |
+| FR-04.5 | ~~Tabel `dispute_resolutions`~~ **Tidak diimplementasikan** — riwayat klaim tersimpan inline di field `claims` item. |
 
 ### FR-05: User Experience
 
@@ -345,12 +343,12 @@ Pipeline ini berjalan di **kedua sisi** — saat pelapor mendaftarkan ciri, dan 
 | ID | Kategori | Requirement |
 |---|---|---|
 | NFR-01 | Keamanan | Server tidak boleh menyimpan atau menerima plaintext keyword dari pengguna manapun. |
-| NFR-02 | Keamanan | Proof yang valid untuk satu item tidak boleh bisa digunakan untuk item lain (itemId binding di circuit, opsional tapi direkomendasikan). |
-| NFR-03 | Performa | Waktu `fullProve()` di browser harus < 30 detik untuk circuit dengan 3 input. Jalankan di Web Worker. |
+| NFR-02 | Keamanan | Proof yang valid untuk satu item tidak boleh bisa digunakan untuk item lain. **Implementasi saat ini TANPA itemId binding di circuit** (diputuskan §8.2); proteksi dilakukan di backend lewat pengecekan `publicSignals` vs `commitments` item. |
+| NFR-03 | Performa | Waktu `fullProve()` di browser harus < 30 detik untuk circuit dengan 3 input. **Implementasi saat ini di main thread** (Web Worker belum dipakai). |
 | NFR-04 | Performa | Waktu `verify()` di backend harus < 100ms per request. |
-| NFR-05 | Reliabilitas | BullMQ job harus survive server restart — Redis sebagai storage backend. |
+| NFR-05 | Reliabilitas | Dispute timer in-memory **tidak** otomatis survive restart; mitigasi saat ini: `rehydrateDisputes()` dipanggil saat startup untuk memulai ulang window item berstatus `disputed`. |
 | NFR-06 | Determinisme | Pipeline ekstraksi keyword harus menghasilkan output yang identik untuk input yang semantically sama. |
-| NFR-07 | Auditability | Semua hasil dispute resolution harus bisa ditelusuri kembali lewat `dispute_resolutions` table. |
+| NFR-07 | Auditability | Riwayat klaim & pemenang tersimpan inline di field `claims` pada `items.json` (tidak ada tabel `dispute_resolutions`). |
 
 ---
 
@@ -364,18 +362,19 @@ Pipeline ini berjalan di **kedua sisi** — saat pelapor mendaftarkan ciri, dan 
 | Hash function di circuit | Poseidon | Dirancang untuk ZK circuit — jauh lebih efisien dari SHA256 |
 | String → field conversion | keccak256 mod BN254 | Pure-JS, jalan di browser dan Node.js tanpa native binding |
 | LLM untuk extraction | Groq API | Endpoint backend proxy (`/api/extract`) agar API Key tidak bocor di frontend |
-| Dispute scheduler | In-memory timer (setInterval) | Lebih simple untuk PoC Hackathon (menggantikan Redis/BullMQ) |
+| Dispute scheduler | In-memory timer (`setTimeout`) | Lebih simple untuk PoC Hackathon (menggantikan Redis/BullMQ) |
 | Threshold logic | AND penuh (semua keyword) | Lebih simple, lebih secure, tidak butuh range proof |
 | Ordering | Sort A-Z sebelum hash | Deterministik, canonical form |
 
-### 8.2 Open Decisions (Telah Diputuskan)
+### 8.2 Keputusan Final
 
 | Keputusan | Opsi Terpilih | Alasan |
 |---|---|---|
 | **MAX_KEYWORDS** | **3** | Cukup spesifik, terbukti berhasil di testing circuit lokal |
-| **Dispute window duration** | **5 Menit** | Sangat ideal untuk demo live di depan juri hackathon |
-| **LLM Model untuk extraction** | **Llama/Qwen termurah** | Sangat cepat untuk task JSON extraction sederhana |
+| **Dispute window duration** | **1 Menit** | Cocok untuk demo live di depan juri hackathon |
+| **LLM Model untuk extraction** | **qwen/qwen3.8-27b via Groq** | Cepat dan cukup untuk task JSON extraction sederhana |
 | **itemId binding di circuit** | **Tanpa binding** | Dihapus untuk PoC agar circuit sangat sederhana (fokus ke validasi keyword) |
+| **Dispute scheduler** | **In-memory `setTimeout`** | Lebih simple untuk PoC Hackathon (menggantikan Redis/BullMQ) |
 
 ---
 
@@ -385,6 +384,9 @@ Fitur-fitur berikut **tidak** dikerjakan dalam sprint ini:
 
 - Migrasi storage dari `items.json` ke database relasional (PostgreSQL) — schema sudah didokumentasikan di `integration_guide.md` tapi implementasinya di-skip untuk hackathon.
 - Dashboard admin untuk melihat audit trail dispute resolution.
+- Tabel `dispute_resolutions` terpisah (audit trail saat ini inline di `items.json`).
+- Salt per item pada circuit ZKP (`FR-02.5`).
+- Web Worker untuk `fullProve()` (`FR-03.1`, `NFR-03`).
 - LLM lokal di device pengguna — menggunakan Groq API saja.
 - Trusted setup ceremony dengan banyak kontributor — satu kontribusi per phase cukup untuk demo.
 - Notifikasi email atau push notification.
@@ -396,9 +398,9 @@ Fitur-fitur berikut **tidak** dikerjakan dalam sprint ini:
 | ID | Risiko | Probabilitas | Dampak | Mitigasi |
 |---|---|---|---|---|
 | R1 | LLM extractor menghasilkan keyword berbeda untuk input yang semantically sama | Sedang | Tinggi (false negative: pengklaim legitimate gagal) | Prompt engineering ketat + few-shot examples + temperature=0. Acceptable trade-off untuk PoC. |
-| R2 | `fullProve()` terlalu lambat di browser pengguna | Sedang | Sedang (UX buruk) | Jalankan di Web Worker, tampilkan progress indicator |
+| R2 | `fullProve()` terlalu lambat / memblokir UI karena jalan di main thread | Sedang | Sedang (UX buruk) | Tampilkan loading indicator; jalankan di Web Worker bila waktu memungkinkan |
 | R3 | Trusted setup belum selesai menjelang demo | Tinggi | Tinggi | Kerjakan trusted setup di awal sprint, bukan di akhir |
-| R4 | Redis tidak tersedia di environment demo | Sedang | Tinggi (Gale-Shapley scheduler tidak jalan) | Siapkan fallback: jalankan resolveDisputes() manual via endpoint admin |
+| R4 | Timer dispute in-memory hilang saat server restart di tengah demo | Sedang | Tinggi (sengketa tidak terselesaikan otomatis) | `rehydrateDisputes()` memulai ulang window item `disputed` saat startup |
 | R5 | Juri mempertanyakan non-determinisme LLM | Tinggi | Sedang | Siapkan jawaban: false negative > false positive. NLP deterministik sebagai primary filter. |
 
 ---
@@ -414,7 +416,7 @@ WHEN   pengklaim mengisi "helmnya ada sticker geologi sama jas ujan warna biru"
 THEN   sistem harus mengekstrak keyword yang identik di kedua sisi
 AND    fullProve() berhasil generate proof yang valid
 AND    backend verify() mengembalikan true
-AND    klaim tercatat sebagai MATCHED
+AND    klaim tercatat sebagai `pending` lalu diputuskan pada fase dispute
 ```
 
 ### AC-2: Rejection — Pengklaim Salah
@@ -438,10 +440,10 @@ AND    tidak ada field keyword atau teks dalam plaintext di payload tersebut
 ### AC-4: Dispute Resolution
 ```
 GIVEN  dua pengklaim berbeda berhasil lolos verifikasi ZKP untuk barang yang sama
-WHEN   dispute window berakhir
-THEN   Gale-Shapley dijalankan otomatis oleh BullMQ worker
-AND    tepat 1 pengklaim dipilih sebagai pemenang berdasarkan timestamp lebih awal
-AND    hasil disimpan ke dispute_resolutions
+WHEN   dispute window (1 menit) berakhir
+THEN   resolveDisputes() dijalankan otomatis oleh timer in-memory
+AND    tepat 1 pengklaim dipilih sebagai pemenang berdasarkan createdAt lebih awal
+AND    status klaim tercatat (approved/rejected) inline di field claims item
 ```
 
 ### AC-5: Order & Case Insensitivity
@@ -481,11 +483,10 @@ AND    proof yang dihasilkan valid
 
 | Task | Estimasi | Output |
 |---|---|---|
-| Setup Redis & BullMQ | 1 jam | Scheduler infra |
-| Implementasi `disputeQueue.ts` | 2 jam | Job scheduling |
-| Implementasi `resolveDisputes()` (Gale-Shapley) | 3 jam | Dispute algorithm |
-| Implementasi `disputeWorker.ts` | 2 jam | Background worker |
-| Notifikasi Socket.IO saat dispute selesai | 1 jam | Real-time update |
+| Implementasi `disputeTimer.ts` (in-memory `setTimeout`) | 1 jam | Scheduler infra |
+| Implementasi `resolveDisputes()` (Gale-Shapley versi PoC / FCFS) | 3 jam | Dispute algorithm |
+| Rehidrasi window dispute saat startup (`rehydrateDisputes`) | 1 jam | Reliability |
+| Notifikasi Socket.IO saat dispute selesai (`dispute_resolved`) | 1 jam | Real-time update |
 
 ### Sprint 4 — Polish & Demo Prep (Priority: Sedang)
 
@@ -502,7 +503,7 @@ AND    proof yang dihasilkan valid
 
 | Dokumen | Lokasi | Isi |
 |---|---|---|
-| Integration Guide | [`docs/integration_guide.md`](./integration_guide.md) | Spesifikasi teknis ZKP Groth16 + Gale-Shapley + BullMQ |
+| Integration Guide | [`docs/integration_guide.md`](./integration_guide.md) | Spesifikasi teknis ZKP Groth16 + Gale-Shapley (dokumen historis, sebagian menyebut BullMQ) |
 | Analisis Tri-Layer Lock | [`docs/analisis_tri_layer_lock.md`](./analisis_tri_layer_lock.md) | Analisis kritis tiap layer dan problem yang ditemukan |
 | Technical Flow Guide | [`docs/technical_flow_guide.md`](./technical_flow_guide.md) | Solusi konkret untuk setiap problem dengan kode implementasi |
 | **PRD (dokumen ini)** | [`docs/PRD.md`](./PRD.md) | Requirements, acceptance criteria, dan roadmap |
