@@ -201,5 +201,24 @@
     "reporterContact": "6281234567897",
     "x": 180,
     "y": 270
+  },
+  {
+    "id": "item1789992542744",
+    "type": "lost",
+    "title": "hp samsung",
+    "icon": "📱",
+    "category": "Gadget",
+    "tag": "hp",
+    "desc": "tangdur",
+    "secretDetail": "ada wallpaper emyu",
+    "claims": [],
+    "resolved": false,
+    "date": "2026-09-21",
+    "time": "19:08",
+    "reporterName": "farhan",
+    "reporterNpm": "222",
+    "reporterContact": "111",
+    "x": 358,
+    "y": 275
   }
 ]

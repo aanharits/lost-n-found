@@ -147,7 +147,8 @@ Komponen [`TagIcon.svelte`](file:///Users/aanharits/Downloads/lost%20n%20found/w
   - [`web/src/lib/stores/items.ts`](file:///Users/aanharits/Downloads/lost%20n%20found/web/src/lib/stores/items.ts): Penambahan tipe `category` dan `tag` pada interface `Item`.
   - [`web/src/lib/stores/ui.ts`](file:///Users/aanharits/Downloads/lost%20n%20found/web/src/lib/stores/ui.ts): Store `activeHighlight` dan `activeCategoryFilter`.
   - [`web/src/lib/components/TagIcon.svelte`](file:///Users/aanharits/Downloads/lost%20n%20found/web/src/lib/components/TagIcon.svelte): Komponen renderer SVG 8-bit pixel art modular.
+  - [`web/src/lib/components/CategoryGamepad.svelte`](file:///Users/aanharits/Downloads/lost%20n%20found/web/src/lib/components/CategoryGamepad.svelte): Komponen terisolasi untuk Gamepad Nintendo kategori 8-bit di sisi kiri papan.
   - [`web/src/lib/components/ItemCard.svelte`](file:///Users/aanharits/Downloads/lost%20n%20found/web/src/lib/components/ItemCard.svelte): Menampilkan TagIcon, lencana nama tag, dan class highlight/dimmed.
-  - [`web/src/lib/components/Board.svelte`](file:///Users/aanharits/Downloads/lost%20n%20found/web/src/lib/components/Board.svelte): Menambahkan baris filter kategori Nintendo, banner sorotan aktif, dan auto-scroll.
+  - [`web/src/lib/components/Board.svelte`](file:///Users/aanharits/Downloads/lost%20n%20found/web/src/lib/components/Board.svelte): Papan utama lost and found dengan penyorotan interaktif status & integrasi gamepad.
   - [`web/src/lib/components/SatpamChat.svelte`](file:///Users/aanharits/Downloads/lost%20n%20found/web/src/lib/components/SatpamChat.svelte): Mengirimkan konteks tag ke Satpam AI, menerima sorotan, dan tombol interaktif `[ 📍 LIHAT DI PAPAN ]`.
   - [`web/src/app.css`](file:///Users/aanharits/Downloads/lost%20n%20found/web/src/app.css): Styling lencana tag, efek peredupan kartu, dan keyframes animasi denyut keemasan Nintendo (`nintendoHighlightPulse`).
