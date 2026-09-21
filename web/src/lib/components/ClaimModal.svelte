@@ -11,8 +11,9 @@
   let loading = $state(false);
   let finished = $state(false);
   let placeholder = $state('Warna, ciri khas, kondisi, tanda khusus, dll...');
-  let submitLabel = $state('Kirim Klaim');
   let waLink = $state('');
+  
+  let submitLabel = $derived(targetItem?.type === 'found' ? 'Kirim Klaim' : 'Cocokkan Ciri');
 
   // Mencari data barang yang sedang menjadi target klaim
   let targetItem = $derived(
@@ -26,6 +27,30 @@
       : 'KLAIM BARANG'
   );
 
+  // Pantau perubahan status targetItem dari socket (saat masa sanggah berakhir)
+  $effect(() => {
+    if (finished && targetItem?.status === 'resolved') {
+      // Cari apakah klaim milik player ini yang di-approve
+      const myClaim = targetItem.claims?.find(
+        (c) => c.claimantNpm === $currentPlayer?.npm && c.status === 'approved'
+      );
+      
+      if (myClaim) {
+        const contact = (targetItem.reporterContact || '').replace(/[^0-9]/g, '');
+        waLink = contact ? `https://wa.me/${contact}` : '';
+        errorMsg = targetItem.type === 'found'
+            ? `Selamat! Kamu terbukti sebagai pemilik sah. Silakan hubungi Penemu.`
+            : `Terima kasih! Kamu terbukti memegang barang yang benar. Silakan hubungi Pemilik.`;
+        errorClass = 'bg-green-200 border-green-600 text-green-800';
+      } else {
+        // Jika status resolved tapi bukan dia pemenangnya
+        waLink = '';
+        errorMsg = `Sayang sekali, sistem memutuskan ada pengklaim lain yang lebih berhak.`;
+        errorClass = 'bg-red-200 border-red-600 text-red-800';
+      }
+    }
+  });
+
   // Menutup modal dan reset seluruh form klaim
   function closeModal() {
     activeModal.set('none');
@@ -35,11 +60,13 @@
     errorMsg = '';
     loading = false;
     finished = false;
-    submitLabel = 'Kirim Klaim';
     waLink = '';
   }
 
-  // Mengirim deskripsi klaim ke server untuk diverifikasi secara otomatis oleh AI
+  import * as snarkjs from 'snarkjs';
+  import { keccak_256 } from 'js-sha3';
+
+  // Mengirim deskripsi klaim ke server menggunakan Zero-Knowledge Proof (ZKP)
   async function submitClaim() {
     if (!targetItem) return;
     if (!claimText.trim()) {
@@ -51,7 +78,6 @@
     errorMsg = '';
     loading = true;
     claimAttemptCount.update((n) => n + 1);
-    const attemptNum = $claimAttemptCount;
 
     const socket = getSocket();
     if (!socket?.connected) {
@@ -63,60 +89,125 @@
 
     const player = $currentPlayer;
 
-    // Kirim data klaim ke server untuk diverifikasi dengan detail rahasia
-    socket.emit('claim_submit', {
-      itemId: targetItem.id,
-      claimText: claimText.trim(),
-      claimantName: player?.name || '',
-      claimantNpm: player?.npm || '',
-      claimantContact: player?.contact || '',
-      attemptNumber: attemptNum,
-    });
+    try {
+      // 1. Ekstrak keyword lewat API Proxy di backend
+      const base = import.meta.env.PUBLIC_SERVER_URL || 'http://localhost:3001';
+      const response = await fetch(`${base}/api/extract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: claimText.trim() })
+      });
+      
+      const data = await response.json();
+      if (!data.keywords || data.keywords.length < 3) {
+        throw new Error('Gagal mengekstrak ciri unik dari teks.');
+      }
 
-    // Menunggu hasil verifikasi claim_updated dari backend
-    const result = await new Promise<any>((resolve) => {
-      const timeout = setTimeout(() => {
-        resolve(null);
-      }, 15000);
-
-      const handler = (data: any) => {
-        if (data.itemId === targetItem!.id) {
-          clearTimeout(timeout);
-          socket.off('claim_updated', handler);
-          resolve(data);
-        }
+      // 2. Hash keyword menjadi Field Element (BN254)
+      const PRIME = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+      const stringToFieldElement = (str: string) => {
+        const hashHex = keccak_256(str);
+        const hashBigInt = BigInt('0x' + hashHex);
+        return (hashBigInt % PRIME).toString();
       };
-      socket.on('claim_updated', handler);
-    });
 
-    loading = false;
+      const secret_1 = stringToFieldElement(data.keywords[0]);
+      const secret_2 = stringToFieldElement(data.keywords[1]);
+      const secret_3 = stringToFieldElement(data.keywords[2]);
 
-    if (!result) {
-      errorMsg = 'Timeout - gagal mendapat respons dari server.';
+      // 3. Meracik ZKP Proof di dalam Browser (Tanpa membocorkan keyword)
+      // File WASM dan ZKEY diletakkan di public/zk/
+      const { proof, publicSignals } = await snarkjs.groth16.fullProve(
+        { 
+          secret_1, 
+          secret_2, 
+          secret_3,
+          hash_1: targetItem.commitments[0],
+          hash_2: targetItem.commitments[1],
+          hash_3: targetItem.commitments[2]
+        },
+        "/zk/ownership_proof.wasm",
+        "/zk/circuit_final.zkey"
+      );
+
+      // 4. Kirim ZKP Proof ke Socket Backend
+      socket.emit('claim_submit', {
+        itemId: targetItem.id,
+        proof: proof,
+        publicSignals: publicSignals,
+        claimantName: player?.name || '',
+        claimantNpm: player?.npm || '',
+        claimantContact: player?.contact || ''
+      });
+
+      // 5. Menunggu hasil verifikasi dari ZKP backend
+      const result = await new Promise<any>((resolve) => {
+        const timeout = setTimeout(() => {
+          resolve({ error: 'Timeout - gagal mendapat respons dari server ZKP.' });
+        }, 15000);
+
+        const successHandler = (socketData: any) => {
+          if (socketData.itemId === targetItem!.id) {
+            clearTimeout(timeout);
+            socket.off('claim_updated', successHandler);
+            socket.off('claim_error', errorHandler);
+            resolve(socketData);
+          }
+        };
+
+        const errorHandler = (errorData: any) => {
+          clearTimeout(timeout);
+          socket.off('claim_updated', successHandler);
+          socket.off('claim_error', errorHandler);
+          resolve({ error: errorData.message });
+        };
+
+        socket.on('claim_updated', successHandler);
+        socket.on('claim_error', errorHandler);
+      });
+
+      loading = false;
+
+      if (result.error) {
+        errorMsg = result.error;
+        errorClass = 'bg-red-200 border-red-600 text-red-800';
+        return;
+      }
+
+      const claim = result.claim;
+
+      if (claim.status === 'pending' || claim.status === 'approved') {
+        // Karena sistem sekarang memakai Dispute Window, status awal klaim adalah 'pending'
+        errorClass = 'bg-green-200 border-green-600 text-green-800';
+        errorMsg = targetItem.type === 'found' 
+            ? `Klaim Disetujui! Ciri-cirimu terbukti benar. Menunggu 1 menit (Masa Sanggah) untuk memastikan tidak ada pengklaim lain...`
+            : `Ciri cocok! Menunggu 1 menit (Masa Sanggah) untuk memastikan tidak ada penemu palsu lain...`;
+        finished = true;
+        claimText = '';
+        
+        // Cek jika sudah resolved langsung dapat nomor kontak
+        if (result.resolved && result.winner) {
+            const contact = (result.reporterContact || '').replace(/[^0-9]/g, '');
+            waLink = contact ? `https://wa.me/${contact}` : '';
+            errorMsg = targetItem.type === 'found'
+                ? `Selamat! Kamu terbukti sebagai pemilik sah. Silakan hubungi Penemu.`
+                : `Terima kasih! Kamu terbukti memegang barang yang benar. Silakan hubungi Pemilik.`;
+        }
+      } else {
+        errorClass = 'bg-red-200 border-red-600 text-red-800';
+        errorMsg = targetItem.type === 'found'
+            ? `Klaim Ditolak: Ciri barang salah atau tidak terbukti.`
+            : `Gagal: Ciri barang tidak cocok dengan laporan kehilangan.`;
+        finished = true;
+      }
+
+    } catch (err: any) {
+      console.error(err);
+      loading = false;
+      errorMsg = targetItem.type === 'found'
+          ? 'Klaim Ditolak Satpam AI: Ciri-ciri rahasia yang kamu sebutkan keliru dan tidak terbukti cocok!'
+          : 'Pencocokan Gagal: Ciri-ciri rahasia barang di tanganmu berbeda dengan data pelapor!';
       errorClass = 'bg-red-200 border-red-600 text-red-800';
-      return;
-    }
-
-    const claim = result.claim;
-
-    // Tampilkan hasil evaluasi verifikasi klaim tanpa emotikon
-    if (claim.status === 'approved') {
-      errorClass = 'bg-green-200 border-green-600 text-green-800';
-      const contact = (result.reporterContact || '').replace(/[^0-9]/g, '');
-      waLink = contact ? `https://wa.me/${contact}` : '';
-      errorMsg = `Disetujui Satpam AI - ${claim.reasoning}`;
-      finished = true;
-      claimText = '';
-    } else if (claim.status === 'pending') {
-      errorClass = 'bg-yellow-200 border-yellow-600 text-yellow-800';
-      errorMsg = `Satpam AI: ${claim.reasoning} - Sebutkan ciri khas khusus lain yang hanya kamu ketahui (kesempatan terakhir).`;
-      claimText = '';
-      placeholder = 'Sebutkan tanda pengenal khusus yang hanya kamu ketahui...';
-      submitLabel = 'Kirim Ciri Tambahan (Terakhir)';
-    } else {
-      errorClass = 'bg-red-200 border-red-600 text-red-800';
-      errorMsg = `Ditolak Satpam AI - ${claim.reasoning}`;
-      finished = true;
     }
   }
 </script>
@@ -134,7 +225,7 @@
           class="font-pixel text-xs md:text-sm text-white tracking-wider font-bold"
           style="text-shadow: 2px 2px 0 #1c120c;"
         >
-          KLAIM KEPEMILIKAN
+          {targetItem.type === 'found' ? 'KLAIM KEPEMILIKAN' : 'KEMBALIKAN BARANG'}
         </h2>
         <button
           onclick={closeModal}
