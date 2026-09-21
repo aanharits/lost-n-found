@@ -1,43 +1,35 @@
 import type { Server as SocketIOServer, Socket } from 'socket.io';
 import { claimSubmitSchema } from '../schemas/claim.schema.js';
 import { getItems, saveItemsToFile, type Claim } from '../data/store.js';
-import { verifyClaimWithAI } from '../ai/verifyClaim.js';
+import { startDisputeWindow } from '../zk/disputeTimer.js';
+import fs from 'fs';
+import path from 'path';
 
-const APPROVE_THRESHOLD = 80;
-const GREY_ZONE_MIN = 40;
+// @ts-ignore
+import * as snarkjs from 'snarkjs';
 
-// Menentukan status klaim berdasarkan skor AI dan nomor percobaan
-function determineClaimStatus(
-  score: number,
-  attemptNumber: number
-): { status: 'approved' | 'pending' | 'rejected'; resolved: boolean } {
-  if (score >= APPROVE_THRESHOLD) {
-    return { status: 'approved', resolved: true };
-  }
-  if (attemptNumber === 1 && score >= GREY_ZONE_MIN && score < APPROVE_THRESHOLD) {
-    return { status: 'pending', resolved: false };
-  }
-  return { status: 'rejected', resolved: false };
+// Load Verification Key
+const vKeyPath = path.join(process.cwd(), 'zk', 'verification_key.json');
+let vKey: any = null;
+try {
+  vKey = JSON.parse(fs.readFileSync(vKeyPath, 'utf-8'));
+} catch (e) {
+  console.error('[ZKP] Gagal memuat verification_key.json. Pastikan Trusted Setup sudah selesai.');
 }
 
 // Membuat struktur objek klaim baru
 function buildClaimEntry(
-  claimText: string,
-  score: number,
-  confidence: string,
-  reasoning: string,
-  status: 'approved' | 'pending' | 'rejected',
   claimantName: string,
   claimantNpm: string,
   claimantContact: string
 ): Claim {
   return {
     id: 'claim' + Date.now(),
-    text: claimText,
-    score,
-    confidence,
-    reasoning,
-    status,
+    text: 'ZKP Proof Verified (Hidden)', // Tidak menyimpan teks klaim
+    score: 100, // ZKP = Pasti 100
+    confidence: 'Tinggi',
+    reasoning: 'Zero-Knowledge Proof Valid',
+    status: 'pending', // Menunggu dispute window berakhir
     claimantName,
     claimantNpm,
     claimantContact,
@@ -45,27 +37,17 @@ function buildClaimEntry(
   };
 }
 
-// Menolak seluruh klaim pending lainnya jika ada klaim yang telah disetujui
-function rejectOtherPendingClaims(claims: Claim[], approvedClaimId: string): void {
-  claims.forEach((c) => {
-    if (c.id !== approvedClaimId && c.status === 'pending') {
-      c.status = 'rejected';
-    }
-  });
-}
-
-// Menangani proses verifikasi pengajuan klaim barang secara realtime
+// Menangani proses verifikasi pengajuan klaim barang via Zero-Knowledge Proof
 export async function handleClaimSubmit(io: SocketIOServer, socket: Socket, data: unknown): Promise<void> {
-  // Validasi payload data klaim dari client
   const parsed = claimSubmitSchema.safeParse(data);
   if (!parsed.success) {
-    socket.emit('claim_error', { message: 'Data klaim tidak valid.' });
+    socket.emit('claim_error', { message: 'Data klaim (ZKP Proof) tidak valid.' });
     return;
   }
 
-  const { itemId, claimText, claimantName, claimantNpm, claimantContact, attemptNumber } = parsed.data;
+  const { itemId, proof, publicSignals, claimantName, claimantNpm, claimantContact } = parsed.data;
 
-  // Cari barang yang diklaim di database
+  // Cari barang
   const items = getItems();
   const item = items.find((i) => i.id === itemId);
   if (!item) {
@@ -73,48 +55,63 @@ export async function handleClaimSubmit(io: SocketIOServer, socket: Socket, data
     return;
   }
 
-  // Verifikasi kecocokan klaim dengan rahasia barang via AI di sisi backend
-  const aiResult = await verifyClaimWithAI(
-    item.secretDetail,
-    claimText,
-    item.title,
-    item.desc
-  );
-
-  // Evaluasi status persetujuan klaim
-  const { status, resolved } = determineClaimStatus(aiResult.score, attemptNumber);
-
-  // Tambahkan riwayat klaim ke data item
-  if (!item.claims) item.claims = [];
-
-  const claimEntry = buildClaimEntry(
-    claimText,
-    aiResult.score,
-    aiResult.confidence,
-    aiResult.reasoning,
-    status,
-    claimantName,
-    claimantNpm,
-    claimantContact
-  );
-
-  item.claims.push(claimEntry);
-
-  // Tandai item selesai dan tolak klaim pending lainnya jika klaim disetujui
-  if (resolved) {
-    item.resolved = true;
-    rejectOtherPendingClaims(item.claims, claimEntry.id);
+  // Jika item sudah resolved, tolak klaim baru
+  if (item.status === 'resolved') {
+    socket.emit('claim_error', { message: 'Barang ini sudah dikembalikan ke pemiliknya.' });
+    return;
   }
 
-  // Simpan perubahan ke file dan broadcast update klaim ke semua client
-  saveItemsToFile(items);
-  console.log(`[Claim] Status for [${item.title}]: ${claimEntry.status} (${claimantName || 'Anon'})`);
+  // Verifikasi 1: Pastikan publicSignals cocok dengan commitments di database
+  if (!item.commitments || item.commitments.length < 3) {
+    socket.emit('claim_error', { message: 'Data ZKP barang corrupt di database.' });
+    return;
+  }
+  
+  for (let i = 0; i < 3; i++) {
+    if (publicSignals[i] !== item.commitments[i]) {
+      console.warn(`[Claim] ZKP Public Signal Mismatch for item ${item.title}`);
+      socket.emit('claim_error', { message: 'Proof tidak valid untuk barang ini (Commitment mismatch).' });
+      return;
+    }
+  }
 
+  // Verifikasi 2: Jalankan snarkjs.verify
+  if (!vKey) {
+    socket.emit('claim_error', { message: 'Sistem ZKP backend belum siap.' });
+    return;
+  }
+
+  const isValid = await snarkjs.groth16.verify(vKey, publicSignals, proof);
+  if (!isValid) {
+    console.warn(`[Claim] ZKP Invalid Proof from ${claimantName || 'Anon'}`);
+    socket.emit('claim_error', { message: 'Verifikasi ZKP Gagal. Anda tidak mengetahui ciri rahasia barang.' });
+    return;
+  }
+
+  // ZKP Lolos!
+  console.log(`[Claim] Valid ZKP received for ${item.title} from ${claimantName || 'Anon'}`);
+  
+  // Ubah status item menjadi disputed jika ini klaim pertama
+  if (item.status === 'open') {
+    item.status = 'disputed';
+  }
+
+  // Tambahkan riwayat klaim
+  if (!item.claims) item.claims = [];
+  const claimEntry = buildClaimEntry(claimantName, claimantNpm, claimantContact);
+  item.claims.push(claimEntry);
+
+  saveItemsToFile(items);
+
+  // Mulai Dispute Window (Gale-Shapley Timer)
+  startDisputeWindow(io, item.id);
+
+  // Broadcast update
   io.emit('claim_updated', {
     itemId: item.id,
     itemTitle: item.title,
     claim: claimEntry,
-    resolved: item.resolved,
+    status: item.status,
     claims: item.claims,
     reporterContact: item.reporterContact,
   });
