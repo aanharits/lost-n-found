@@ -1,7 +1,9 @@
 <script lang="ts">
   import type { Item } from '$lib/stores/items.js';
+  import { highlight, isItemHighlighted } from '$lib/stores/highlight.js';
   import { draggable } from '$lib/actions/draggable.js';
   import { fly } from 'svelte/transition';
+  import TagIcon from './TagIcon.svelte';
 
   let { item, onClaim, onReviewClaims, onDragEnd }: {
     item: Item;
@@ -12,30 +14,34 @@
 
   let isMobile = $state(false);
 
-  // Deteksi tampilan mobile layar kecil
+  // Deteksi viewport mobile
   $effect(() => {
     isMobile = window.innerWidth < 768;
   });
 
-  // State turunan untuk styling header dan status klaim
+  // Styling header dan klaim
   const headerClass = $derived(item.type === 'found' ? 'found' : '');
   const headerText = $derived(item.type === 'found' ? 'KETEMU' : 'HILANG');
   const pendingClaims = $derived((item.claims || []).filter((c) => c.status === 'pending'));
+
+  // Evaluasi status highlight kartu
+  const isHighlighted = $derived(isItemHighlighted(item, $highlight));
+  const isDimmed = $derived(!!$highlight && !isHighlighted);
 </script>
 
 <div
-  class="item-card {item.resolved ? 'resolved-card' : ''}"
+  class="item-card {item.resolved ? 'resolved-card' : ''} {isHighlighted ? 'highlighted-card' : ''} {isDimmed ? 'dimmed-card' : ''}"
   id={item.id}
   style="left: {item.x}px; top: {item.y}px;"
   use:draggable={{ itemId: item.id, containerId: 'board-container', onDragEnd }}
   transition:fly={{ y: -30, duration: 400 }}
 >
-  <!-- Pixel Pushpin / Paku Payung 8-Bit di Papan -->
+  <!-- Pushpin 8-bit -->
   <div class="absolute -top-2 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-red-600 border-2 border-[#140b05] shadow-[0_2px_0px_#140b05] z-30 pointer-events-none">
     <div class="w-1 h-1 rounded-full bg-red-300 ml-0.5 mt-0.5"></div>
   </div>
 
-  <!-- Badge jumlah klaim yang menunggu persetujuan -->
+  <!-- Badge pending claim -->
   {#if pendingClaims.length > 0}
     <button
       class="claim-badge font-pixel"
@@ -46,13 +52,15 @@
     </button>
   {/if}
 
-  <!-- Pita penanda barang sudah berhasil diselesaikan -->
+  <!-- Pita status selesai -->
   {#if item.resolved}
     <div class="resolved-ribbon font-pixel">SELESAI</div>
   {/if}
 
   <div class="card-header font-pixel {headerClass}">{headerText}</div>
-  <div class="card-image">{item.icon}</div>
+  <div class="card-image flex items-center justify-center">
+    <TagIcon tag={item.tag} fallback={item.icon} size={48} />
+  </div>
   <div class="p-2.5 bg-[#fefce8] flex-grow flex flex-col justify-between">
     <div>
       <p class="font-bold text-[14px] leading-tight text-[#2c1b0f] truncate">{item.title}</p>

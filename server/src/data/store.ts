@@ -28,6 +28,8 @@ export interface Item {
   type: 'lost' | 'found';
   title: string;
   icon: string;
+  category?: string;
+  tag?: string;
   desc: string;
   commitments: string[];
   claims: Claim[];

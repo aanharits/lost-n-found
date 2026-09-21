@@ -8,6 +8,8 @@ export const itemAddSchema = z.object({
   }),
   title: z.string().min(1, 'Nama barang wajib diisi'),
   icon: z.string().default('📦'),
+  category: z.string().optional().default(''),
+  tag: z.string().optional().default(''),
   desc: z.string().min(1, 'Lokasi wajib diisi'),
   secretDetail: z.string().optional().default(''),
   commitments: z.array(z.string()).optional().default([]),

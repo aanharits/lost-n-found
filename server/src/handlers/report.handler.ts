@@ -8,6 +8,8 @@ import { stringToFieldElement } from '../zk/fieldElement.js';
 // @ts-ignore
 import { buildPoseidon } from 'circomlibjs';
 
+import { autoClassifyItem } from '../utils/tagClassifier.js';
+
 // Menangani pembuatan postingan barang baru dengan validasi dan sanitasi data
 export async function handleItemAdd(io: SocketIOServer, socket: Socket, data: unknown): Promise<void> {
   const parsed = itemAddSchema.safeParse(data);
@@ -17,7 +19,17 @@ export async function handleItemAdd(io: SocketIOServer, socket: Socket, data: un
   }
 
   const inputData = parsed.data;
-  console.log(`[Item] New report from ${inputData.reporterName || 'Anon'}: ${inputData.title}`);
+
+  // Auto-klasifikasi category & tag jika belum ada
+  let category = inputData.category;
+  let tag = inputData.tag;
+  if (!tag || !category) {
+    const classified = await autoClassifyItem(inputData.title, inputData.desc);
+    category = classified.category;
+    tag = classified.tag;
+  }
+
+  console.log(`[Item] New report from ${inputData.reporterName || 'Anon'}: ${inputData.title} [${category} • ${tag}]`);
 
   try {
     // 1. Ekstrak keyword dari input rahasia pelapor
@@ -36,6 +48,8 @@ export async function handleItemAdd(io: SocketIOServer, socket: Socket, data: un
       type: inputData.type,
       title: inputData.title,
       icon: inputData.icon,
+      category: category,
+      tag: tag,
       desc: inputData.desc,
       commitments: commitments,
       claims: [],

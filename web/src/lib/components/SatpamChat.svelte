@@ -1,45 +1,52 @@
 <script lang="ts">
-  import { getSocket } from '$lib/socket.js';
-  import { items } from '$lib/stores/items.js';
-  import Avatar from './Avatar.svelte';
-  import { fly, fade } from 'svelte/transition';
+  import { getSocket } from "$lib/socket.js";
+  import { items } from "$lib/stores/items.js";
+  import { highlight, scrollToCard } from "$lib/stores/highlight.js";
+  import Avatar from "./Avatar.svelte";
+  import { fly, fade } from "svelte/transition";
 
   let chatOpen = $state(false);
-  let chatInput = $state('');
-  let chatHistory: Array<{ role: 'user' | 'satpam'; text: string }> = $state([]);
+  let chatInput = $state("");
+  let chatHistory: Array<{
+    role: "user" | "satpam";
+    text: string;
+    hasHighlight?: boolean;
+    firstItemId?: string | null;
+  }> = $state([]);
   let chatLoading = $state(false);
   let chatContainer = $state<HTMLElement>();
   let avatarEl = $state<HTMLElement>();
 
   // Konfigurasi 8-Bit Pak Satpam menggunakan DiceBear PixelArt
   const satpamOptions = {
-    seed: 'PakSatpamAI',
-    hair: ['short01'],
-    hairColor: ['28150a'],
-    hat: ['variant02'],
-    hatColor: ['2663a3'],
+    seed: "PakSatpamAI",
+    hair: ["short01"],
+    hairColor: ["28150a"],
+    hat: ["variant02"],
+    hatColor: ["2663a3"],
     hatProbability: 100,
-    beard: ['variant01'],
+    beard: ["variant01"],
     beardProbability: 100,
-    clothing: ['variant01'],
-    clothingColor: ['03396c'],
-    skinColor: ['e0b687'],
-    eyes: ['variant11'],
-    mouth: ['happy01']
+    clothing: ["variant01"],
+    clothingColor: ["03396c"],
+    skinColor: ["e0b687"],
+    eyes: ["variant11"],
+    mouth: ["happy01"],
   };
 
   // Membuka atau menutup jendela obrolan dengan Satpam AI
   function toggleChat() {
     chatOpen = !chatOpen;
+    if (chatOpen) {
+      setTimeout(scrollToBottom, 50);
+    }
   }
 
   // Menggulir tampilan chat ke pesan paling bawah secara otomatis
   function scrollToBottom() {
-    setTimeout(() => {
-      if (chatContainer) {
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-      }
-    }, 50);
+    if (chatContainer) {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
   }
 
   // Mengirim pesan pengguna ke Satpam AI melalui event socket chat_message
@@ -47,51 +54,98 @@
     const text = chatInput.trim();
     if (!text) return;
 
-    chatHistory = [...chatHistory, { role: 'user', text }];
-    chatInput = '';
+    chatHistory = [...chatHistory, { role: "user", text }];
+    chatInput = "";
     chatLoading = true;
     scrollToBottom();
 
     const socket = getSocket();
     if (!socket?.connected) {
-      chatHistory = [...chatHistory, { role: 'satpam', text: 'Koneksi socket offline nih, coba sebentar lagi ya!' }];
+      chatHistory = [
+        ...chatHistory,
+        {
+          role: "satpam",
+          text: "Koneksi socket offline nih, coba sebentar lagi ya!",
+        },
+      ];
       chatLoading = false;
       scrollToBottom();
       return;
     }
 
-    const boardData = $items.map((i) => `[${i.type.toUpperCase()}] ${i.title} - Lokasi: ${i.desc}`).join(' | ');
+    // Sertakan tag dan kategori dalam data papan untuk Satpam AI
+    const boardData = $items
+      .map(
+        (i) =>
+          `[${i.type.toUpperCase()} | ${i.category || "Umum"} • ${i.tag || "Lainnya"}] ${i.title} - Lokasi: ${i.desc}`,
+      )
+      .join(" | ");
     const historyContext = chatHistory
       .slice(-6)
-      .map((m) => `${m.role === 'user' ? 'Mahasiswa' : 'Satpam AI'}: ${m.text}`)
-      .join('\n');
+      .map((m) => `${m.role === "user" ? "Mahasiswa" : "Satpam AI"}: ${m.text}`)
+      .join("\n");
 
-    socket.emit('chat_message', {
+    socket.emit("chat_message", {
       message: text,
-      boardData: boardData || 'Papan sedang kosong',
+      boardData: boardData || "Papan sedang kosong",
       historyContext,
     });
 
+    interface ChatReplyData {
+      reply: string;
+      highlightTag?: string | null;
+      highlightCategory?: string | null;
+      highlightType?: 'lost' | 'found' | null;
+      highlightItemIds?: string[];
+    }
+
     // Menunggu balasan respon dari AI dengan batas timeout 12 detik
-    const reply = await new Promise<string>((resolve) => {
+    const replyData = await new Promise<ChatReplyData>((resolve) => {
       const timeout = setTimeout(() => {
-        resolve('Waduh, koneksi otakku lagi nge-lag nih. Coba lagi ya!');
+        resolve({
+          reply: "Waduh, koneksi otakku lagi nge-lag nih. Coba lagi ya!",
+        });
       }, 12000);
 
-      socket.once('chat_reply', (data: { reply: string }) => {
+      socket.once("chat_reply", (data: ChatReplyData) => {
         clearTimeout(timeout);
-        resolve(data.reply);
+        resolve(data);
       });
     });
 
-    chatHistory = [...chatHistory, { role: 'satpam', text: reply }];
+    // Jika ada instruksi sorotan barang dari Satpam AI, aktifkan highlight di papan
+    const hasHighlight = !!(
+      (replyData.highlightItemIds && replyData.highlightItemIds.length > 0) ||
+      replyData.highlightTag ||
+      replyData.highlightCategory ||
+      replyData.highlightType
+    );
+
+    if (hasHighlight) {
+      highlight.fromSatpam({
+        category: replyData.highlightCategory,
+        tag: replyData.highlightTag,
+        itemType: replyData.highlightType,
+        itemIds: replyData.highlightItemIds,
+      });
+    }
+
+    chatHistory = [
+      ...chatHistory,
+      {
+        role: "satpam",
+        text: replyData.reply,
+        hasHighlight,
+        firstItemId: replyData.highlightItemIds?.[0] || null,
+      },
+    ];
     chatLoading = false;
     scrollToBottom();
   }
 
   // Mengirim chat ketika tombol Enter ditekan
   function handleKeypress(e: KeyboardEvent) {
-    if (e.key === 'Enter') sendChat();
+    if (e.key === "Enter") sendChat();
   }
 </script>
 
@@ -107,9 +161,13 @@
     transition:fly={{ y: 15, duration: 200 }}
   >
     <!-- Header panel chat: Sesuai Screenshot Biru Nintendo -->
-    <div class="bg-[#2563eb] text-white px-3 py-2 font-pixel text-[9px] md:text-[10px] flex justify-between items-center border-b-2 border-[#1c120c]">
+    <div
+      class="bg-[#2563eb] text-white px-3 py-2 font-pixel text-[9px] md:text-[10px] flex justify-between items-center border-b-2 border-[#1c120c]"
+    >
       <div class="flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full bg-green-400 border border-[#0c0812] animate-pulse"></span>
+        <span
+          class="w-2 h-2 rounded-full bg-green-400 border border-[#0c0812] animate-pulse"
+        ></span>
         <span class="font-bold tracking-wider">Chat Log Satpam AI</span>
       </div>
       <button
@@ -128,27 +186,60 @@
       class="p-3.5 max-h-[230px] overflow-y-auto font-sans text-xs flex flex-col gap-2.5 bg-white border-b-2 border-[#1c120c]"
     >
       {#if chatHistory.length === 0}
-        <div class="text-[#1c120c] font-pixel text-[8px] text-center p-3.5 border-2 border-dashed border-[#b87d46] bg-[#fefce8] rounded leading-relaxed">
-          Halo! Ada barang hilang atau butuh bantuan di kampus? Ketik pertanyaan di bawah ya!
+        <div
+          class="text-[#1c120c] font-pixel text-[8px] text-center p-3.5 border-2 border-dashed border-[#b87d46] bg-[#fefce8] rounded leading-relaxed"
+        >
+          Halo! Ada barang hilang atau butuh bantuan di kampus? Ketik pertanyaan
+          di bawah ya!
         </div>
       {:else}
         {#each chatHistory as msg, i}
-          <div class="flex flex-col {msg.role === 'user' ? 'items-end' : 'items-start'}">
-            <span class="font-pixel text-[7px] mb-0.5 font-bold {msg.role === 'user' ? 'text-[#2563eb]' : 'text-[#1c120c]'}">
-              {msg.role === 'user' ? 'Kamu' : 'Satpam AI'}
+          <div
+            class="flex flex-col {msg.role === 'user'
+              ? 'items-end'
+              : 'items-start'}"
+          >
+            <span
+              class="font-pixel text-[7px] mb-0.5 font-bold {msg.role === 'user'
+                ? 'text-[#2563eb]'
+                : 'text-[#1c120c]'}"
+            >
+              {msg.role === "user" ? "Kamu" : "Satpam AI"}
             </span>
             <div
               class="p-2.5 rounded-none border-2 border-[#1c120c] font-sans text-xs font-bold max-w-[88%] shadow-[2px_2px_0px_#1c120c] leading-relaxed bg-white text-[#1c120c]"
             >
-              {msg.text}
+              <div>{msg.text}</div>
+              {#if msg.hasHighlight}
+                <button
+                  type="button"
+                  onclick={() => {
+                    if (msg.firstItemId) {
+                      scrollToCard(msg.firstItemId, 0);
+                    }
+                    chatOpen = false;
+                  }}
+                  class="mt-2 bg-[#ffd700] hover:bg-[#facc15] active:translate-y-0.5 text-[#1c120c] font-pixel text-[8px] py-1 px-2.5 rounded border border-[#1c120c] shadow-[1px_1px_0_#1c120c] cursor-pointer flex items-center gap-1.5 font-bold w-fit transition-all"
+                >
+                  <span>📍</span> LIHAT DI PAPAN
+                </button>
+              {/if}
             </div>
           </div>
         {/each}
         {#if chatLoading}
-          <div class="flex flex-col items-start" transition:fade={{ duration: 150 }}>
-            <span class="font-pixel text-[7px] mb-0.5 text-[#1c120c] font-bold">Satpam AI</span>
-            <div class="p-2 rounded-none border-2 border-[#1c120c] bg-white text-[#2563eb] font-pixel text-[8px] animate-pulse shadow-[2px_2px_0px_#1c120c] flex items-center gap-2">
-              <span class="w-1.5 h-1.5 rounded-full bg-[#2563eb] animate-ping"></span>
+          <div
+            class="flex flex-col items-start"
+            transition:fade={{ duration: 150 }}
+          >
+            <span class="font-pixel text-[7px] mb-0.5 text-[#1c120c] font-bold"
+              >Satpam AI</span
+            >
+            <div
+              class="p-2 rounded-none border-2 border-[#1c120c] bg-white text-[#2563eb] font-pixel text-[8px] animate-pulse shadow-[2px_2px_0px_#1c120c] flex items-center gap-2"
+            >
+              <span class="w-1.5 h-1.5 rounded-full bg-[#2563eb] animate-ping"
+              ></span>
               Sebentar, saya cek buku catatan posko dulu...
             </div>
           </div>
@@ -199,22 +290,24 @@
     class="relative group cursor-pointer focus:outline-none flex flex-col items-center transition-transform hover:-translate-y-1 select-none"
   >
     <!-- Avatar Pixel Art 8-Bit Pak Satpam (DiceBear PixelArt) -->
-    <div class="relative w-[94px] h-[94px] rounded-t flex items-center justify-center overflow-hidden">
+    <div
+      class="relative w-[94px] h-[94px] rounded-t flex items-center justify-center overflow-hidden"
+    >
       <Avatar seed="PakSatpamAI" size={94} options={satpamOptions} />
-      
+
       <!-- Pin Lencana Emas 8-Bit di Topi Satpam -->
-      <div class="absolute top-[12px] left-1/2 -translate-x-1/2 w-2.5 h-2 bg-[#ffd700] border border-[#78350f] shadow-[0_1px_0px_#78350f] pointer-events-none"></div>
+      <div
+        class="absolute top-[12px] left-1/2 -translate-x-1/2 w-2.5 h-2 bg-[#ffd700] border border-[#78350f] shadow-[0_1px_0px_#78350f] pointer-events-none"
+      ></div>
     </div>
 
     <!-- Meja / Pos Piket Satpam 8-Bit (Nintendo Pod Style) -->
-    <div class="relative -mt-2.5 z-10 flex items-center gap-1.5 bg-[#120f20] border border-[#2d2244] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),_2px_2px_0px_#06040a] px-3 py-1 rounded-md group-hover:bg-[#1f1730] transition-colors">
-      <span class="w-1.5 h-1.5 rounded-full bg-green-400 border border-[#0c0812] animate-pulse"></span>
+    <div
+      class="relative -mt-2.5 z-10 flex items-center gap-1.5 bg-[#120f20] border border-[#2d2244] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),_2px_2px_0px_#06040a] px-3 py-1 rounded-md group-hover:bg-[#1f1730] transition-colors"
+    >
       <span
-        class="font-pixel text-[8px] md:text-[9px] text-[#f8fafc] font-bold tracking-wide"
-        style="text-shadow: 1px 1px 0 #000;"
-      >
-        SATPAM AI
-      </span>
+        class="w-1.5 h-1.5 rounded-full bg-green-400 border border-[#0c0812] animate-pulse"
+      ></span>
     </div>
   </button>
 </div>

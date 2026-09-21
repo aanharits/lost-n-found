@@ -1,25 +1,23 @@
 import { writable } from 'svelte/store';
+export { highlight, activeHighlight, currentFilter, scrollToCard, isItemHighlighted, type HighlightState } from './highlight.js';
 
 export type Scene = 'lobby' | 'board';
 export type FilterType = 'all' | 'lost' | 'found';
 export type ModalType = 'none' | 'report' | 'claim' | 'claimsReview';
 
-// Store status scene tampilan aktif (lobby atau board)
+// Scene aktif ('lobby' | 'board')
 export const currentScene = writable<Scene>('lobby');
 
-// Store filter kategori barang (all, lost, found)
-export const currentFilter = writable<FilterType>('all');
-
-// Store modal dialog yang sedang terbuka
+// Modal aktif
 export const activeModal = writable<ModalType>('none');
 
-// Store ID barang yang sedang dipilih untuk klaim atau review
+// Target item untuk modal klaim & review
 export const claimTargetItemId = writable<string | null>(null);
 export const reviewTargetItemId = writable<string | null>(null);
 
-// Store jumlah user online dan status koneksi socket
+// Status koneksi socket dan counter user online
 export const onlineCount = writable<number>(1);
 export const socketConnected = writable<boolean>(false);
 
-// Store penghitung percobaan klaim untuk batas kesempatan
+// Counter percobaan verifikasi klaim
 export const claimAttemptCount = writable<number>(0);

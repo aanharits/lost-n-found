@@ -3,7 +3,8 @@
   import { fly, fade } from 'svelte/transition';
   import { items, type Item } from '$lib/stores/items.js';
   import { currentPlayer } from '$lib/stores/player.js';
-  import { currentScene, currentFilter, socketConnected, onlineCount, activeModal, claimTargetItemId, reviewTargetItemId } from '$lib/stores/ui.js';
+  import { currentScene, socketConnected, onlineCount, activeModal, claimTargetItemId, reviewTargetItemId } from '$lib/stores/ui.js';
+  import { highlight } from '$lib/stores/highlight.js';
   import { getSocket } from '$lib/socket.js';
   import ItemCard from './ItemCard.svelte';
   import Avatar from './Avatar.svelte';
@@ -11,20 +12,13 @@
   import ClaimModal from './ClaimModal.svelte';
   import ClaimsReviewModal from './ClaimsReviewModal.svelte';
   import SatpamChat from './SatpamChat.svelte';
+  import CategoryGamepad from './CategoryGamepad.svelte';
 
   let boardContainer: HTMLElement;
 
-  // Filter daftar barang sesuai tab yang dipilih (all, lost, found)
-  let filteredItems = $derived(
-    $items.filter((item) => $currentFilter === 'all' || item.type === $currentFilter)
-  );
 
-  // Mengubah filter kategori tampilan barang
-  function setFilter(type: 'all' | 'lost' | 'found') {
-    currentFilter.set(type);
-  }
 
-  // Merapikan posisi seluruh kartu dalam susunan grid rapi dan broadcast ke user lain
+  // Susun ulang posisi kartu ke dalam grid rapi
   function organizeBoard() {
     const cardWidth = 140;
     const cardHeight = 175;
@@ -35,9 +29,7 @@
     const columns = Math.max(1, Math.floor(availableWidth / (cardWidth + gapX)));
 
     items.update((current) => {
-      const filtered = current.filter(
-        (item) => $currentFilter === 'all' || item.type === $currentFilter
-      );
+      const filtered = current;
 
       const posMap = new Map<string, { x: number; y: number }>();
       filtered.forEach((item, index) => {
@@ -108,8 +100,14 @@
   }
 
   function onWindowClick(e: MouseEvent) {
-    if (isProfileOpen && !(e.target as HTMLElement).closest('.profile-menu-container')) {
+    const target = e.target as HTMLElement;
+    if (isProfileOpen && !target.closest('.profile-menu-container')) {
       isProfileOpen = false;
+    }
+
+    // Jika sedang aktif highlight dan user klik di luar tombol dan kartu, batalkan sorotan (unhighlight)
+    if ($highlight && !target.closest('button') && !target.closest('.item-card')) {
+      highlight.clear();
     }
   }
 
@@ -230,7 +228,7 @@
 >
 
   <!-- Judul dan subjudul papan: Sesuai Screenshot Terang & Colorful -->
-  <div class="text-center mb-3 z-10 select-none">
+  <div class="text-center mb-3 z-10 select-none flex flex-col items-center">
     <h1
       class="text-3xl md:text-5xl font-pixel text-white mb-1 tracking-wider"
       style="text-shadow: 3px 3px 0 #1c120c, 5px 5px 0 rgba(0,0,0,0.3);"
@@ -245,13 +243,18 @@
     </p>
   </div>
 
-  <!-- Area papan kartu barang -->
-  <div
-    id="board-container"
-    bind:this={boardContainer}
-    class="board-container w-full max-w-5xl flex-grow rounded-xl overflow-hidden relative shadow-[8px_8px_0px_rgba(0,0,0,0.5)]"
-  >
-    <!-- Tombol aksi lapor dan rapihkan posisi: Colorful Retro Action Buttons -->
+  <!-- Kontainer utama board -->
+  <div class="relative w-full max-w-5xl flex-grow flex flex-col items-center">
+    <!-- Gamepad kontrol kategori -->
+    <CategoryGamepad />
+
+    <!-- Area papan kartu -->
+    <div
+      id="board-container"
+      bind:this={boardContainer}
+      class="board-container w-full flex-grow rounded-xl overflow-hidden relative shadow-[8px_8px_0px_rgba(0,0,0,0.5)] cursor-default"
+    >
+    <!-- Tombol aksi (lapor & rapihkan) -->
     <div class="absolute top-4 left-4 z-20 flex gap-2">
       <button
         onclick={openReportModal}
@@ -267,26 +270,29 @@
       </button>
     </div>
 
-    <!-- Tombol tab filter kategori barang: Controller Pod Sesuai Screenshot -->
+    <!-- Filter status hilang / ketemu -->
     <div class="absolute top-4 right-4 z-20 flex bg-white border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] rounded overflow-hidden select-none">
       <button
-        onclick={() => setFilter('all')}
+        type="button"
+        onclick={() => highlight.toggleStatus('all')}
         class="px-3 py-1 font-pixel text-[8px] md:text-[9px] transition-all cursor-pointer font-bold
-          {$currentFilter === 'all' ? 'bg-[#2563eb] text-white' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
+          {!$highlight?.itemType ? 'bg-[#2563eb] text-white' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
       >
         SEMUA
       </button>
       <button
-        onclick={() => setFilter('lost')}
+        type="button"
+        onclick={() => highlight.toggleStatus('lost')}
         class="px-3 py-1 font-pixel text-[8px] md:text-[9px] transition-all cursor-pointer font-bold border-l-2 border-r-2 border-[#1c120c]
-          {$currentFilter === 'lost' ? 'bg-[#dc2626] text-white' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
+          {$highlight?.itemType === 'lost' ? 'bg-[#dc2626] text-white ring-1 ring-inset ring-red-400' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
       >
         HILANG
       </button>
       <button
-        onclick={() => setFilter('found')}
+        type="button"
+        onclick={() => highlight.toggleStatus('found')}
         class="px-3 py-1 font-pixel text-[8px] md:text-[9px] transition-all cursor-pointer font-bold
-          {$currentFilter === 'found' ? 'bg-[#16a34a] text-white' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
+          {$highlight?.itemType === 'found' ? 'bg-[#16a34a] text-white ring-1 ring-inset ring-green-400' : 'bg-white text-[#1c120c] hover:bg-slate-100'}"
       >
         KETEMU
       </button>
@@ -294,7 +300,7 @@
 
     <!-- Area render kartu barang -->
     <div id="cards-area" class="cards-area">
-      {#each filteredItems as item (item.id)}
+      {#each $items as item (item.id)}
         <ItemCard
           {item}
           onClaim={() => openClaimModal(item.id)}
@@ -309,6 +315,7 @@
       <SatpamChat />
     </div>
   </div>
+</div>
 </div>
 
 <!-- Modal dialogs -->
