@@ -283,7 +283,7 @@
   <div class="relative w-full max-w-5xl flex-grow flex flex-col items-center">
     <!-- Panel Kategori Sisi Kiri (Desain Gamepad Nintendo 8-Bit Lucu dengan Layar LCD) -->
     <aside
-      class="select-none mb-3 min-[1140px]:mb-0 min-[1140px]:absolute min-[1140px]:-left-40 min-[1140px]:top-0 z-25 w-[142px] bg-[#d1d5db] border-4 border-[#1c120c] shadow-[inset_0_2px_0_rgba(255,255,255,0.75),inset_-2px_-2px_0_rgba(0,0,0,0.25),4px_4px_0px_#0c0812] rounded-2xl p-2 flex flex-col gap-2"
+      class="select-none mb-3 min-[1140px]:mb-0 min-[1140px]:absolute min-[1140px]:-left-40 min-[1140px]:top-0 z-25 w-[142px] bg-[#fefce8] border-4 border-[#1c120c] shadow-[inset_0_2px_0_rgba(255,255,255,0.9),inset_-2px_-2px_0_rgba(0,0,0,0.12),4px_4px_0px_#0c0812] rounded-2xl p-2 flex flex-col gap-2"
     >
       <!-- Layar Mini LCD Game Boy -->
       <div class="bg-[#1e293b] border-2 border-[#1c120c] rounded-lg p-1.5 flex flex-col gap-1 shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)]">
@@ -316,7 +316,7 @@
             class="font-pixel text-[8px] py-1.5 px-2 w-full rounded border-2 border-[#1c120c] shadow-[2px_2px_0px_#1c120c] active:translate-y-0.5 active:shadow-none cursor-pointer font-bold tracking-wider transition-all select-none text-center
               {$activeHighlight?.category === cat.id
                 ? 'bg-[#ffd700] text-[#1c120c] translate-x-1 shadow-none border-[#1c120c] ring-1 ring-[#facc15]'
-                : 'bg-white text-[#1c120c] hover:bg-[#fefce8]'}"
+                : 'bg-white text-[#1c120c] hover:bg-[#fff9db]'}"
           >
             {cat.label}
           </button>
@@ -324,22 +324,22 @@
       </div>
 
       <!-- Detail Retro: Tombol Karet Select / Start & Speaker Grille -->
-      <div class="flex items-center justify-between px-1 pt-1 border-t border-slate-400/50 mt-0.5">
+      <div class="flex items-center justify-between px-1 pt-1 border-t border-[#e2dcbb] mt-0.5">
         <div class="flex gap-1.5 items-center">
           <div class="flex flex-col items-center">
             <div class="w-3.5 h-1.5 bg-[#64748b] border border-[#1c120c] rounded-full -rotate-25 shadow-[1px_1px_0_#1c120c]"></div>
-            <span class="text-[5px] font-pixel text-slate-500 mt-0.5">SELECT</span>
+            <span class="text-[5px] font-pixel text-[#78716c] mt-0.5">SELECT</span>
           </div>
           <div class="flex flex-col items-center">
             <div class="w-3.5 h-1.5 bg-[#64748b] border border-[#1c120c] rounded-full -rotate-25 shadow-[1px_1px_0_#1c120c]"></div>
-            <span class="text-[5px] font-pixel text-slate-500 mt-0.5">START</span>
+            <span class="text-[5px] font-pixel text-[#78716c] mt-0.5">START</span>
           </div>
         </div>
         <!-- Lubang Speaker 8-bit -->
         <div class="flex gap-1 items-center pr-0.5">
-          <div class="w-0.5 h-2.5 bg-[#94a3b8] border border-[#1c120c] rounded-full -rotate-25"></div>
-          <div class="w-0.5 h-2.5 bg-[#94a3b8] border border-[#1c120c] rounded-full -rotate-25"></div>
-          <div class="w-0.5 h-2.5 bg-[#94a3b8] border border-[#1c120c] rounded-full -rotate-25"></div>
+          <div class="w-0.5 h-2.5 bg-[#cbd5e1] border border-[#1c120c] rounded-full -rotate-25"></div>
+          <div class="w-0.5 h-2.5 bg-[#cbd5e1] border border-[#1c120c] rounded-full -rotate-25"></div>
+          <div class="w-0.5 h-2.5 bg-[#cbd5e1] border border-[#1c120c] rounded-full -rotate-25"></div>
         </div>
       </div>
     </aside>
