@@ -1,12 +1,11 @@
 import type { Item } from './store.js';
 
-// Menghapus field secretDetail sebelum dikirim ke client agar tidak bocor
-export function sanitizeItem(item: Item): Omit<Item, 'secretDetail'> {
-  const { secretDetail, ...sanitized } = item;
-  return sanitized;
+// Karena menggunakan ZKP, tidak ada field secretDetail mentah yang tersimpan.
+// Fungsi ini dipertahankan hanya agar kompatibel dengan pemanggilan dari file lain.
+export function sanitizeItem(item: Item): Item {
+  return item;
 }
 
-// Menghapus field secretDetail dari seluruh array item
-export function sanitizeItems(items: Item[]): Omit<Item, 'secretDetail'>[] {
-  return items.map(sanitizeItem);
+export function sanitizeItems(items: Item[]): Item[] {
+  return items;
 }

@@ -29,9 +29,9 @@ export interface Item {
   title: string;
   icon: string;
   desc: string;
-  secretDetail: string;
+  commitments: string[];
   claims: Claim[];
-  resolved: boolean;
+  status: 'open' | 'disputed' | 'resolved';
   date: string;
   time: string;
   reporterName: string;
