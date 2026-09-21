@@ -131,7 +131,8 @@ Komponen [`TagIcon.svelte`](file:///Users/aanharits/Downloads/lost%20n%20found/w
 - **Server:**
   - [`server/src/schemas/item.schema.ts`](file:///Users/aanharits/Downloads/lost%20n%20found/server/src/schemas/item.schema.ts): Menambahkan field `category` dan `tag` pada schema Zod.
   - [`server/src/data/store.ts`](file:///Users/aanharits/Downloads/lost%20n%20found/server/src/data/store.ts): Update interface `Item` dengan `category` dan `tag`.
-  - [`server/src/utils/tagClassifier.ts`](file:///Users/aanharits/Downloads/lost%20n%20found/server/src/utils/tagClassifier.ts): Engine klasifikasi regex komprehensif + AI fallback Groq.
+  - [`server/src/utils/tagRegexRules.ts`](file:///Users/aanharits/Downloads/lost%20n%20found/server/src/utils/tagRegexRules.ts): Kamus pola regex per kategori (`GADGET_RULES`, `PAKAIAN_RULES`, `PERSONAL_RULES`, `DOKUMEN_RULES`) & fungsi pencocokan cepat (0ms).
+  - [`server/src/utils/tagClassifier.ts`](file:///Users/aanharits/Downloads/lost%20n%20found/server/src/utils/tagClassifier.ts): Orchestrator klasifikasi (Regex lokal -> AI Fallback Groq) & re-export modular.
   - [`server/src/handlers/report.handler.ts`](file:///Users/aanharits/Downloads/lost%20n%20found/server/src/handlers/report.handler.ts): Auto-enrichment `category` dan `tag` saat barang ditambahkan.
   - [`server/src/handlers/chat.handler.ts`](file:///Users/aanharits/Downloads/lost%20n%20found/server/src/handlers/chat.handler.ts): Deteksi intent sorotan tag/kategori dari pesan mahasiswa untuk dikirimkan ke client.
   - [`server/data/items.json`](file:///Users/aanharits/Downloads/lost%20n%20found/server/data/items.json): Data awal barang dilengkapi metadata tag & kategori.
