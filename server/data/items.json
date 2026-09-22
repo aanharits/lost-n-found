@@ -379,7 +379,102 @@
     "reporterName": "aann yogs",
     "reporterNpm": "1243432423",
     "reporterContact": "08392047023",
-    "x": 451.94341901854415,
-    "y": 201.55888230920704
+    "x": 678,
+    "y": 290
+  },
+  {
+    "id": "item1790009006054",
+    "type": "lost",
+    "title": "atm",
+    "icon": "💳",
+    "category": "Dokumen & Kartu",
+    "tag": "atm",
+    "desc": "kantin",
+    "commitments": [
+      "11994803919506503275771244928580015102783865154771219103423310162525232337096",
+      "12576110178585780240445562716375784379186314768092000515907875651062747585682",
+      "7115581852292531745213612413275537209611539130401230196753713257554155659260"
+    ],
+    "claims": [
+      {
+        "id": "claim1790009035811",
+        "text": "ZKP Proof Verified (Hidden)",
+        "score": 100,
+        "confidence": "Tinggi",
+        "reasoning": "Zero-Knowledge Proof Valid",
+        "status": "approved",
+        "claimantName": "yash",
+        "claimantNpm": "12431432",
+        "claimantContact": "09937840932",
+        "createdAt": "2026-09-21T16:43:55.812Z"
+      }
+    ],
+    "status": "resolved",
+    "date": "2026-09-21",
+    "time": "23:43",
+    "reporterName": "aann yogs",
+    "reporterNpm": "1243432423",
+    "reporterContact": "08392047023",
+    "x": 843,
+    "y": 276
+  },
+  {
+    "id": "item1790009570262",
+    "type": "lost",
+    "title": "tas",
+    "icon": "🎒",
+    "category": "Pakaian & Aksesoris",
+    "tag": "tas",
+    "desc": "kantin",
+    "commitments": [
+      "21774857139651892364792604362861092833953696900349216895770870544765570098368",
+      "18786897623427439571913353310579063165860900024851276191547776268662699618522",
+      "12644015378337051076430976137436066550386906424519669640389055075629851000195"
+    ],
+    "claims": [],
+    "status": "open",
+    "date": "2026-09-21",
+    "time": "23:51",
+    "reporterName": "aan galer",
+    "reporterNpm": "325423543",
+    "reporterContact": "082143143312",
+    "x": 581,
+    "y": 37
+  },
+  {
+    "id": "item1790010851980",
+    "type": "found",
+    "title": "botol minum",
+    "icon": "🍶",
+    "category": "Personal",
+    "tag": "tempat_makan",
+    "desc": "kelas",
+    "commitments": [
+      "14898735592182094947425138677800983842813202405526640146292194795461459957492",
+      "7115581852292531745213612413275537209611539130401230196753713257554155659260",
+      "7115581852292531745213612413275537209611539130401230196753713257554155659260"
+    ],
+    "claims": [
+      {
+        "id": "claim1790010962517",
+        "text": "ZKP Proof Verified (Hidden)",
+        "score": 100,
+        "confidence": "Tinggi",
+        "reasoning": "Zero-Knowledge Proof Valid",
+        "status": "approved",
+        "claimantName": "yash",
+        "claimantNpm": "12431432",
+        "claimantContact": "09937840932",
+        "createdAt": "2026-09-21T17:16:02.517Z"
+      }
+    ],
+    "status": "resolved",
+    "date": "2026-09-22",
+    "time": "00:13",
+    "reporterName": "aan galer",
+    "reporterNpm": "325423543",
+    "reporterContact": "082143143312",
+    "x": 452.79290949693126,
+    "y": 215.7793338355075
   }
 ]
