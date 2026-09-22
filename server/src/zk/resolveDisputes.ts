@@ -4,7 +4,7 @@ import { getItems, persistItems } from '../data/store.js';
  * Layer 3: Gale-Shapley Dispute Resolution (Sederhana untuk PoC).
  * Karena ini barang hilang (1 barang), algoritma Gale-Shapley di sini
  * akan dipersingkat:
- * "Pilih klaim yang valid berdasarkan siapa yang mengajukan lebih dulu (First-Come First-Served)".
+ * "Pilih klaim yang valid berdasarkan score tertinggi (DESC) lalu siapa yang mengajukan lebih dulu (ASC)".
  * 
  * @param itemId ID barang yang disengketakan
  * @returns ID klaim yang menang, atau null jika tidak ada pemenang
@@ -26,8 +26,15 @@ export function resolveDisputes(itemId: string): string | null {
     return null;
   }
 
-  // Urutkan berdasarkan waktu klaim paling awal
-  pendingClaims.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  // Urutkan berdasarkan score DESC, lalu waktu klaim paling awal ASC
+  pendingClaims.sort((a, b) => {
+    const scoreA = a.score ?? 0;
+    const scoreB = b.score ?? 0;
+    if (scoreB !== scoreA) {
+      return scoreB - scoreA;
+    }
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+  });
 
   const winner = pendingClaims[0];
 

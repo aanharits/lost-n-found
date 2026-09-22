@@ -4,6 +4,7 @@ import { getItems, persistItems, type Item } from '../data/store.js';
 import { sanitizeItem } from '../data/sanitize.js';
 import { pickEmojiWithAI } from '../ai/verifyClaim.js';
 import { extractKeywordsWithAI } from '../zk/keywordExtractor.js';
+import { MIN_KEYWORDS } from '../zk/normalizeKeywords.js';
 import { stringToFieldElement } from '../zk/fieldElement.js';
 import { poseidonCommitment } from '../zk/poseidon.js';
 
@@ -33,7 +34,18 @@ export async function handleItemAdd(io: SocketIOServer, socket: Socket, data: un
   try {
     // 1. Ekstrak keyword dari input rahasia pelapor
     const keywords = await extractKeywordsWithAI(inputData.secretDetail || '');
-    
+
+    // 1b. Tolak laporan dengan ciri rahasia terlalu sedikit.
+    // Dengan intersection scoring, N kecil membuat penebak cukup tahu 1
+    // keyword untuk lolos. Minimal MIN_KEYWORDS mencegah lubang ini.
+    if (keywords.length < MIN_KEYWORDS) {
+      console.warn(`[Item] Report rejected: hanya ${keywords.length} keyword nyata (min ${MIN_KEYWORDS}) untuk "${inputData.title}"`);
+      socket.emit('item_add_error', {
+        message: `Ciri rahasia terlalu sedikit. Tambahkan minimal ${MIN_KEYWORDS} ciri pembeda yang spesifik (warna, merek, motif, bahan, dsb).`
+      });
+      return;
+    }
+
     // 2. Hash menggunakan Poseidon untuk membuat Commitment
     const commitments = await Promise.all(
       keywords.map((kw) => poseidonCommitment(stringToFieldElement(kw)))
