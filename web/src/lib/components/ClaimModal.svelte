@@ -13,12 +13,12 @@
   let placeholder = $state('Warna, ciri khas, kondisi, tanda khusus, dll...');
   let waLink = $state('');
   
-  let submitLabel = $derived(targetItem?.type === 'found' ? 'Kirim Klaim' : 'Cocokkan Ciri');
-
   // Mencari data barang yang sedang menjadi target klaim
   let targetItem = $derived(
     $items.find((i) => i.id === $claimTargetItemId) || null
   );
+
+  let submitLabel = $derived(targetItem?.type === 'found' ? 'Kirim Klaim' : 'Cocokkan Ciri');
 
   // Judul modal berdasarkan status jenis barang
   let modalTitle = $derived(
@@ -65,6 +65,7 @@
 
   import * as snarkjs from 'snarkjs';
   import { keccak_256 } from 'js-sha3';
+  import { poseidon1 } from 'poseidon-lite';
 
   // Mengirim deskripsi klaim ke server menggunakan Zero-Knowledge Proof (ZKP)
   async function submitClaim() {
@@ -90,7 +91,7 @@
     const player = $currentPlayer;
 
     try {
-      // 1. Ekstrak keyword lewat API Proxy di backend
+      // 1. Ekstrak keyword lewat API Proxy di backend (ZKP v2)
       const base = import.meta.env.PUBLIC_SERVER_URL || 'http://localhost:3001';
       const response = await fetch(`${base}/api/extract`, {
         method: 'POST',
@@ -99,42 +100,67 @@
       });
       
       const data = await response.json();
-      if (!data.keywords || data.keywords.length < 3) {
+      if (!data.keywords || data.keywords.length < 1) {
         throw new Error('Gagal mengekstrak ciri unik dari teks.');
       }
 
-      // 2. Hash keyword menjadi Field Element (BN254)
+      // 2. Hash setiap keyword menjadi Field Element (BN254)
       const PRIME = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
-      const stringToFieldElement = (str: string) => {
+      const stringToFieldElement = (str: string): bigint => {
         const hashHex = keccak_256(str);
         const hashBigInt = BigInt('0x' + hashHex);
-        return (hashBigInt % PRIME).toString();
+        return hashBigInt % PRIME;
       };
 
-      const secret_1 = stringToFieldElement(data.keywords[0]);
-      const secret_2 = stringToFieldElement(data.keywords[1]);
-      const secret_3 = stringToFieldElement(data.keywords[2]);
+      const fieldElements = data.keywords.map(stringToFieldElement);
+      const commitments = targetItem.commitments;
 
-      // 3. Meracik ZKP Proof di dalam Browser (Tanpa membocorkan keyword)
-      // File WASM dan ZKEY diletakkan di public/zk/
-      const { proof, publicSignals } = await snarkjs.groth16.fullProve(
-        { 
-          secret_1, 
-          secret_2, 
-          secret_3,
-          hash_1: targetItem.commitments[0],
-          hash_2: targetItem.commitments[1],
-          hash_3: targetItem.commitments[2]
-        },
-        "/zk/ownership_proof.wasm",
-        "/zk/circuit_final.zkey"
-      );
+      // 3. ZKP v2: Pre-check dengan Poseidon JS dulu (poseidon-lite)
+      // Ini JAUH lebih efisien dari try/catch fullProve:
+      // - Poseidon JS cepat (microseconds)
+      // - fullProve hanya dipanggil untuk pasangan yang PASTI cocok
+      // - fullProve tidak throw saat constraint gagal, jadi try/catch tidak bisa diandalkan
+      const proofs: Array<{ commitmentIndex: number; proof: any; publicSignal: string }> = [];
+      const matchedCommitmentIndices = new Set<number>();
 
-      // 4. Kirim ZKP Proof ke Socket Backend
+      errorMsg = `Memverifikasi ciri-ciri (0/${commitments.length})...`;
+
+      for (let kwIdx = 0; kwIdx < fieldElements.length; kwIdx++) {
+        const fe = fieldElements[kwIdx];
+        // Hitung Poseidon(fe) di JS — sama persis dengan yang ada di sirkuit
+        const poseidonHash = poseidon1([fe]).toString();
+
+        for (let cmtIdx = 0; cmtIdx < commitments.length; cmtIdx++) {
+          if (matchedCommitmentIndices.has(cmtIdx)) continue;
+
+          // Pre-check: apakah hash JS cocok dengan commitment yang tersimpan?
+          if (poseidonHash !== commitments[cmtIdx]) continue; // tidak cocok, skip
+
+          // Cocok! Sekarang generate ZKP proof (pasti berhasil karena constraint terpenuhi)
+          const { proof, publicSignals } = await snarkjs.groth16.fullProve(
+            { secret: fe.toString(), target_hash: commitments[cmtIdx] },
+            "/zk/single_keyword_proof.wasm",
+            "/zk/single_keyword_proof.zkey"
+          );
+          proofs.push({ commitmentIndex: cmtIdx, proof, publicSignal: publicSignals[0] });
+          matchedCommitmentIndices.add(cmtIdx);
+          errorMsg = `Memverifikasi ciri-ciri (${proofs.length}/${commitments.length})...`;
+          break; // keyword ini sudah match, lanjut keyword berikutnya
+        }
+      }
+
+      // 4b. Jika tidak ada satupun keyword yang cocok dengan commitment manapun
+      if (proofs.length === 0) {
+        loading = false;
+        errorMsg = 'Tidak ada ciri yang cocok. Coba ingat lebih detail — warna, merek, nama, atau ciri unik lain.';
+        errorClass = 'bg-red-200 border-red-600 text-red-800';
+        return;
+      }
+
+      // 4c. Kirim semua proof yang berhasil ke Socket Backend
       socket.emit('claim_submit', {
         itemId: targetItem.id,
-        proof: proof,
-        publicSignals: publicSignals,
+        proofs: proofs,
         claimantName: player?.name || '',
         claimantNpm: player?.npm || '',
         claimantContact: player?.contact || ''

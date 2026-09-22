@@ -108,7 +108,7 @@
                     </span>
                   {/if}
                   <span class="px-2 py-0.5 text-[7px] font-pixel font-bold rounded bg-[#0284c7] text-white border border-[#1c120c]">
-                    AI: {claim.confidence} ({claim.score}%)
+                    AI: {claim.confidence} ({(claim.score * 100).toFixed(0)}%)
                   </span>
                 </div>
                 <span class="text-[10px] text-stone-500 font-sans font-bold">{formatDate(claim.createdAt)}</span>

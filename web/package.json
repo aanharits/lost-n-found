@@ -17,6 +17,7 @@
 		"@dicebear/core": "^9.4.3",
 		"axios": "^1.7.0",
 		"js-sha3": "^0.13.0",
+		"poseidon-lite": "^0.3.0",
 		"snarkjs": "^0.7.6",
 		"socket.io-client": "^4.8.0"
 	},
