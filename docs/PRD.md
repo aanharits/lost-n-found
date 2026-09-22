@@ -504,6 +504,9 @@ AND    proof yang dihasilkan valid
 | Dokumen | Lokasi | Isi |
 |---|---|---|
 | Integration Guide | [`docs/integration_guide.md`](./integration_guide.md) | Spesifikasi teknis ZKP Groth16 + Gale-Shapley (dokumen historis, sebagian menyebut BullMQ) |
-| Analisis Tri-Layer Lock | [`docs/analisis_tri_layer_lock.md`](./analisis_tri_layer_lock.md) | Analisis kritis tiap layer dan problem yang ditemukan |
-| Technical Flow Guide | [`docs/technical_flow_guide.md`](./technical_flow_guide.md) | Solusi konkret untuk setiap problem dengan kode implementasi |
+| ZKP v2 — Intersection Scoring | [`docs/v2/zkp_v2_intersection_scoring.md`](./v2/zkp_v2_intersection_scoring.md) | Desain inti v2 (aktif) |
+| ZKP v2 — Keyword Strategy | [`docs/v2/keyword_extraction_strategy.md`](./v2/keyword_extraction_strategy.md) | Strategi normalisasi & prompt LLM |
+| ZKP v2 — Implementation Report | [`docs/v2/zkp_v2_implementation_report.md`](./v2/zkp_v2_implementation_report.md) | Laporan pengerjaan v2 |
+| Analisis Tri-Layer Lock (v1) | [`docs/v1/analisis_tri_layer_lock.md`](./v1/analisis_tri_layer_lock.md) | Analisis kritis tiap layer |
+| Technical Flow Guide (v1) | [`docs/v1/technical_flow_guide.md`](./v1/technical_flow_guide.md) | Solusi problem Tri-Layer Lock |
 | **PRD (dokumen ini)** | [`docs/PRD.md`](./PRD.md) | Requirements, acceptance criteria, dan roadmap |

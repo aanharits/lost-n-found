@@ -1,36 +1,50 @@
 # Panduan Membaca Dokumentasi (Reading Order)
 
-Dokumen-dokumen di dalam folder `docs/` ini mencatat seluruh sejarah pemikiran, pengembangan, dan integrasi proyek **Lost & Found Kampus** hingga mencapai tahap implementasi akhir sistem keamanan kriptografi.
+Dokumen di folder `docs/` mencatat sejarah pemikiran, pengembangan, dan integrasi proyek **Lost & Found Kampus** sampai sistem keamanan ZKP v2.
 
-Bagi anggota tim baru, rekan *tester*, atau dosen pembimbing/penilai, silakan membaca dokumen-dokumen ini sesuai urutan berikut untuk memahami alur pikir proyek dari hulu ke hilir:
+Folder dipisahkan berdasarkan versi agar tidak tercampur:
 
----
-
-## 🏆 FASE 1: Konsep & Fondasi Keamanan (Wajib Dibaca)
-Ini adalah dokumen teoritis yang merumuskan masalah utama dari aplikasi *Lost & Found* konvensional, serta solusi arsitektur yang kita tawarkan.
-1. [analisis_tri_layer_lock.md](./analisis_tri_layer_lock.md) - Analisis fundamental tentang arsitektur *Tri-Layer Lock* (NLP + ZKP + Algoritma Gale-Shapley) yang menjadi inti keamanan aplikasi kita.
-2. [gale_shapley_architecture.md](./gale_shapley_architecture.md) - Penjelasan mendalam tentang peran Layer 3 (Penyelesaian Sengketa / Masa Sanggah 1 Menit) dan *roadmap* algoritmanya menuju N-to-N matching.
+- **`docs/v1/`** — Dokumen era **ZKP v1** (circuit `ownership_proof`, AND-gate 3 keyword, dummy padding).
+- **`docs/v2/`** — Dokumen era **ZKP v2** (circuit `single_keyword_proof`, intersection scoring, normalisasi keyword). Ini yang **aktif dipakai saat ini**.
+- **`docs/` (root)** — Dokumen umum/lintas-versi (PRD, Gale-Shapley, panduan migrasi, dsb).
 
 ---
 
-## ⚙️ FASE 2: Implementasi Zero-Knowledge Proof (ZKP)
-Dokumen teknis tentang bagaimana sirkuit kriptografi diracik dari nol dan dikompilasi agar bisa berjalan di browser web.
-3. [zkp_setup_guide.md](./zkp_setup_guide.md) - Catatan langkah-langkah instalasi lingkungan *Circom*, *SnarkJS*, dan inisiasi *Powers of Tau (PTau)*.
-4. [zkp_build_log.md](./zkp_build_log.md) - Jurnal log eksekusi kompilasi sirkuit `ownership_proof.circom` (pembuktian rahasia Poseidon Hash) menjadi file `.wasm` dan `.zkey`.
+## 🏆 FASE 0: Mulai Dari Sini
+
+1. [PRD.md](./PRD.md) - Product Requirements Document (requirements, acceptance criteria, roadmap).
+2. [gale_shapley_architecture.md](./gale_shapley_architecture.md) - Peran Layer 3 (Dispute Window) dan roadmap menuju N-to-N matching.
 
 ---
 
-## 🚀 FASE 3: Integrasi Full-Stack (Frontend & Backend)
-Dokumen yang menjelaskan bagaimana otak kriptografi (ZKP) dihubungkan ke UI (Svelte) dan logika *Server* (Node.js/Socket.io).
-5. [backend_zkp_summary.md](./backend_zkp_summary.md) - Penjelasan integrasi API Groq LLM (untuk mengekstrak ciri-ciri rahasia) dan logika verifikasi *Proof* secara *real-time* di *Backend*.
-6. [frontend_zkp_guide.md](./frontend_zkp_guide.md) - Penjelasan bagaimana *Browser* klien mengkomputasi *Proof* secara lokal (tanpa pernah membocorkan *keyword* rahasianya ke internet), dan bagaimana UI dinamis berganti teks (*Lost* vs *Found*).
-7. [zkp_test_report.md](./zkp_test_report.md) - Laporan hasil pengujian *End-to-End* ZKP, termasuk catatan *bug fixes* mengenai isu salah ketik (Typo) yang sempat ditolak secara ketat oleh *hash* ZKP.
+## ⚡ FASE 1: ZKP v2 (AKTIF — Baca Ini Dulu)
+
+Dokumen versi terkini. Jika kamu baru mengenal proyek ini, mulai dari sini.
+
+1. [zkp_v2_intersection_scoring.md](./v2/zkp_v2_intersection_scoring.md) - Desain inti v2: N-commitment + intersection scoring + Gale-Shapley berbobot.
+2. [keyword_extraction_strategy.md](./v2/keyword_extraction_strategy.md) - Strategi normalisasi keyword (mekanis vs stopword vs canonical) dan prompt LLM ketat.
+3. [zkp_v2_implementation_report.md](./v2/zkp_v2_implementation_report.md) - Laporan pengerjaan v2: 7 perbaikan, alasan angka (5 & 0.5), bukti verifikasi.
 
 ---
 
-## 📜 Dokumen Sejarah Pengembangan Kuno (Pre-ZKP Phase)
-Dokumen-dokumen di bawah ini adalah warisan dari fase awal pengembangan purwarupa (sebelum ide keamanan ZKP dan lelang Gale-Shapley dicetuskan). Anda cukup membacanya sebagai referensi tambahan:
-* [PRD.md](./PRD.md) - *Product Requirements Document* asli.
-* [MIGRATE_TECH_STACK.md](./MIGRATE_TECH_STACK.md) & [MIGRATION_NOTES.md](./MIGRATION_NOTES.md) - Jurnal sejarah migrasi besar-besaran proyek dari Vanilla HTML/JS ke ekosistem Svelte 5 & TypeScript.
-* [tag-feature-summary.md](./tag-feature-summary.md) - Rangkuman pembuatan fitur otomatisasi Tagging & Kategori berbasis AI NLP.
-* [technical_flow_guide.md](./technical_flow_guide.md) & [integration_guide.md](./integration_guide.md) - Cetak biru panduan arsitektur alur data tradisional aplikasi awal.
+## 📦 FASE 2: ZKP v1 (Arsip — Referensi Historis)
+
+Dokumen era v1, bermanfaat untuk memahami **dari mana** desain v2 berasal dan masalah apa yang dipecahkan.
+
+4. [analisis_tri_layer_lock.md](./v1/analisis_tri_layer_lock.md) - Analisis arsitektur Tri-Layer Lock (NLP + ZKP + Gale-Shapley).
+5. [technical_flow_guide.md](./v1/technical_flow_guide.md) - Solusi teknis 4 problem inti Tri-Layer Lock.
+6. [backend_zkp_summary.md](./v1/backend_zkp_summary.md) - Integrasi API Groq LLM & verifikasi proof di backend (v1).
+7. [frontend_zkp_guide.md](./v1/frontend_zkp_guide.md) - Panduan generate proof di browser (v1).
+8. [zkp_setup_guide.md](./v1/zkp_setup_guide.md) - Instalasi Circom, SnarkJS, dan Powers of Tau.
+9. [zkp_build_log.md](./v1/zkp_build_log.md) - Jurnal kompilasi circuit v1 (`ownership_proof`).
+10. [zkp_test_report.md](./v1/zkp_test_report.md) - Laporan pengujian End-to-End v1.
+
+---
+
+## 📜 FASE 3: Sejarah Pengembangan Kuno (Pre-ZKP)
+
+Warisan dari fase awal (sebelum ide ZKP & Gale-Shapley). Baca sebagai referensi tambahan saja:
+
+* [MIGRATE_TECH_STACK.md](./MIGRATE_TECH_STACK.md) & [MIGRATION_NOTES.md](./MIGRATION_NOTES.md) - Jurnal migrasi dari Vanilla HTML/JS ke Svelte 5 & TypeScript.
+* [tag-feature-summary.md](./tag-feature-summary.md) - Rangkuman fitur otomatisasi Tagging & Kategori berbasis AI NLP.
+* [integration_guide.md](./integration_guide.md) - Cetak biru arsitektur alur data aplikasi awal.
