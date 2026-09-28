@@ -1,47 +1,42 @@
 import type { Server as SocketIOServer, Socket } from 'socket.io';
 import { itemMoveSchema } from '../schemas/item.schema.js';
-import { getItems, setItems, persistItems, saveItemsToFile } from '../data/store.js';
-import { sanitizeItems } from '../data/sanitize.js';
+import { dbGetItems, dbUpdateItemPosition, dbUpdateItemPositionsBatch } from '../db/db-store.js';
 
 // Menangani pergeseran posisi kartu barang saat di-drag secara realtime
-export function handleItemMove(io: SocketIOServer, socket: Socket, data: unknown): void {
+export async function handleItemMove(io: SocketIOServer, socket: Socket, data: unknown): Promise<void> {
   const parsed = itemMoveSchema.safeParse(data);
   if (!parsed.success) return;
 
-  const posData = parsed.data;
-  const items = getItems();
-  const item = items.find((i) => i.id === posData.id);
+  const { id, x, y } = parsed.data;
 
-  if (item) {
-    item.x = posData.x;
-    item.y = posData.y;
-    socket.broadcast.emit('item_moved', posData);
-    persistItems(items);
-  }
+  // Update posisi di DB (fire-and-forget, tidak perlu await untuk realtime yang cepat)
+  dbUpdateItemPosition(id, x, y).catch((err) => {
+    console.error('[Board] Failed to update item position:', err);
+  });
+
+  socket.broadcast.emit('item_moved', { id, x, y });
 }
 
 // Menangani penyusunan ulang posisi batch seluruh kartu di board
-export function handleItemsOrganize(io: SocketIOServer, socket: Socket, data: unknown): void {
+export async function handleItemsOrganize(io: SocketIOServer, socket: Socket, data: unknown): Promise<void> {
   if (!Array.isArray(data)) return;
 
   const positions = data as Array<{ id: string; x: number; y: number }>;
-  const items = getItems();
 
-  positions.forEach((pos) => {
-    const item = items.find((i) => i.id === pos.id);
-    if (item) {
-      item.x = pos.x;
-      item.y = pos.y;
-    }
+  // Update semua posisi di DB secara parallel
+  dbUpdateItemPositionsBatch(positions).catch((err) => {
+    console.error('[Board] Failed to batch update positions:', err);
   });
 
   socket.broadcast.emit('items_organized', positions);
-  persistItems(items);
 }
 
 // Menangani reset demo items menjadi kosong dan broadcast data bersih
-export function handleResetDemo(io: SocketIOServer): void {
-  setItems([]);
-  saveItemsToFile([]);
-  io.emit('items_init', sanitizeItems(getItems()));
+export async function handleResetDemo(io: SocketIOServer): Promise<void> {
+  // Reset mode untuk demo: ambil ulang items dari DB (tidak menghapus DB, hanya clear tampilan)
+  // Jika ingin benar-benar menghapus semua data untuk demo, uncomment baris di bawah ini:
+  // await db.delete(itemsTable);
+  const items = await dbGetItems();
+  const sanitized = items.map(({ reporterToken: _, ...rest }) => rest);
+  io.emit('items_init', sanitized);
 }

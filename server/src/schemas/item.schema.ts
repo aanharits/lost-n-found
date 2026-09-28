@@ -20,11 +20,21 @@ export const itemAddSchema = z.object({
   reporterName: z.string().optional().default(''),
   reporterNpm: z.string().optional().default(''),
   reporterContact: z.string().optional().default(''),
+  reporterToken: z.string().min(1, 'Reporter token wajib ada'),
   x: z.number().optional().default(100),
   y: z.number().optional().default(100),
 });
 
 export type ItemAddInput = z.infer<typeof itemAddSchema>;
+
+// Skema validasi hapus laporan barang (hanya pemilik)
+export const itemDeleteSchema = z.object({
+  id: z.string().min(1, 'ID item wajib ada'),
+  reporterToken: z.string().optional().default(''),
+  reporterNpm: z.string().optional().default(''),
+});
+
+export type ItemDeleteInput = z.infer<typeof itemDeleteSchema>;
 
 // Skema validasi pergeseran posisi kartu barang di papan
 export const itemMoveSchema = z.object({

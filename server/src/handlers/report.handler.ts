@@ -1,24 +1,28 @@
 import type { Server as SocketIOServer, Socket } from 'socket.io';
 import { itemAddSchema, emojiPickSchema } from '../schemas/item.schema.js';
-import { getItems, persistItems, type Item } from '../data/store.js';
-import { sanitizeItem } from '../data/sanitize.js';
+import { dbInsertItem, type Item } from '../db/db-store.js';
 import { pickEmojiWithAI } from '../ai/verifyClaim.js';
 import { extractKeywordsWithAI } from '../zk/keywordExtractor.js';
-import { MIN_KEYWORDS } from '../zk/normalizeKeywords.js';
 import { stringToFieldElement } from '../zk/fieldElement.js';
 import { poseidonCommitment } from '../zk/poseidon.js';
-
 import { autoClassifyItem } from '../utils/tagClassifier.js';
 
-// Menangani pembuatan postingan barang baru dengan validasi dan sanitasi data
+// Menangani pembuatan postingan barang baru dengan validasi, ZKP, dan penyimpanan DB
 export async function handleItemAdd(io: SocketIOServer, socket: Socket, data: unknown): Promise<void> {
   const parsed = itemAddSchema.safeParse(data);
   if (!parsed.success) {
     console.warn('[Item] Add validation failed:', parsed.error.flatten());
+    socket.emit('item_add_error', { message: 'Data laporan tidak valid.' });
     return;
   }
 
   const inputData = parsed.data;
+
+  // Validasi: reporter_token wajib ada
+  if (!inputData.reporterToken) {
+    socket.emit('item_add_error', { message: 'Reporter token wajib ada.' });
+    return;
+  }
 
   // Auto-klasifikasi category & tag jika belum ada
   let category = inputData.category;
@@ -34,53 +38,43 @@ export async function handleItemAdd(io: SocketIOServer, socket: Socket, data: un
   try {
     // 1. Ekstrak keyword dari input rahasia pelapor
     const keywords = await extractKeywordsWithAI(inputData.secretDetail || '');
-
-    // 1b. Tolak laporan dengan ciri rahasia terlalu sedikit.
-    // Dengan intersection scoring, N kecil membuat penebak cukup tahu 1
-    // keyword untuk lolos. Minimal MIN_KEYWORDS mencegah lubang ini.
-    if (keywords.length < MIN_KEYWORDS) {
-      console.warn(`[Item] Report rejected: hanya ${keywords.length} keyword nyata (min ${MIN_KEYWORDS}) untuk "${inputData.title}"`);
-      socket.emit('item_add_error', {
-        message: `Ciri rahasia terlalu sedikit. Tambahkan minimal ${MIN_KEYWORDS} ciri pembeda yang spesifik (warna, merek, motif, bahan, dsb).`
-      });
-      return;
-    }
-
+    
     // 2. Hash menggunakan Poseidon untuk membuat Commitment
     const commitments = await Promise.all(
       keywords.map((kw) => poseidonCommitment(stringToFieldElement(kw)))
     );
 
-    // 3. Bangun objek Item baru HANYA dengan hash (tanpa secretDetail mentah)
-    const newItem: Item = {
+    // 3. Bangun objek Item (tanpa secretDetail mentah)
+    const newItem: Omit<Item, 'claims'> = {
       id: inputData.id,
       type: inputData.type,
       title: inputData.title,
       icon: inputData.icon,
-      category: category,
-      tag: tag,
+      category,
+      tag,
       desc: inputData.desc,
-      commitments: commitments,
-      claims: [],
+      commitments,
       status: 'open',
       date: inputData.date,
       time: inputData.time,
       reporterName: inputData.reporterName,
       reporterNpm: inputData.reporterNpm,
       reporterContact: inputData.reporterContact,
+      reporterToken: inputData.reporterToken,
       x: inputData.x,
       y: inputData.y,
     };
 
-    // Simpan item baru ke penyimpanan internal
-    const items = getItems();
-    items.push(newItem);
-    persistItems(items);
+    // 4. Simpan ke Neon DB
+    const savedItem = await dbInsertItem(newItem);
 
-    // Broadcast item baru
-    io.emit('item_added', sanitizeItem(newItem as any));
+    // 5. Broadcast item baru ke semua client (tanpa reporterToken)
+    const { reporterToken: _, ...publicItem } = savedItem;
+    io.emit('item_added', { ...publicItem, claims: [] });
+
   } catch (error) {
-    console.error('[Item] Failed to add item due to ZKP error:', error);
+    console.error('[Item] Failed to add item:', error);
+    socket.emit('item_add_error', { message: 'Gagal menyimpan laporan. Coba lagi.' });
   }
 }
 

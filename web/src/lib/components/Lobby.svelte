@@ -87,6 +87,13 @@
     }
     errorMsg = "";
 
+    // Buat atau ambil device token untuk kepemilikan laporan (edit/hapus tanpa auth)
+    let reporterToken = localStorage.getItem('lf_device_token');
+    if (!reporterToken) {
+      reporterToken = 'tok_' + crypto.randomUUID();
+      localStorage.setItem('lf_device_token', reporterToken);
+    }
+
     const player: Player = {
       name: name.trim(),
       npm: npm.trim(),
@@ -98,6 +105,7 @@
     currentPlayer.set(player);
     currentScene.set("board");
   }
+
 </script>
 
 <div

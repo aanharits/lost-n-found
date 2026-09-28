@@ -1,6 +1,5 @@
 import { Hono } from 'hono';
 
-import { getItems } from '../data/store.js';
 import { extractKeywordsWithAI } from '../zk/keywordExtractor.js';
 
 const api = new Hono();
