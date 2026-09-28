@@ -151,5 +151,23 @@ export function initSocket(): Socket {
     showToast(`${u.name} keluar`, 'danger');
   });
 
+  // Sinkronisasi laporan yang diedit oleh pemiliknya
+  socket.on('item_updated', (updatedItem: Item) => {
+    items.update((current) =>
+      current.map((item) => (item.id === updatedItem.id ? { ...item, ...updatedItem } : item))
+    );
+    showToast(`Laporan "${updatedItem.title}" telah diperbarui.`, 'info');
+  });
+
+  // Hapus kartu dari board ketika pemilik menghapus laporan
+  socket.on('item_deleted', ({ id }: { id: string }) => {
+    items.update((current) => {
+      const deleted = current.find((i) => i.id === id);
+      if (deleted) showToast(`Laporan "${deleted.title}" telah dihapus.`, 'danger');
+      return current.filter((i) => i.id !== id);
+    });
+  });
+
   return socket;
 }
+
