@@ -7,6 +7,8 @@
   import { highlight } from '$lib/stores/highlight.js';
   import { getSocket } from '$lib/socket.js';
   import ItemCard from './ItemCard.svelte';
+  import SatpamArchiveCard from './SatpamArchiveCard.svelte';
+  import SatpamFolderModal from './SatpamFolderModal.svelte';
   import Avatar from './Avatar.svelte';
   import ReportModal from './ReportModal.svelte';
   import ClaimModal from './ClaimModal.svelte';
@@ -18,6 +20,28 @@
   import { calculateGridLayout } from '$lib/utils/gridLayout.js';
 
   let boardContainer: HTMLElement;
+
+  // Role Satpam & state Layer 2 Arsip Berkas
+  const isSatpam = $derived($currentPlayer?.role === 'satpam');
+  let activeArchiveItem = $state<Item | null>(null);
+  let satpamViewMode = $state<'archive' | 'cards'>('archive');
+
+  function openArchiveDetail(item: Item) {
+    activeArchiveItem = item;
+  }
+
+  function closeArchiveDetail() {
+    activeArchiveItem = null;
+  }
+
+  onMount(() => {
+    if ($currentPlayer?.role === 'satpam') {
+      const socket = getSocket();
+      if (socket?.connected) {
+        socket.emit('satpam_join', { accessKey: $currentPlayer.accessKey || 'satpamganteng' });
+      }
+    }
+  });
 
   // Susun ulang posisi kartu ke dalam grid rapi
   function organizeBoard() {
@@ -319,14 +343,19 @@
       class="text-3xl md:text-5xl font-pixel text-white mb-1 tracking-wider"
       style="text-shadow: 3px 3px 0 #1c120c, 5px 5px 0 rgba(0,0,0,0.3);"
     >
-      L &amp; F KAMPUS
+      {isSatpam ? "POS ARSIP SATPAM" : "L & F KAMPUS"}
     </h1>
     <p
       class="text-xs md:text-sm font-pixel text-[#ffd700] font-bold tracking-widest"
       style="text-shadow: 1px 1px 0 #1c120c, 2px 2px 0 #1c120c;"
     >
-      AI Image Match System
+      {isSatpam ? "Retro Evidence & Case Archives" : "AI Image Match System"}
     </p>
+    {#if isSatpam}
+      <span class="mt-1 text-[8px] md:text-[8.5px] font-pixel bg-[#0f766e] text-white px-2.5 py-0.5 rounded border border-[#140b05] shadow-[1px_1px_0px_#140b05] tracking-wide">
+        👮 HAK AKSES RESMI: PETUGAS KEAMANAN KAMPUS
+      </span>
+    {/if}
   </div>
 
   <!-- Kontainer utama board -->
@@ -340,7 +369,7 @@
       bind:this={boardContainer}
       class="board-container w-full flex-grow rounded-xl overflow-hidden relative shadow-[8px_8px_0px_rgba(0,0,0,0.5)] cursor-default"
     >
-    <!-- Tombol aksi (lapor & rapihkan) -->
+    <!-- Tombol aksi (lapor, rapihkan, dan toggle mode arsip satpam) -->
     <div class="absolute top-4 left-4 z-20 flex gap-2">
       <button
         onclick={openReportModal}
@@ -354,6 +383,16 @@
       >
         RAPIHKAN
       </button>
+      {#if isSatpam}
+        <button
+          type="button"
+          onclick={() => satpamViewMode = satpamViewMode === 'archive' ? 'cards' : 'archive'}
+          class="bg-[#0d9488] hover:bg-[#0f766e] active:translate-y-0.5 text-white font-pixel text-[8.5px] md:text-[9.5px] py-2 px-3 rounded border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] active:shadow-none cursor-pointer transition-all select-none font-bold tracking-wider"
+          title="Beralih antara Map Arsip dan Kartu Standar"
+        >
+          {satpamViewMode === 'archive' ? '🎴 VIEW KARTU' : '📁 VIEW MAP ARSIP'}
+        </button>
+      {/if}
     </div>
 
     <!-- Filter status hilang / ketemu -->
@@ -384,17 +423,25 @@
       </button>
     </div>
 
-    <!-- Area render kartu barang -->
+    <!-- Area render kartu barang (Diferensiasi: Map Berkas untuk Satpam vs ItemCard untuk Mahasiswa) -->
     <div id="cards-area" class="cards-area">
       {#each $items as item (item.id)}
-        <ItemCard
-          {item}
-          currentPlayerNpm={$currentPlayer?.npm || ''}
-          onClaim={() => openClaimModal(item.id)}
-          onReviewClaims={() => openClaimsReview(item.id)}
-          onDelete={() => openDeleteModal(item.id)}
-          onDragEnd={(x, y) => handleItemDragEnd(item.id, x, y)}
-        />
+        {#if isSatpam && satpamViewMode === 'archive'}
+          <SatpamArchiveCard
+            {item}
+            onOpenArchive={() => openArchiveDetail(item)}
+            onDragEnd={(x, y) => handleItemDragEnd(item.id, x, y)}
+          />
+        {:else}
+          <ItemCard
+            {item}
+            currentPlayerNpm={$currentPlayer?.npm || ''}
+            onClaim={() => openClaimModal(item.id)}
+            onReviewClaims={() => openClaimsReview(item.id)}
+            onDelete={() => openDeleteModal(item.id)}
+            onDragEnd={(x, y) => handleItemDragEnd(item.id, x, y)}
+          />
+        {/if}
       {/each}
     </div>
 
@@ -405,6 +452,14 @@
   </div>
 </div>
 </div>
+
+<!-- Modal Layer 2: Animasi Membuka Map Berkas Rahasia Satpam -->
+{#if activeArchiveItem}
+  <SatpamFolderModal
+    item={activeArchiveItem}
+    onClose={closeArchiveDetail}
+  />
+{/if}
 
 <!-- Modal dialogs -->
 {#if $activeModal === 'report'}

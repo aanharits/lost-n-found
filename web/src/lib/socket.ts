@@ -52,6 +52,30 @@ export function initSocket(): Socket {
     }
   });
 
+  // Menerima data arsip lengkap khusus Satpam (termasuk foto bukti fisik)
+  socket.on('satpam_items_init', (satpamItems: Item[]) => {
+    if (Array.isArray(satpamItems)) {
+      items.set(satpamItems);
+    }
+  });
+
+  socket.on('satpam_items_response', (satpamItems: Item[]) => {
+    if (Array.isArray(satpamItems)) {
+      items.set(satpamItems);
+    }
+  });
+
+  socket.on('satpam_item_added', (newItem: Item) => {
+    items.update((current) => {
+      const exists = current.some((i) => i.id === newItem.id);
+      if (!exists) {
+        showToast(`[Arsip Satpam] Berkas #${newItem.shortCode || newItem.id} "${newItem.title}" masuk`, 'info');
+        return [...current, newItem];
+      }
+      return current.map((i) => (i.id === newItem.id ? { ...i, ...newItem } : i));
+    });
+  });
+
   // Menerima item baru yang dibuat oleh pengguna lain
   socket.on('item_added', (newItem: Item) => {
     items.update((current) => {
