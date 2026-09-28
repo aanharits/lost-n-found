@@ -9,24 +9,11 @@ import { handleChatMessage } from '../handlers/chat.handler.js';
 
 // Wiring event Socket.IO ke handler domain masing-masing
 export function setupSocketHandlers(io: SocketIOServer): void {
-  io.on('connection', async (socket) => {
+  io.on('connection', (socket) => {
     console.log(`[Socket] Client connected: ${socket.id}`);
 
-    try {
-      // Kirim data item awal dari DB ke client yang baru terhubung
-      const items = await dbGetItems();
-      // Sanitasi reporter_token sebelum broadcast ke client
-      const sanitized = items.map(({ reporterToken: _, ...rest }) => rest);
-      socket.emit('items_init', sanitized);
-    } catch (err) {
-      console.error('[Socket] Failed to load items from DB:', err);
-      socket.emit('items_init', []);
-    }
-
-    // Broadcast jumlah user aktif ke semua client
-    io.emit('users_count', getConnectedUsersCount());
-
-    // Event bergabung dan terputusnya user
+    // Daftarkan seluruh event listener secara synchronous terlebih dahulu
+    // agar event yang dikirim langsung oleh client tidak hilang (race condition)
     socket.on('user_join', (data) => handleUserJoin(io, socket, data));
     socket.on('disconnect', () => handleDisconnect(io, socket));
 
@@ -47,5 +34,19 @@ export function setupSocketHandlers(io: SocketIOServer): void {
 
     // Event percakapan dengan Satpam AI
     socket.on('chat_message', (data) => handleChatMessage(socket, data));
+
+    // Broadcast jumlah user aktif ke semua client
+    io.emit('users_count', getConnectedUsersCount());
+
+    // Kirim data item awal dari DB ke client secara asynchronous
+    dbGetItems()
+      .then((items) => {
+        const sanitized = items.map(({ reporterToken: _, ...rest }) => rest);
+        socket.emit('items_init', sanitized);
+      })
+      .catch((err) => {
+        console.error('[Socket] Failed to load items from DB:', err);
+        socket.emit('items_init', []);
+      });
   });
 }
