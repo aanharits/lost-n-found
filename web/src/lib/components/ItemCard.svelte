@@ -7,21 +7,30 @@
 
   let {
     item,
+    currentPlayerNpm = "",
     onClaim,
     onReviewClaims,
     onDragEnd,
+    onDelete,
   }: {
     item: Item;
+    currentPlayerNpm?: string;
     onClaim: () => void;
     onReviewClaims: () => void;
     onDragEnd: (x: number, y: number) => void;
+    onDelete?: () => void;
   } = $props();
 
   let isMobile = $state(false);
 
-  // Deteksi viewport mobile
+  // Deteksi viewport mobile — reaktif terhadap resize
   $effect(() => {
-    isMobile = window.innerWidth < 768;
+    const update = () => {
+      isMobile = window.innerWidth < 768;
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   });
 
   // Styling header dan klaim
@@ -34,6 +43,13 @@
   // Evaluasi status highlight kartu
   const isHighlighted = $derived(isItemHighlighted(item, $highlight));
   const isDimmed = $derived(!!$highlight && !isHighlighted);
+
+  // Cek apakah item ini milik player yang sedang login
+  const isOwnItem = $derived(
+    !!currentPlayerNpm &&
+      !!item.reporterNpm &&
+      currentPlayerNpm === item.reporterNpm,
+  );
 </script>
 
 <div
@@ -54,8 +70,8 @@
     <div class="w-1 h-1 rounded-full bg-red-300 ml-0.5 mt-0.5"></div>
   </div>
 
-  <!-- Badge pending claim -->
-  {#if pendingClaims.length > 0}
+  <!-- Badge pending claim (hanya visible untuk pelapor barang) -->
+  {#if isOwnItem && pendingClaims.length > 0}
     <button
       class="claim-badge font-pixel"
       onclick={(e) => {
@@ -63,6 +79,7 @@
         onReviewClaims();
       }}
       type="button"
+      title="Lihat pengajuan klaim untuk barang ini"
     >
       {pendingClaims.length} KLAIM
     </button>
@@ -73,36 +90,79 @@
     <div class="resolved-ribbon font-pixel">SELESAI</div>
   {/if}
 
-  <div class="card-header font-pixel {headerClass}">{headerText}</div>
-  <div class="card-image flex items-center justify-center">
-    <TagIcon tag={item.tag} fallback={item.icon} size={48} />
-  </div>
-  <div class="p-2.5 bg-[#fefce8] flex-grow flex flex-col justify-between">
-    <div>
-      <p class="font-bold text-[14px] leading-tight text-[#2c1b0f] truncate">
-        {item.title}
-      </p>
-      <p class="text-[9px] text-[#78350f] font-bold my-0.5">
-        {item.date || "-"} | {item.time || "-"}
-      </p>
-      <p class="text-[11px] text-[#451a03] truncate leading-tight font-medium">
-        {item.desc}
-      </p>
+  <div
+    class="card-inner-frame w-full h-full flex flex-col overflow-hidden rounded-[1px]"
+  >
+    <div class="card-header font-pixel {headerClass}">{headerText}</div>
+    <div class="card-image flex items-center justify-center">
+      <TagIcon
+        tag={item.tag}
+        fallback={item.icon}
+        size={48}
+        title={item.title}
+      />
     </div>
-    {#if item.status === "resolved"}
-      <button
-        disabled
-        class="bg-[#78716c] text-[#e7e5e4] font-pixel text-[8px] py-1.5 mt-1.5 w-full rounded border-2 border-[#44403c] cursor-not-allowed text-center select-none"
-      >
-        SUDAH DIKLAIM
-      </button>
-    {:else}
-      <button
-        onclick={onClaim}
-        class="bg-[#0284c7] hover:bg-[#0369a1] active:translate-y-0.5 text-white font-pixel text-[8px] py-1.5 mt-1.5 w-full rounded border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] cursor-pointer text-center select-none transition-all"
-      >
-        KLAIM BARANG
-      </button>
-    {/if}
+    <div
+      class="p-2 bg-[#fefce8] flex-grow flex flex-col justify-between min-h-0"
+    >
+      <div class="min-h-0 flex flex-col gap-0.5">
+        <p
+          class="font-bold text-[15px] leading-tight text-[#2c1b0f] truncate font-sans"
+          title={item.title}
+        >
+          {item.title}
+        </p>
+        <p class="text-[10px] text-[#78350f] font-bold font-sans leading-none">
+          {item.date || "-"} | {item.time || "-"}
+        </p>
+        <p
+          class="text-[11px] text-[#451a03] font-medium font-sans truncate flex items-center gap-1 mt-0.5"
+          title={item.desc}
+        >
+          <span class="truncate">{item.desc || "-"}</span>
+        </p>
+      </div>
+
+      <!-- Tombol aksi di bagian bawah kartu -->
+      {#if item.status === "resolved"}
+        <button
+          disabled
+          class="bg-[#78716c] text-[#e7e5e4] font-pixel text-[8px] py-1.5 mt-1 w-full rounded border-2 border-[#44403c] cursor-not-allowed text-center select-none tracking-wider"
+        >
+          SUDAH DIKLAIM
+        </button>
+      {:else if isOwnItem}
+        <!-- Tombol aksi hapus untuk laporan milik sendiri -->
+        {#if item.status === "disputed"}
+          <button
+            disabled
+            title="Laporan sedang dalam proses klaim / sanggah"
+            type="button"
+            class="bg-[#78716c] text-[#d6d3d1] font-pixel text-[7.5px] py-1.5 mt-1 w-full rounded border-2 border-[#44403c] cursor-not-allowed text-center select-none tracking-wider"
+          >
+            PROSES KLAIM
+          </button>
+        {:else}
+          <button
+            onclick={(e) => {
+              e.stopPropagation();
+              onDelete?.();
+            }}
+            type="button"
+            title="Hapus laporan ini dari papan"
+            class="bg-[#dc2626] hover:bg-[#b91c1c] active:translate-y-0.5 text-white font-pixel text-[8.5px] py-1.5 mt-1 w-full rounded border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] active:shadow-none cursor-pointer text-center select-none font-bold transition-all tracking-wider flex items-center justify-center"
+          >
+            HAPUS
+          </button>
+        {/if}
+      {:else}
+        <button
+          onclick={onClaim}
+          class="bg-[#0284c7] hover:bg-[#0369a1] active:translate-y-0.5 text-white font-pixel text-[8.5px] py-1.5 mt-1 w-full rounded border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] active:shadow-none cursor-pointer text-center select-none transition-all tracking-wider font-bold"
+        >
+          KLAIM BARANG
+        </button>
+      {/if}
+    </div>
   </div>
 </div>

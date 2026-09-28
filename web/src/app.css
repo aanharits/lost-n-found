@@ -145,15 +145,15 @@ body {
 
 .item-card {
   position: absolute;
-  width: 145px;
-  height: 180px;
+  width: 152px;
+  height: 205px;
   cursor: grab;
   user-select: none;
   display: flex;
   flex-direction: column;
   z-index: 10;
   background-color: #fefce8;
-  border: 3px solid #2c1b0f;
+  border: 3px solid #140b05;
   box-shadow: inset -2px -2px 0px rgba(0,0,0,0.1), 4px 4px 0px #140b05;
   border-radius: 4px;
   transition: left 0.3s cubic-bezier(0.2, 0, 0, 1), top 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.2s ease, box-shadow 0.2s ease;
@@ -174,14 +174,18 @@ body {
 }
 
 .card-header {
+  height: 24px;
   background-color: #dc2626;
-  color: white;
-  padding: 4px;
+  color: #fef08a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   font-size: 10px;
   font-weight: bold;
   letter-spacing: 0.5px;
-  border-bottom: 3px solid #2c1b0f;
+  border-bottom: 2px solid #140b05;
+  flex-shrink: 0;
 }
 
 .card-header.found {
@@ -190,15 +194,17 @@ body {
 }
 
 .card-image {
-  flex-grow: 1;
+  height: 70px;
+  flex-shrink: 0;
   background-color: #fef9c3;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 2.2rem;
   line-height: 1;
-  border-bottom: 2px solid #2c1b0f;
+  border-bottom: 2px solid #140b05;
   overflow: hidden;
+  position: relative;
 }
 
 /* === Tag Badge Pill on Card Image === */

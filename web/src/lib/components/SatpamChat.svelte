@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { tick } from "svelte";
   import { getSocket } from "$lib/socket.js";
   import { items } from "$lib/stores/items.js";
   import { highlight, scrollToCard } from "$lib/stores/highlight.js";
+  import { currentPlayer } from "$lib/stores/player.js";
   import Avatar from "./Avatar.svelte";
   import { fly, fade } from "svelte/transition";
 
@@ -38,16 +40,28 @@
   function toggleChat() {
     chatOpen = !chatOpen;
     if (chatOpen) {
-      setTimeout(scrollToBottom, 50);
+      scrollToBottom();
     }
   }
 
-  // Menggulir tampilan chat ke pesan paling bawah secara otomatis
-  function scrollToBottom() {
-    if (chatContainer) {
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
+  // Menggulir tampilan chat ke pesan paling bawah secara otomatis dan andal
+  async function scrollToBottom() {
+    await tick();
+    requestAnimationFrame(() => {
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    });
   }
+
+  // Auto-scroll reaktif setiap ada pesan baru, loading berubah, atau chat dibuka
+  $effect(() => {
+    if (chatOpen) {
+      const _len = chatHistory.length;
+      const _load = chatLoading;
+      scrollToBottom();
+    }
+  });
 
   // Mengirim pesan pengguna ke Satpam AI melalui event socket chat_message
   async function sendChat() {
@@ -180,67 +194,89 @@
       </button>
     </div>
 
-    <!-- Area riwayat pesan: Bersih, Putih Sesuai Screenshot -->
+    <!-- Area riwayat pesan: Bersih dengan Bubble Beravatar Berwarna Selaras & Auto Scroll -->
     <div
       bind:this={chatContainer}
-      class="p-3.5 max-h-[230px] overflow-y-auto font-sans text-xs flex flex-col gap-2.5 bg-white border-b-2 border-[#1c120c]"
+      class="chat-log-scroll p-3.5 max-h-[260px] overflow-y-auto font-sans text-xs flex flex-col gap-3 bg-[#f8fafc] border-b-2 border-[#1c120c]"
     >
       {#if chatHistory.length === 0}
+        <!-- Pesan sambutan awal dari Satpam AI -->
         <div
-          class="text-[#1c120c] font-pixel text-[8px] text-center p-3.5 border-2 border-dashed border-[#b87d46] bg-[#fefce8] rounded leading-relaxed"
+          class="flex items-start gap-2.5 p-2.5 px-3 rounded border-2 border-[#1c120c] shadow-[2px_2px_0px_#1c120c] bg-[#dcfce7] text-[#1c120c] max-w-[92%] self-start"
+          transition:fade={{ duration: 150 }}
         >
-          Halo! Ada barang hilang atau butuh bantuan di kampus? Ketik pertanyaan
-          di bawah ya!
+          <div class="w-7 h-7 rounded-full border border-[#1c120c] overflow-hidden shrink-0 bg-white flex items-center justify-center mt-0.5 shadow-[1px_1px_0px_#1c120c]">
+            <Avatar seed="PakSatpamAI" size={28} options={satpamOptions} />
+          </div>
+          <div class="leading-relaxed font-sans text-xs font-bold">
+            Halo! Ada barang hilang atau butuh bantuan di kampus? Ketik pertanyaan di bawah ya!
+          </div>
         </div>
       {:else}
         {#each chatHistory as msg, i}
-          <div
-            class="flex flex-col {msg.role === 'user'
-              ? 'items-end'
-              : 'items-start'}"
-          >
-            <span
-              class="font-pixel text-[7px] mb-0.5 font-bold {msg.role === 'user'
-                ? 'text-[#2563eb]'
-                : 'text-[#1c120c]'}"
-            >
-              {msg.role === "user" ? "Kamu" : "Satpam AI"}
-            </span>
+          {#if msg.role === "satpam"}
+            <!-- Bubble Satpam AI (Kiri dengan Avatar Satpam - Pastel Mint Green) -->
             <div
-              class="p-2.5 rounded-none border-2 border-[#1c120c] font-sans text-xs font-bold max-w-[88%] shadow-[2px_2px_0px_#1c120c] leading-relaxed bg-white text-[#1c120c]"
+              class="flex items-start gap-2.5 p-2.5 px-3 rounded border-2 border-[#1c120c] shadow-[2px_2px_0px_#1c120c] bg-[#dcfce7] text-[#1c120c] max-w-[88%] self-start"
+              transition:fly={{ y: 8, duration: 150 }}
             >
-              <div>{msg.text}</div>
-              {#if msg.hasHighlight}
-                <button
-                  type="button"
-                  onclick={() => {
-                    if (msg.firstItemId) {
-                      scrollToCard(msg.firstItemId, 0);
-                    }
-                    chatOpen = false;
-                  }}
-                  class="mt-2 bg-[#ffd700] hover:bg-[#facc15] active:translate-y-0.5 text-[#1c120c] font-pixel text-[8px] py-1 px-2.5 rounded border border-[#1c120c] shadow-[1px_1px_0_#1c120c] cursor-pointer flex items-center gap-1.5 font-bold w-fit transition-all"
-                >
-                  <span>📍</span> LIHAT DI PAPAN
-                </button>
-              {/if}
+              <div class="w-7 h-7 rounded-full border border-[#1c120c] overflow-hidden shrink-0 bg-white flex items-center justify-center mt-0.5 shadow-[1px_1px_0px_#1c120c]">
+                <Avatar seed="PakSatpamAI" size={28} options={satpamOptions} />
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="leading-relaxed font-sans text-xs font-bold break-words">{msg.text}</div>
+                {#if msg.hasHighlight}
+                  <button
+                    type="button"
+                    onclick={() => {
+                      if (msg.firstItemId) {
+                        scrollToCard(msg.firstItemId, 0);
+                      }
+                      chatOpen = false;
+                    }}
+                    class="mt-2 bg-[#ffd700] hover:bg-[#facc15] active:translate-y-0.5 text-[#1c120c] font-pixel text-[8px] py-1 px-2.5 rounded border border-[#1c120c] shadow-[1px_1px_0_#1c120c] cursor-pointer flex items-center gap-1.5 font-bold w-fit transition-all"
+                  >
+                    <span>📍</span> LIHAT DI PAPAN
+                  </button>
+                {/if}
+              </div>
             </div>
-          </div>
+          {:else}
+            <!-- Bubble User (Kanan dengan Avatar Pilihan User - Warm Amber Parchment selaras retro theme) -->
+            <div
+              class="flex items-start gap-2.5 p-2.5 px-3 rounded border-2 border-[#1c120c] shadow-[2px_2px_0px_#1c120c] bg-[#fef3c7] text-[#1c120c] max-w-[88%] self-end"
+              transition:fly={{ y: 8, duration: 150 }}
+            >
+              <div class="flex-1 min-w-0">
+                <div class="leading-relaxed font-sans text-xs font-bold break-words text-left">{msg.text}</div>
+              </div>
+              <div class="w-7 h-7 rounded-full border border-[#1c120c] overflow-hidden shrink-0 bg-white flex items-center justify-center mt-0.5 shadow-[1px_1px_0px_#1c120c]">
+                <Avatar
+                  seed={$currentPlayer?.avatarSeed || $currentPlayer?.npm || 'Felix'}
+                  gender={$currentPlayer?.gender || 'male'}
+                  size={28}
+                />
+              </div>
+            </div>
+          {/if}
         {/each}
+
         {#if chatLoading}
+          <!-- Loading Bubble Satpam (Pastel Mint Green) -->
           <div
-            class="flex flex-col items-start"
+            class="flex items-center gap-2.5 p-2 px-3 rounded border-2 border-[#1c120c] shadow-[2px_2px_0px_#1c120c] bg-[#dcfce7] text-[#1c120c] max-w-[88%] self-start"
             transition:fade={{ duration: 150 }}
           >
-            <span class="font-pixel text-[7px] mb-0.5 text-[#1c120c] font-bold"
-              >Satpam AI</span
-            >
-            <div
-              class="p-2 rounded-none border-2 border-[#1c120c] bg-white text-[#2563eb] font-pixel text-[8px] animate-pulse shadow-[2px_2px_0px_#1c120c] flex items-center gap-2"
-            >
-              <span class="w-1.5 h-1.5 rounded-full bg-[#2563eb] animate-ping"
-              ></span>
-              Sebentar, saya cek buku catatan posko dulu...
+            <div class="w-7 h-7 rounded-full border border-[#1c120c] overflow-hidden shrink-0 bg-white flex items-center justify-center shadow-[1px_1px_0px_#1c120c]">
+              <Avatar seed="PakSatpamAI" size={28} options={satpamOptions} />
+            </div>
+            <div class="flex items-center gap-1.5 font-sans text-xs font-bold text-[#1c120c]">
+              <span>Cek catatan posko dulu...</span>
+              <span class="inline-flex gap-1 ml-0.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#1c120c] animate-bounce"></span>
+                <span class="w-1.5 h-1.5 rounded-full bg-[#1c120c] animate-bounce [animation-delay:0.2s]"></span>
+                <span class="w-1.5 h-1.5 rounded-full bg-[#1c120c] animate-bounce [animation-delay:0.4s]"></span>
+              </span>
             </div>
           </div>
         {/if}
@@ -311,3 +347,21 @@
     </div>
   </button>
 </div>
+
+<style>
+  .chat-log-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .chat-log-scroll::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  .chat-log-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+    border: 1px solid #94a3b8;
+  }
+  .chat-log-scroll::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+</style>
+

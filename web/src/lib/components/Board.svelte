@@ -3,7 +3,7 @@
   import { fly, fade } from 'svelte/transition';
   import { items, type Item } from '$lib/stores/items.js';
   import { currentPlayer } from '$lib/stores/player.js';
-  import { currentScene, socketConnected, onlineCount, activeModal, claimTargetItemId, reviewTargetItemId } from '$lib/stores/ui.js';
+  import { currentScene, socketConnected, onlineCount, activeModal, claimTargetItemId, reviewTargetItemId, deleteTargetItemId, inboxOpen, inboxTab } from '$lib/stores/ui.js';
   import { highlight } from '$lib/stores/highlight.js';
   import { getSocket } from '$lib/socket.js';
   import ItemCard from './ItemCard.svelte';
@@ -11,32 +11,25 @@
   import ReportModal from './ReportModal.svelte';
   import ClaimModal from './ClaimModal.svelte';
   import ClaimsReviewModal from './ClaimsReviewModal.svelte';
+  import DeleteItemModal from './DeleteItemModal.svelte';
   import SatpamChat from './SatpamChat.svelte';
   import CategoryGamepad from './CategoryGamepad.svelte';
+  import InboxPanel from './InboxPanel.svelte';
+  import { calculateGridLayout } from '$lib/utils/gridLayout.js';
 
   let boardContainer: HTMLElement;
 
-
-
   // Susun ulang posisi kartu ke dalam grid rapi
   function organizeBoard() {
-    const cardWidth = 140;
-    const cardHeight = 175;
-    const gapX = 20;
-    const gapY = 25;
-
-    const availableWidth = boardContainer ? boardContainer.offsetWidth - 40 : 800;
-    const columns = Math.max(1, Math.floor(availableWidth / (cardWidth + gapX)));
+    const boardWidth = boardContainer ? boardContainer.offsetWidth : 1024;
+    const layout = calculateGridLayout(boardWidth);
 
     items.update((current) => {
       const filtered = current;
 
       const posMap = new Map<string, { x: number; y: number }>();
       filtered.forEach((item, index) => {
-        const col = index % columns;
-        const row = Math.floor(index / columns);
-        const x = 20 + col * (cardWidth + gapX);
-        const y = 70 + row * (cardHeight + gapY);
+        const { x, y } = layout.getPos(index);
         posMap.set(item.id, { x, y });
 
         // Update DOM inline style langsung agar kartu beranimasi seketika
@@ -82,6 +75,12 @@
     activeModal.set('claimsReview');
   }
 
+  // Membuka modal konfirmasi hapus laporan barang milik sendiri
+  function openDeleteModal(itemId: string) {
+    deleteTargetItemId.set(itemId);
+    activeModal.set('deleteItem');
+  }
+
   // Keluar dari akun saat ini dan kembali ke lobby pemilihan karakter
   function switchUser() {
     currentPlayer.logout();
@@ -93,9 +92,45 @@
 
   function toggleProfile() {
     isProfileOpen = !isProfileOpen;
+    if (isProfileOpen) inboxOpen.set(false);
   }
 
   function closeProfile() {
+    isProfileOpen = false;
+  }
+
+  // Hitung badge inbox: klaim pending masuk (reporter) + klaim saya yang pending
+  let inboxBadge = $derived(
+    (() => {
+      const npm = $currentPlayer?.npm || '';
+      if (!npm) return 0;
+      const incoming = $items
+        .filter((i) => i.reporterNpm === npm)
+        .reduce((acc, i) => acc + (i.claims || []).filter((c) => c.status === 'pending').length, 0);
+      const mine = $items
+        .flatMap((i) => i.claims || [])
+        .filter((c) => c.claimantNpm === npm && c.status === 'pending').length;
+      return incoming + mine;
+    })()
+  );
+
+  function openInbox(tab: 'incoming' | 'mine') {
+    inboxTab.set(tab);
+    inboxOpen.set(true);
+    isProfileOpen = false;
+  }
+
+  function toggleInbox() {
+    if (!$inboxOpen) {
+      const npm = $currentPlayer?.npm || '';
+      const hasIncoming = $items.some(
+        (i) => i.reporterNpm === npm && (i.claims || []).some((c) => c.status === 'pending')
+      );
+      inboxTab.set(hasIncoming ? 'incoming' : 'mine');
+      inboxOpen.set(true);
+    } else {
+      inboxOpen.set(false);
+    }
     isProfileOpen = false;
   }
 
@@ -136,8 +171,58 @@
     </span>
   </div>
 
-  <!-- Logo Profil: Sesuai Screenshot Slate Navy Capsule -->
-  <div class="pointer-events-auto relative profile-menu-container">
+  <!-- Header Kanan: Lonceng Notifikasi Inbox & Logo Profil -->
+  <div class="pointer-events-auto flex items-center gap-2">
+    <!-- Inbox Panel Modal Dialog -->
+    <InboxPanel />
+
+    <!-- Tombol Lonceng Notifikasi Inbox (di samping kiri profile) -->
+    <button
+      type="button"
+      onclick={toggleInbox}
+      class="relative w-[34px] h-[34px] rounded-full bg-[#2b3847] hover:bg-[#384a5e] {$inboxOpen ? 'ring-2 ring-[#facc15] bg-[#384a5e]' : ''} border border-black/30 shadow-[0_2px_4px_rgba(0,0,0,0.3)] flex items-center justify-center transition-all active:translate-y-0.5 cursor-pointer select-none group"
+      title={inboxBadge > 0 ? `Inbox Notifikasi (${inboxBadge} klaim)` : 'Inbox Notifikasi Klaim'}
+      aria-label="Buka Inbox Notifikasi Klaim"
+    >
+      <!-- 8-Bit Pixel Bell SVG Icon -->
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        class="transition-transform duration-200 group-hover:scale-110 drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
+      >
+        <!-- Hanger / Top Ring -->
+        <rect x="11" y="2" width="2" height="2" fill="#facc15" />
+        <rect x="10" y="4" width="4" height="2" fill="#eab308" />
+        <!-- Bell Dome -->
+        <rect x="8" y="6" width="8" height="3" fill="#facc15" />
+        <rect x="7" y="7" width="2" height="2" fill="#fef08a" />
+        <!-- Bell Body -->
+        <rect x="6" y="9" width="12" height="4" fill="#facc15" />
+        <rect x="6" y="9" width="2" height="3" fill="#fef08a" />
+        <rect x="15" y="9" width="3" height="4" fill="#ca8a04" />
+        <!-- Bell Flared Rim -->
+        <rect x="4" y="13" width="16" height="3" fill="#eab308" />
+        <rect x="4" y="13" width="2" height="2" fill="#fef08a" />
+        <rect x="17" y="13" width="3" height="3" fill="#a16207" />
+        <!-- Clapper -->
+        <rect x="10" y="16" width="4" height="3" fill="#ffd700" />
+      </svg>
+
+      <!-- Badge Indikator Notifikasi -->
+      {#if inboxBadge > 0}
+        <span class="absolute -top-1 -right-1 flex h-4 min-w-[16px]">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+          <span class="relative inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-[#dc2626] border border-white text-white font-pixel text-[7px] font-bold shadow-md leading-none">
+            {inboxBadge}
+          </span>
+        </span>
+      {/if}
+    </button>
+
+    <!-- Logo Profil: Sesuai Screenshot Slate Navy Capsule -->
+    <div class="relative profile-menu-container">
     <button
       type="button"
       onclick={toggleProfile}
@@ -218,6 +303,7 @@
         </button>
       </div>
     {/if}
+  </div>
   </div>
 </div>
 
@@ -303,8 +389,10 @@
       {#each $items as item (item.id)}
         <ItemCard
           {item}
+          currentPlayerNpm={$currentPlayer?.npm || ''}
           onClaim={() => openClaimModal(item.id)}
           onReviewClaims={() => openClaimsReview(item.id)}
+          onDelete={() => openDeleteModal(item.id)}
           onDragEnd={(x, y) => handleItemDragEnd(item.id, x, y)}
         />
       {/each}
@@ -329,4 +417,8 @@
 
 {#if $activeModal === 'claimsReview'}
   <ClaimsReviewModal />
+{/if}
+
+{#if $activeModal === 'deleteItem'}
+  <DeleteItemModal />
 {/if}
