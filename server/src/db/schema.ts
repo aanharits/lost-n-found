@@ -4,6 +4,7 @@ import { relations } from 'drizzle-orm';
 // ─── Tabel items (Laporan barang hilang & ketemu) ─────────────────────────────
 export const itemsTable = pgTable('items', {
   id: varchar('id', { length: 64 }).primaryKey(),
+  shortCode: varchar('short_code', { length: 16 }),           // Human-readable short ID (contoh: 'B-7K9')
   type: varchar('type', { length: 10 }).notNull(),           // 'lost' | 'found'
   title: varchar('title', { length: 255 }).notNull(),
   icon: varchar('icon', { length: 16 }).default('📦'),
@@ -11,6 +12,7 @@ export const itemsTable = pgTable('items', {
   tag: varchar('tag', { length: 64 }).default(''),
   description: text('description').notNull(),
   commitments: jsonb('commitments').$type<string[]>().default([]),
+  evidencePhoto: text('evidence_photo').default(''),          // Foto bukti fisik pelapor (rahasia satpam)
   status: varchar('status', { length: 20 }).default('open'), // 'open' | 'disputed' | 'resolved'
   date: varchar('date', { length: 32 }).default(''),
   time: varchar('time', { length: 32 }).default(''),

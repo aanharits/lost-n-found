@@ -3,6 +3,7 @@ import { z } from 'zod';
 // Skema validasi pembuatan postingan item baru
 export const itemAddSchema = z.object({
   id: z.string().min(1, 'ID item wajib ada'),
+  shortCode: z.string().optional(),
   type: z.enum(['lost', 'found'], {
     errorMap: () => ({ message: 'Type harus "lost" atau "found"' }),
   }),
@@ -13,6 +14,7 @@ export const itemAddSchema = z.object({
   desc: z.string().min(1, 'Lokasi wajib diisi'),
   secretDetail: z.string().optional().default(''),
   commitments: z.array(z.string()).optional().default([]),
+  evidencePhoto: z.string().optional().default(''),
   claims: z.array(z.any()).optional().default([]),
   status: z.enum(['open', 'disputed', 'resolved']).optional().default('open'),
   date: z.string().optional().default(''),

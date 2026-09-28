@@ -15,13 +15,53 @@ export function setupSocketHandlers(io: SocketIOServer): void {
     try {
       // Kirim data item awal dari DB ke client yang baru terhubung
       const items = await dbGetItems();
-      // Sanitasi reporter_token sebelum broadcast ke client
-      const sanitized = items.map(({ reporterToken: _, ...rest }) => rest);
+      // Sanitasi reporter_token & evidencePhoto sebelum broadcast ke client publik
+      const sanitized = items.map(({ reporterToken: _, evidencePhoto: __, ...rest }) => rest);
       socket.emit('items_init', sanitized);
     } catch (err) {
       console.error('[Socket] Failed to load items from DB:', err);
       socket.emit('items_init', []);
     }
+
+    // Handler autentikasi & room khusus Petugas Satpam
+    const SATPAM_SECRET_KEY = process.env.SATPAM_ACCESS_KEY || 'satpamganteng';
+
+    socket.on('satpam_join', async (data: { accessKey?: string }) => {
+      const key = data?.accessKey?.trim();
+      if (key === SATPAM_SECRET_KEY) {
+        socket.join('satpam_room');
+        console.log(`[Socket] Satpam verified and joined satpam_room: ${socket.id}`);
+        try {
+          const allItems = await dbGetItems();
+          // Satpam boleh melihat evidencePhoto, hanya reporterToken yang disanitasi
+          const satpamItems = allItems.map(({ reporterToken: _, ...rest }) => rest);
+          socket.emit('satpam_auth_success', { ok: true });
+          socket.emit('satpam_items_init', satpamItems);
+        } catch (err) {
+          console.error('[Socket] Failed to load satpam items:', err);
+          socket.emit('satpam_items_init', []);
+        }
+      } else {
+        console.warn(`[Socket] Satpam auth failed for ${socket.id}: Invalid key`);
+        socket.emit('satpam_auth_failed', { message: 'Access key Satpam tidak valid.' });
+      }
+    });
+
+    socket.on('satpam_get_items', async (data: { accessKey?: string }) => {
+      const key = data?.accessKey?.trim();
+      if (key === SATPAM_SECRET_KEY) {
+        try {
+          const allItems = await dbGetItems();
+          const satpamItems = allItems.map(({ reporterToken: _, ...rest }) => rest);
+          socket.emit('satpam_items_response', satpamItems);
+        } catch (err) {
+          console.error('[Socket] Failed to load satpam items:', err);
+          socket.emit('satpam_items_response', []);
+        }
+      } else {
+        socket.emit('satpam_auth_failed', { message: 'Access key Satpam tidak valid.' });
+      }
+    });
 
     // Broadcast jumlah user aktif ke semua client
     io.emit('users_count', getConnectedUsersCount());

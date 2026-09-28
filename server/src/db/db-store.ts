@@ -1,12 +1,14 @@
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, isNull } from 'drizzle-orm';
 import { db } from './index.js';
 import { itemsTable, claimsTable, type ItemRecord, type ClaimRecord } from './schema.js';
+import { generateShortCode } from '../utils/shortCode.js';
 
 // ─── Type exports yang kompatibel dengan interface lama di store.ts ───────────
 
 // Bentuk Item yang dipakai di seluruh aplikasi (frontend-friendly, claims embedded)
 export interface Item {
   id: string;
+  shortCode: string;      // Human-readable short ID (misal 'B-7K9')
   type: 'lost' | 'found';
   title: string;
   icon: string;
@@ -18,6 +20,7 @@ export interface Item {
   status: 'open' | 'disputed' | 'resolved';
   date: string;
   time: string;
+  evidencePhoto?: string; // Data URL foto bukti asli (hanya untuk Satpam)
   reporterName: string;
   reporterNpm: string;
   reporterContact: string;
@@ -41,8 +44,16 @@ export interface Claim {
 
 // ─── Helper: Konversi dari format DB record ke format Item frontend ───────────
 function rowToItem(row: ItemRecord, claims: ClaimRecord[]): Item {
+  // Fallback jika item lama di DB belum memiliki short_code
+  const shortCode = row.shortCode && row.shortCode.trim() !== ''
+    ? row.shortCode
+    : row.id.startsWith('item')
+      ? `#${row.id.slice(-4).toUpperCase()}`
+      : `#${row.id.slice(0, 4).toUpperCase()}`;
+
   return {
     id: row.id,
+    shortCode,
     type: row.type as 'lost' | 'found',
     title: row.title,
     icon: row.icon ?? '📦',
@@ -54,6 +65,7 @@ function rowToItem(row: ItemRecord, claims: ClaimRecord[]): Item {
     status: (row.status ?? 'open') as 'open' | 'disputed' | 'resolved',
     date: row.date ?? '',
     time: row.time ?? '',
+    evidencePhoto: row.evidencePhoto ?? '',
     reporterName: row.reporterName ?? '',
     reporterNpm: row.reporterNpm,
     reporterContact: row.reporterContact ?? '',
@@ -105,8 +117,13 @@ export async function dbGetItem(id: string): Promise<Item | null> {
 
 /** Tambah item baru */
 export async function dbInsertItem(item: Omit<Item, 'claims'>): Promise<Item> {
+  const shortCode = item.shortCode && item.shortCode.trim() !== ''
+    ? item.shortCode.trim()
+    : generateShortCode();
+
   const [inserted] = await db.insert(itemsTable).values({
     id: item.id,
+    shortCode,
     type: item.type,
     title: item.title,
     icon: item.icon ?? '📦',
@@ -114,6 +131,7 @@ export async function dbInsertItem(item: Omit<Item, 'claims'>): Promise<Item> {
     tag: item.tag ?? '',
     description: item.desc,
     commitments: item.commitments,
+    evidencePhoto: item.evidencePhoto ?? '',
     status: item.status ?? 'open',
     date: item.date,
     time: item.time,
@@ -125,6 +143,27 @@ export async function dbInsertItem(item: Omit<Item, 'claims'>): Promise<Item> {
     y: String(item.y ?? 100),
   }).returning();
   return rowToItem(inserted, []);
+}
+
+/** Ambil semua item khusus untuk Satpam (termasuk evidencePhoto) */
+export async function dbGetItemsForSatpam(): Promise<Item[]> {
+  return dbGetItems();
+}
+
+/** Backfill short_code untuk item lawas yang masih kosong di database */
+export async function dbBackfillShortCodes(): Promise<number> {
+  const allRows = await db.select().from(itemsTable);
+  let updatedCount = 0;
+  for (const row of allRows) {
+    if (!row.shortCode || row.shortCode.trim() === '') {
+      const code = generateShortCode();
+      await db.update(itemsTable)
+        .set({ shortCode: code, updatedAt: new Date() })
+        .where(eq(itemsTable.id, row.id));
+      updatedCount++;
+    }
+  }
+  return updatedCount;
 }
 
 /** Update status dan koordinat item */

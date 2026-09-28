@@ -6,6 +6,8 @@ import { extractKeywordsWithAI } from '../zk/keywordExtractor.js';
 import { stringToFieldElement } from '../zk/fieldElement.js';
 import { poseidonCommitment } from '../zk/poseidon.js';
 import { autoClassifyItem } from '../utils/tagClassifier.js';
+import { sanitizeEvidencePhoto } from '../utils/imageSanitizer.js';
+import { generateShortCode } from '../utils/shortCode.js';
 
 // Menangani pembuatan postingan barang baru dengan validasi, ZKP, dan penyimpanan DB
 export async function handleItemAdd(io: SocketIOServer, socket: Socket, data: unknown): Promise<void> {
@@ -24,6 +26,13 @@ export async function handleItemAdd(io: SocketIOServer, socket: Socket, data: un
     return;
   }
 
+  // Sanitasi & validasi bukti foto jika disertakan
+  const photoSanitized = sanitizeEvidencePhoto(inputData.evidencePhoto);
+  if (!photoSanitized.valid) {
+    socket.emit('item_add_error', { message: photoSanitized.error || 'Format foto bukti tidak valid.' });
+    return;
+  }
+
   // Auto-klasifikasi category & tag jika belum ada
   let category = inputData.category;
   let tag = inputData.tag;
@@ -33,7 +42,11 @@ export async function handleItemAdd(io: SocketIOServer, socket: Socket, data: un
     tag = classified.tag;
   }
 
-  console.log(`[Item] New report from ${inputData.reporterName || 'Anon'}: ${inputData.title} [${category} • ${tag}]`);
+  const shortCode = inputData.shortCode && inputData.shortCode.trim() !== ''
+    ? inputData.shortCode.trim()
+    : generateShortCode();
+
+  console.log(`[Item] New report from ${inputData.reporterName || 'Anon'}: ${inputData.title} [${shortCode}] [${category} • ${tag}]`);
 
   try {
     // 1. Ekstrak keyword dari input rahasia pelapor
@@ -47,6 +60,7 @@ export async function handleItemAdd(io: SocketIOServer, socket: Socket, data: un
     // 3. Bangun objek Item (tanpa secretDetail mentah)
     const newItem: Omit<Item, 'claims'> = {
       id: inputData.id,
+      shortCode,
       type: inputData.type,
       title: inputData.title,
       icon: inputData.icon,
@@ -54,6 +68,7 @@ export async function handleItemAdd(io: SocketIOServer, socket: Socket, data: un
       tag,
       desc: inputData.desc,
       commitments,
+      evidencePhoto: photoSanitized.sanitized || '',
       status: 'open',
       date: inputData.date,
       time: inputData.time,
@@ -68,9 +83,13 @@ export async function handleItemAdd(io: SocketIOServer, socket: Socket, data: un
     // 4. Simpan ke Neon DB
     const savedItem = await dbInsertItem(newItem);
 
-    // 5. Broadcast item baru ke semua client (tanpa reporterToken)
-    const { reporterToken: _, ...publicItem } = savedItem;
+    // 5. Broadcast item baru ke publik (filter reporterToken & evidencePhoto untuk privasi)
+    const { reporterToken: _t, evidencePhoto: _p, ...publicItem } = savedItem;
     io.emit('item_added', { ...publicItem, claims: [] });
+
+    // 6. Broadcast item lengkap (dengan evidencePhoto) khusus ke room satpam
+    const { reporterToken: _rt, ...satpamItem } = savedItem;
+    io.to('satpam_room').emit('satpam_item_added', { ...satpamItem, claims: [] });
 
   } catch (error) {
     console.error('[Item] Failed to add item:', error);
