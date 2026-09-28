@@ -17,6 +17,7 @@ export interface Claim {
 // Tipe data objek barang laporan
 export interface Item {
   id: string;
+  shortCode?: string;
   type: 'lost' | 'found';
   title: string;
   icon: string;
@@ -28,6 +29,7 @@ export interface Item {
   status: 'open' | 'disputed' | 'resolved';
   date: string;
   time: string;
+  evidencePhoto?: string;
   reporterName: string;
   reporterNpm: string;
   reporterContact: string;

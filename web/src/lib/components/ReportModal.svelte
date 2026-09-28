@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { activeModal } from '$lib/stores/ui.js';
   import { items } from '$lib/stores/items.js';
   import { currentPlayer } from '$lib/stores/player.js';
@@ -6,6 +7,7 @@
   import { matchItemByText, type CategoryId } from '$lib/constants/itemAssets.js';
   import TagIcon from './TagIcon.svelte';
   import { getNextAvailablePosition } from '$lib/utils/gridLayout.js';
+  import { generateShortCode } from '$lib/utils/shortCode.js';
   import { fade, fly } from 'svelte/transition';
 
   let type = $state<'lost' | 'found'>('lost');
@@ -17,12 +19,135 @@
   let errorMsg = $state('');
   let loading = $state(false);
 
+  // Short ID generator untuk laporan
+  let shortCode = $state(generateShortCode());
+
+  // Bukti foto fisik (upload / live webcam capture)
+  let evidencePhoto = $state('');
+  let isCameraOpen = $state(false);
+  let videoElement = $state<HTMLVideoElement | null>(null);
+  let mediaStream = $state<MediaStream | null>(null);
+  let cameraError = $state('');
+  let fileInput = $state<HTMLInputElement | null>(null);
+
   // Set nilai default tanggal dan jam ke waktu saat ini
   $effect(() => {
     const now = new Date();
     date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     time = now.toTimeString().slice(0, 5);
   });
+
+  // Hentikan stream kamera saat komponen ditutup/unmount
+  onDestroy(() => {
+    stopCamera();
+  });
+
+  // Buka kamera WebCam HTML5
+  async function startCamera() {
+    cameraError = '';
+    isCameraOpen = true;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+      mediaStream = stream;
+      if (videoElement) {
+        videoElement.srcObject = stream;
+        await videoElement.play();
+      }
+    } catch (err: any) {
+      console.error('Camera error:', err);
+      cameraError = 'Kamera tidak dapat diakses atau izin ditolak.';
+      isCameraOpen = false;
+      stopCamera();
+    }
+  }
+
+  // Matikan stream video kamera
+  function stopCamera() {
+    if (mediaStream) {
+      mediaStream.getTracks().forEach((track) => track.stop());
+      mediaStream = null;
+    }
+    if (videoElement) {
+      videoElement.srcObject = null;
+    }
+  }
+
+  // Ambil snapshot dari video kamera
+  function takeSnapshot() {
+    if (!videoElement) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = videoElement.videoWidth || 640;
+    canvas.height = videoElement.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+      const rawData = canvas.toDataURL('image/jpeg', 0.85);
+      compressImage(rawData, 800, 0.8).then((compressed) => {
+        evidencePhoto = compressed;
+      });
+    }
+    stopCamera();
+    isCameraOpen = false;
+  }
+
+  // Tangani upload gambar dari perangkat
+  function handleFileUpload(e: Event) {
+    const target = e.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      errorMsg = 'File harus berupa gambar (JPG, PNG, WEBP)!';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const rawDataUrl = reader.result as string;
+      evidencePhoto = await compressImage(rawDataUrl, 800, 0.8);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Helper kompresi gambar berbasis canvas
+  function compressImage(dataUrl: string, maxWidth = 800, quality = 0.8): Promise<string> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } else {
+          resolve(dataUrl);
+        }
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  }
+
+  // Hapus foto yang sudah dipilih
+  function removePhoto() {
+    evidencePhoto = '';
+    if (fileInput) fileInput.value = '';
+  }
 
   // Deteksi tag dan kategori secara presisi berdasarkan batas kata (word-boundary)
   function detectTagAndCategory(inputName: string): { tag: string; category: CategoryId } {
@@ -60,12 +185,17 @@
 
   // Menutup modal form lapor barang dan reset input
   function closeModal() {
+    stopCamera();
+    isCameraOpen = false;
     activeModal.set('none');
     name = '';
     desc = '';
     secretDetail = '';
+    evidencePhoto = '';
     errorMsg = '';
+    cameraError = '';
     loading = false;
+    shortCode = generateShortCode();
   }
 
   // Mengirim laporan barang baru ke server dengan icon hasil analisis AI atau lokal
@@ -106,8 +236,6 @@
 
     const { x: safeX, y: safeY } = getNextAvailablePosition(currentItems, boardWidth);
 
-
-
     const player = $currentPlayer;
     let reporterToken = localStorage.getItem('lf_device_token');
     if (!reporterToken) {
@@ -116,6 +244,7 @@
     }
     const newItem = {
       id: 'item' + Date.now(),
+      shortCode,
       type: type,
       title: name.trim(),
       icon,
@@ -123,6 +252,7 @@
       tag: detectedInfo.tag,
       desc: desc.trim(),
       secretDetail: secretDetail.trim(),
+      evidencePhoto,
       claims: [],
       status: 'open',
       date,
@@ -142,32 +272,37 @@
 
     closeModal();
   }
-
 </script>
 
 <div class="modal-overlay backdrop-blur-xs" transition:fade={{ duration: 150 }}>
   <div
-    class="relative max-w-md w-full m-4 bg-white border-4 border-[#1c120c] shadow-[6px_6px_0px_#0a060f] rounded flex flex-col overflow-hidden select-none"
+    class="relative max-w-lg w-full m-3 max-h-[90vh] bg-white border-4 border-[#1c120c] shadow-[6px_6px_0px_#0a060f] rounded flex flex-col overflow-hidden select-none"
     transition:fly={{ y: 20, duration: 250 }}
   >
     <!-- Header Modal: Modern Minimalist Nintendo Blue Title Bar -->
-    <div class="bg-[#2563eb] text-white px-3.5 py-2.5 font-pixel text-[9px] md:text-[10px] flex justify-between items-center border-b-2 border-[#1c120c]">
+    <div class="bg-[#2563eb] text-white px-3.5 py-2.5 font-pixel text-[9px] md:text-[10px] flex justify-between items-center border-b-2 border-[#1c120c] shrink-0">
       <div class="flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-green-400 border border-[#0c0812] animate-pulse"></span>
         <span class="font-bold tracking-wider">FORM LAPOR BARANG</span>
       </div>
-      <button
-        onclick={closeModal}
-        class="text-white hover:text-red-200 font-pixel text-xs px-1.5 py-0.5 cursor-pointer leading-none"
-        type="button"
-        aria-label="Tutup"
-      >
-        ✕
-      </button>
+      <div class="flex items-center gap-2">
+        <!-- Badge Short ID -->
+        <span class="bg-[#1e3a8a] text-[#fef08a] px-2 py-0.5 rounded text-[8px] font-mono font-bold border border-[#93c5fd]/40 shadow-xs">
+          #{shortCode}
+        </span>
+        <button
+          onclick={closeModal}
+          class="text-white hover:text-red-200 font-pixel text-xs px-1.5 py-0.5 cursor-pointer leading-none"
+          type="button"
+          aria-label="Tutup"
+        >
+          ✕
+        </button>
+      </div>
     </div>
 
-    <!-- Body Form Minimalis Modern 8-Bit Canvas -->
-    <div class="p-4 md:p-5 flex flex-col gap-3.5 bg-[#f8fafc]">
+    <!-- Body Form Scrollable -->
+    <div class="p-4 md:p-5 flex flex-col gap-3.5 bg-[#f8fafc] overflow-y-auto">
       
       <!-- Segmented Status Switcher (Lost vs Found) -->
       <div class="flex flex-col gap-1.5">
@@ -240,7 +375,7 @@
       <div class="flex flex-col gap-1">
         <label for="report-secret" class="font-pixel text-[8.5px] md:text-[9.5px] text-[#1c120c] font-bold flex items-center justify-between">
           <span>CIRI KHAS RAHASIA</span>
-          <span class="text-stone-500 font-sans text-[10px] font-bold">(opsional verifikasi AI)</span>
+          <span class="text-stone-500 font-sans text-[10px] font-bold">(opsional verifikasi AI ZKP)</span>
         </label>
         <textarea
           id="report-secret"
@@ -249,6 +384,138 @@
           class="bg-white border-2 border-[#1c120c] focus:border-[#2563eb] text-[#1c120c] rounded py-2 px-3 font-sans text-xs md:text-sm font-bold resize-none placeholder-stone-400 shadow-[inset_1px_1px_0_rgba(0,0,0,0.08)] outline-none transition-all"
           placeholder="Detail khusus untuk verifikasi klaim (misal: stiker, warna gantungan)"
         ></textarea>
+      </div>
+
+      <!-- Section: Bukti Foto Fisik (Dual Mode: Upload & WebCam) -->
+      <div class="flex flex-col gap-2 p-3 bg-[#f1f5f9] rounded border-2 border-[#1c120c] shadow-[2px_2px_0px_#1c120c]">
+        <div class="flex items-center justify-between">
+          <span class="font-pixel text-[8.5px] md:text-[9.5px] text-[#0f172a] font-bold flex items-center gap-1.5">
+            <span>📷</span> BUKTI FOTO FISIK ASLI
+          </span>
+          <span class="text-[7.5px] font-pixel text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
+            ARSIP SATPAM
+          </span>
+        </div>
+
+        <div class="text-[8px] md:text-[8.5px] text-[#475569] font-sans font-medium flex items-center gap-1.5 bg-white p-2 rounded border border-[#cbd5e1]">
+          <span>🔒</span>
+          <span><strong>Privasi Aman:</strong> Foto asli hanya tersimpan di berkas Satpam. Di papan publik hanya tampil ilustrasi pixel 8-bit.</span>
+        </div>
+
+        <!-- Mode Kamera WebCam Sedang Aktif -->
+        {#if isCameraOpen}
+          <div class="relative w-full aspect-video bg-black rounded border-2 border-[#1c120c] overflow-hidden flex flex-col items-center justify-center">
+            <!-- Video feed -->
+            <!-- svelte-ignore a11y_media_has_caption -->
+            <video
+              bind:this={videoElement}
+              autoplay
+              playsinline
+              muted
+              class="w-full h-full object-cover"
+            ></video>
+
+            <!-- Retro Scanlines & Target Overlay -->
+            <div class="absolute inset-0 pointer-events-none border-2 border-emerald-400/40 flex items-center justify-center">
+              <div class="w-24 h-24 border-2 border-dashed border-emerald-400 rounded flex items-center justify-center">
+                <span class="text-emerald-400 text-xs font-mono font-bold">+</span>
+              </div>
+              <span class="absolute top-2 left-2 text-[8px] font-pixel text-emerald-300 bg-black/60 px-1.5 py-0.5 rounded">
+                [LIVE WEBCAM]
+              </span>
+            </div>
+
+            <!-- Kamera action buttons -->
+            <div class="absolute bottom-2 left-0 right-0 flex justify-center gap-2 z-10 px-2">
+              <button
+                type="button"
+                onclick={takeSnapshot}
+                class="bg-emerald-500 hover:bg-emerald-600 text-white font-pixel text-[8.5px] px-3 py-1.5 rounded border-2 border-[#1c120c] shadow-[2px_2px_0px_#1c120c] cursor-pointer flex items-center gap-1 font-bold"
+              >
+                <span>●</span> AMBIL FOTO
+              </button>
+              <button
+                type="button"
+                onclick={() => { stopCamera(); isCameraOpen = false; }}
+                class="bg-stone-700 hover:bg-stone-800 text-white font-pixel text-[8.5px] px-3 py-1.5 rounded border-2 border-[#1c120c] shadow-[2px_2px_0px_#1c120c] cursor-pointer"
+              >
+                BATAL
+              </button>
+            </div>
+          </div>
+        {:else if evidencePhoto}
+          <!-- Preview Foto yang Sudah Terpilih -->
+          <div class="flex items-center gap-3 bg-white p-2.5 rounded border-2 border-[#1c120c] shadow-[1px_1px_0px_#1c120c]">
+            <img
+              src={evidencePhoto}
+              alt="Bukti fisik barang"
+              class="w-16 h-16 object-cover rounded border-2 border-[#1c120c] shadow-xs"
+            />
+            <div class="flex-1 flex flex-col justify-between h-16">
+              <div>
+                <p class="font-pixel text-[8px] text-emerald-700 font-bold flex items-center gap-1">
+                  <span>✓</span> FOTO SIAP DIARSIPKAN
+                </p>
+                <p class="text-[10px] text-stone-500 font-sans mt-0.5 font-medium">
+                  Tersimpan di berkas #{shortCode}
+                </p>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  onclick={() => fileInput?.click()}
+                  class="text-[7.5px] font-pixel text-blue-700 hover:underline cursor-pointer"
+                >
+                  Ganti File
+                </button>
+                <span class="text-stone-300">|</span>
+                <button
+                  type="button"
+                  onclick={removePhoto}
+                  class="text-[7.5px] font-pixel text-red-600 hover:underline cursor-pointer"
+                >
+                  Hapus
+                </button>
+              </div>
+            </div>
+          </div>
+        {:else}
+          <!-- Opsi Pemilihan Foto: Upload File atau WebCam -->
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onclick={() => fileInput?.click()}
+              class="py-2.5 px-3 bg-white hover:bg-stone-50 text-[#1c120c] rounded border-2 border-[#1c120c] shadow-[2px_2px_0px_#1c120c] active:shadow-none active:translate-y-0.5 font-pixel text-[8px] md:text-[8.5px] font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-1"
+            >
+              <span class="text-base">📁</span>
+              <span>UPLOAD GAMBAR</span>
+            </button>
+            <button
+              type="button"
+              onclick={startCamera}
+              class="py-2.5 px-3 bg-white hover:bg-stone-50 text-[#1c120c] rounded border-2 border-[#1c120c] shadow-[2px_2px_0px_#1c120c] active:shadow-none active:translate-y-0.5 font-pixel text-[8px] md:text-[8.5px] font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-1"
+            >
+              <span class="text-base">📸</span>
+              <span>BUKA KAMERA</span>
+            </button>
+          </div>
+        {/if}
+
+        <!-- Error Kamera Jika Ada -->
+        {#if cameraError}
+          <div class="text-[7.5px] font-pixel text-red-700 bg-red-100 p-1.5 rounded border border-red-300">
+            {cameraError}
+          </div>
+        {/if}
+
+        <!-- Hidden input file -->
+        <input
+          bind:this={fileInput}
+          type="file"
+          accept="image/*"
+          onchange={handleFileUpload}
+          class="hidden"
+        />
       </div>
 
       <!-- Tanggal & Jam Input -->
@@ -296,7 +563,7 @@
     </div>
 
     <!-- Tombol Aksi Bawah Minimalis Modern Nintendo -->
-    <div class="p-3.5 md:p-4 bg-white border-t-2 border-[#1c120c] flex gap-2.5">
+    <div class="p-3.5 md:p-4 bg-white border-t-2 border-[#1c120c] flex gap-2.5 shrink-0">
       <button
         onclick={closeModal}
         type="button"

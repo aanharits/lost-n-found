@@ -4,6 +4,7 @@
   import { draggable } from "$lib/actions/draggable.js";
   import { fly } from "svelte/transition";
   import TagIcon from "./TagIcon.svelte";
+  import { formatShortCode } from "$lib/utils/shortCode.js";
 
   let {
     item,
@@ -50,6 +51,9 @@
       !!item.reporterNpm &&
       currentPlayerNpm === item.reporterNpm,
   );
+
+  // Human-readable short ID
+  const displayCode = $derived(formatShortCode(item.shortCode, item.id));
 </script>
 
 <div
@@ -93,7 +97,15 @@
   <div
     class="card-inner-frame w-full h-full flex flex-col overflow-hidden rounded-[1px]"
   >
-    <div class="card-header font-pixel {headerClass}">{headerText}</div>
+    <div class="card-header font-pixel {headerClass} px-2 flex justify-between items-center">
+      <span class="tracking-wide text-[9px]">{headerText}</span>
+      <span
+        class="bg-[#140b05]/65 text-[#fef08a] text-[7.5px] px-1.5 py-0.5 rounded-sm border border-[#fef08a]/40 font-mono font-bold tracking-wider shadow-[1px_1px_0px_rgba(0,0,0,0.4)]"
+        title="Short ID: {displayCode}"
+      >
+        {displayCode}
+      </span>
+    </div>
     <div class="card-image flex items-center justify-center">
       <TagIcon
         tag={item.tag}
