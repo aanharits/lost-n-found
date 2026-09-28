@@ -73,32 +73,33 @@ Tombol **INBOX** di header board (antara status online dan profil). Badge merah 
 **Reporter:**
 1. Badge merah muncul di tombol INBOX
 2. Buka INBOX -> tab KLAIM MASUK
-3. Review deskripsi + ZKP score tiap pengklaim
-4. Klik SETUJUI -> selesai, pengklaim lain otomatis ditolak
+3. Review detail pengklaim yang lolos ZKP secara transparan
+4. Sistem Gale-Shapley menyelesaikan sengketa secara otomatis dalam window 1 menit
 
 ---
 
-## File yang Berubah
+## File yang Terlibat
 
 ### Server
 | File | Perubahan |
 |---|---|
-| `schemas/claim.schema.ts` | Tambah `claimApproveSchema` |
-| `handlers/claim.handler.ts` | Tambah `handleClaimApprove` |
-| `socket/handlers.ts` | Register event `claim_approve` |
-| `zk/disputeTimer.ts` | Timer 1 menit -> 48 jam, tambah `cancelDisputeWindow` |
+| `zk/disputeTimer.ts` | Timer dispute window 1 menit (Gale-Shapley auto-resolve) |
+| `zk/resolveDisputes.ts` | Algoritma Gale-Shapley (score ZKP DESC, waktu klaim ASC) |
+| `handlers/claim.handler.ts` | Validasi ZKP v2 & trigger dispute window |
+| `socket/handlers.ts` | Register event klaim & delete item |
 
 ### Web
 | File | Perubahan |
 |---|---|
 | `stores/ui.ts` | Tambah `inboxOpen`, `inboxTab` stores |
-| `components/InboxPanel.svelte` | Komponen baru |
+| `components/InboxPanel.svelte` | Panel inbox transparan untuk memantau klaim masuk & klaim saya |
 | `components/Board.svelte` | Tombol INBOX + badge counter di HUD |
 | `components/ClaimModal.svelte` | Pesan sukses diarahkan ke inbox |
 
 ### Socket Events
 | Event | Arah | Keterangan |
 |---|---|---|
-| `claim_approve` | Client -> Server | Reporter setujui klaim |
-| `claim_approve_error` | Server -> Client | Error saat approve |
-| `dispute_resolved` | Server -> All | Ada field baru: `resolvedBy: 'reporter' atau 'auto'` |
+| `claim_submit` | Client -> Server | Pengajuan klaim dengan multi-proof ZKP |
+| `claim_updated` | Server -> All | Update riwayat klaim barang |
+| `dispute_resolved` | Server -> All | Broadcast pemenang klaim oleh Gale-Shapley setelah 1 menit |
+

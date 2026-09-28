@@ -1,7 +1,7 @@
 import type { Server as SocketIOServer, Socket } from 'socket.io';
-import { claimSubmitSchema, claimApproveSchema } from '../schemas/claim.schema.js';
-import { dbGetItem, dbInsertClaim, dbUpdateItemStatus, dbUpdateClaimStatus, dbGetClaimsByItemId, type Claim } from '../db/db-store.js';
-import { startDisputeWindow, cancelDisputeWindow } from '../zk/disputeTimer.js';
+import { claimSubmitSchema } from '../schemas/claim.schema.js';
+import { dbGetItem, dbInsertClaim, dbUpdateItemStatus, type Claim } from '../db/db-store.js';
+import { startDisputeWindow } from '../zk/disputeTimer.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -113,8 +113,7 @@ export async function handleClaimSubmit(io: SocketIOServer, socket: Socket, data
     await dbUpdateItemStatus(itemId, 'disputed');
   }
 
-  // Mulai fallback Dispute Window 48 jam (Gale-Shapley)
-  // Hanya jalan jika reporter tidak manual approve dalam 48 jam
+  // Mulai Dispute Window 1 menit (Gale-Shapley auto-resolve)
   startDisputeWindow(io, itemId);
 
   io.emit('claim_updated', {
@@ -127,68 +126,3 @@ export async function handleClaimSubmit(io: SocketIOServer, socket: Socket, data
   });
 }
 
-// Menangani persetujuan manual klaim oleh reporter (primary resolver)
-// Dipanggil via event socket 'claim_approve'
-export async function handleClaimApprove(io: SocketIOServer, socket: Socket, data: unknown): Promise<void> {
-  const parsed = claimApproveSchema.safeParse(data);
-  if (!parsed.success) {
-    socket.emit('claim_approve_error', { message: 'Data persetujuan tidak valid.' });
-    return;
-  }
-
-  const { itemId, claimId, reporterNpm } = parsed.data;
-
-  const item = await dbGetItem(itemId);
-  if (!item) {
-    socket.emit('claim_approve_error', { message: 'Item tidak ditemukan.' });
-    return;
-  }
-
-  if (item.reporterNpm !== reporterNpm) {
-    socket.emit('claim_approve_error', { message: 'Hanya pelapor yang bisa menyetujui klaim.' });
-    return;
-  }
-
-  if (item.status === 'resolved') {
-    socket.emit('claim_approve_error', { message: 'Barang ini sudah diselesaikan.' });
-    return;
-  }
-
-  const claims = await dbGetClaimsByItemId(itemId);
-  const targetClaim = claims.find((c) => c.id === claimId);
-  if (!targetClaim || targetClaim.status !== 'pending') {
-    socket.emit('claim_approve_error', { message: 'Klaim tidak ditemukan atau sudah diproses.' });
-    return;
-  }
-
-  // Approve klaim yang dipilih, reject semua klaim pending lainnya
-  await Promise.all(
-    claims
-      .filter((c) => c.status === 'pending')
-      .map((c) =>
-        c.id === claimId
-          ? dbUpdateClaimStatus(c.id, 'approved')
-          : dbUpdateClaimStatus(c.id, 'rejected', 'Klaim lain telah disetujui oleh pelapor.')
-      )
-  );
-
-  // Batalkan fallback timer Gale-Shapley — reporter sudah mengambil keputusan
-  cancelDisputeWindow(itemId);
-
-  await dbUpdateItemStatus(itemId, 'resolved');
-
-  const updatedItem = await dbGetItem(itemId);
-  if (!updatedItem) return;
-
-  console.log(`[Claim] Manually approved by reporter ${reporterNpm}: claimId=${claimId} for "${item.title}"`);
-
-  // Broadcast ke semua client — pakai event yang sama dengan auto-resolve (dispute_resolved)
-  io.emit('dispute_resolved', {
-    itemId: updatedItem.id,
-    itemTitle: updatedItem.title,
-    status: updatedItem.status,
-    claims: updatedItem.claims,
-    winnerId: claimId,
-    resolvedBy: 'reporter',
-  });
-}

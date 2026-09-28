@@ -21,12 +21,4 @@ export const claimSubmitSchema = z.object({
 export type ClaimSubmitInput = z.infer<typeof claimSubmitSchema>;
 export type SingleProof = z.infer<typeof singleProofSchema>;
 
-// Skema validasi persetujuan klaim oleh reporter (manual approval)
-export const claimApproveSchema = z.object({
-  itemId: z.string().min(1, 'ID item wajib ada'),
-  claimId: z.string().min(1, 'ID klaim wajib ada'),
-  reporterNpm: z.string().min(1, 'NPM reporter wajib ada'),
-});
-
-export type ClaimApproveInput = z.infer<typeof claimApproveSchema>;
 

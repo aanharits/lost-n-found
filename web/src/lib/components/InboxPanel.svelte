@@ -35,60 +35,14 @@
 
   let myPendingCount = $derived(myClaims.filter((m) => m.claim.status === 'pending').length);
 
-  // ── Approve handler ───────────────────────────────────────────────────────
-  let approvingId = $state<string | null>(null);
-  let approveError = $state('');
-
-  async function approveClaim(itemId: string, claimId: string) {
-    const socket = getSocket();
-    if (!socket?.connected) {
-      approveError = 'Koneksi socket terputus.';
-      return;
-    }
-
-    approvingId = claimId;
-    approveError = '';
-
-    socket.emit('claim_approve', {
-      itemId,
-      claimId,
-      reporterNpm: $currentPlayer?.npm || '',
-    });
-
-    // Tunggu respons dari server
-    await new Promise<void>((resolve) => {
-      const timeout = setTimeout(() => {
-        approveError = 'Timeout — coba lagi.';
-        approvingId = null;
-        resolve();
-      }, 8000);
-
-      socket.once('dispute_resolved', (data: any) => {
-        if (data.itemId === itemId) {
-          clearTimeout(timeout);
-          approvingId = null;
-          resolve();
-        }
-      });
-
-      socket.once('claim_approve_error', (data: any) => {
-        clearTimeout(timeout);
-        approveError = data.message || 'Gagal menyetujui klaim.';
-        approvingId = null;
-        resolve();
-      });
-    });
-  }
-
   function switchTab(tab: InboxTab) {
     inboxTab.set(tab);
-    approveError = '';
   }
 
   function close() {
     inboxOpen.set(false);
-    approveError = '';
   }
+
 
   // Format tanggal ISO ke format: 26/9/2026 21.59
   function formatDate(iso: string): string {
@@ -184,13 +138,6 @@
     <!-- Content area -->
     <div class="flex flex-col gap-2.5 p-2.5 max-h-[380px] overflow-y-auto inbox-scroll bg-[#f8fafc]">
 
-      <!-- Error banner -->
-      {#if approveError}
-        <div class="p-2 bg-red-100 border-2 border-red-600 text-red-800 font-pixel text-[7.5px] rounded text-center font-bold shadow-[2px_2px_0px_#1c120c]" transition:fly={{ y: -4, duration: 100 }}>
-          {approveError}
-        </div>
-      {/if}
-
       <!-- ── Tab: KLAIM MASUK ──────────────────────────────────────────── -->
       {#if $inboxTab === 'incoming'}
         {#if reporterItems.length === 0}
@@ -249,19 +196,15 @@
                         {/if}
                       </div>
 
-                      <!-- Approve Button -->
+                      <!-- Status Resolusi Gale-Shapley Otomatis -->
                       {#if item.status !== 'resolved'}
-                        <button
-                          type="button"
-                          onclick={() => approveClaim(item.id, claim.id)}
-                          disabled={approvingId === claim.id}
-                          class="mt-0.5 bg-[#16a34a] hover:bg-[#15803d] active:translate-y-0.5 text-white font-pixel text-[7.5px] py-1.5 px-2.5 rounded-md w-full border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] active:shadow-none transition-all cursor-pointer font-bold tracking-wider disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          {approvingId === claim.id ? 'MEMPROSES...' : 'SETUJUI KLAIM INI'}
-                        </button>
+                        <div class="mt-0.5 bg-[#fef3c7] border border-[#f59e0b] text-[#92400e] font-pixel text-[7px] py-1.5 px-2 rounded-md text-center font-bold flex items-center justify-center gap-1.5 shadow-[1px_1px_0px_#1c120c]">
+                          <span class="w-1.5 h-1.5 rounded-full bg-[#f59e0b] animate-ping"></span>
+                          <span>PROSES GALE-SHAPLEY (1 MENIT)</span>
+                        </div>
                       {:else}
-                        <div class="mt-0.5 bg-[#bbf7d0] border border-[#16a34a] text-[#166534] font-pixel text-[6.5px] py-1 px-2 rounded text-center font-bold">
-                          SUDAH DISELESAIKAN
+                        <div class="mt-0.5 bg-[#bbf7d0] border border-[#16a34a] text-[#166534] font-pixel text-[7px] py-1.5 px-2 rounded-md text-center font-bold shadow-[1px_1px_0px_#1c120c]">
+                          SUDAH DISELESAIKAN (GALE-SHAPLEY)
                         </div>
                       {/if}
                     </div>

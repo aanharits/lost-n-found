@@ -2,7 +2,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { dbGetItems } from '../db/db-store.js';
 import { handleUserJoin, handleDisconnect, getConnectedUsersCount } from '../handlers/user.handler.js';
 import { handleItemAdd, handlePickEmoji } from '../handlers/report.handler.js';
-import { handleClaimSubmit, handleClaimApprove } from '../handlers/claim.handler.js';
+import { handleClaimSubmit } from '../handlers/claim.handler.js';
 import { handleItemMove, handleItemsOrganize, handleResetDemo } from '../handlers/board.handler.js';
 import { handleItemDelete } from '../handlers/item.handler.js';
 import { handleChatMessage } from '../handlers/chat.handler.js';
@@ -39,8 +39,6 @@ export function setupSocketHandlers(io: SocketIOServer): void {
 
     // Event pengajuan klaim barang
     socket.on('claim_submit', (data) => handleClaimSubmit(io, socket, data));
-    // Event persetujuan manual klaim oleh reporter (primary resolver)
-    socket.on('claim_approve', (data) => handleClaimApprove(io, socket, data));
 
     // Event pergerakan dan organisasi papan barang
     socket.on('item_move', (data) => handleItemMove(io, socket, data));

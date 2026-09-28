@@ -2,46 +2,36 @@ import { dbGetItems, dbGetItem } from '../db/db-store.js';
 import { resolveDisputes } from './resolveDisputes.js';
 import type { Server as SocketIOServer } from 'socket.io';
 
-// 48 jam sebagai fallback window (bukan penentu utama — reporter yang approve duluan)
-const DISPUTE_WINDOW_MS = 48 * 60 * 60 * 1000;
+// 1 Menit window dispute untuk PoC Hackathon (Gale-Shapley auto-resolve)
+const DISPUTE_WINDOW_MS = 1 * 60 * 1000;
 
 // In-memory map untuk melacak timer dispute per barang
 const activeTimers = new Map<string, NodeJS.Timeout>();
 
 /**
- * Memulai fallback Dispute Window untuk suatu barang.
- *
- * Timer ini hanya sebagai FALLBACK — jika reporter tidak melakukan
- * manual approval dalam 48 jam, Gale-Shapley akan memilih pemenang
- * berdasarkan ZKP score tertinggi + waktu klaim paling awal.
- *
- * Jika reporter sudah approve sebelum timer habis, item sudah
- * berstatus 'resolved' dan timer ini akan skip saat jalan.
+ * Memulai perhitungan mundur dispute window untuk suatu barang.
+ * Selama 1 menit, klaim lain yang lolos verifikasi ZKP dapat masuk antrean.
+ * Setelah 1 menit berakhir, Gale-Shapley otomatis mengeksekusi resolusi pemenang
+ * berdasarkan ZKP intersection score tertinggi dan waktu pengajuan paling awal.
  *
  * Jika sudah ada timer aktif untuk item ini, biarkan berjalan
- * (waktu dihitung dari klaim PERTAMA, bukan klaim terbaru).
+ * (waktu dihitung dari klaim PERTAMA).
  */
 export function startDisputeWindow(io: SocketIOServer, itemId: string): void {
   if (activeTimers.has(itemId)) {
     return; // Timer sudah berjalan sejak klaim pertama
   }
 
-  console.log(`[Dispute] Fallback window opened for item ${itemId}. Auto-resolve in ${DISPUTE_WINDOW_MS / 3600000}h if reporter doesn't act.`);
+  console.log(`[Dispute] Window opened for item ${itemId}. Auto-resolve in ${DISPUTE_WINDOW_MS / 1000}s via Gale-Shapley...`);
 
   const timer = setTimeout(async () => {
     activeTimers.delete(itemId);
 
-    // Cek apakah reporter sudah manual approve sebelum timer habis
-    const item = await dbGetItem(itemId);
-    if (!item || item.status === 'resolved') {
-      console.log(`[Dispute] Fallback skipped for ${itemId} — already resolved by reporter.`);
-      return;
-    }
-
-    // Fallback: jalankan Gale-Shapley auto-resolve
-    console.log(`[Dispute] Reporter inactive for 48h. Running Gale-Shapley fallback for ${itemId}...`);
+    // 1. Eksekusi resolusi Gale-Shapley otomatis
+    console.log(`[Dispute] Window closed for ${itemId}. Running Gale-Shapley resolution...`);
     const winnerClaimId = await resolveDisputes(itemId);
 
+    // 2. Broadcast hasilnya ke semua client
     const updatedItem = await dbGetItem(itemId);
     if (updatedItem) {
       io.emit('dispute_resolved', {
@@ -50,26 +40,12 @@ export function startDisputeWindow(io: SocketIOServer, itemId: string): void {
         status: updatedItem.status,
         claims: updatedItem.claims,
         winnerId: winnerClaimId,
-        resolvedBy: 'auto',
       });
-      console.log(`[Dispute] Fallback resolved for ${itemId}. Winner: ${winnerClaimId || 'NONE'}`);
+      console.log(`[Dispute] Resolution broadcast for ${itemId}. Winner: ${winnerClaimId || 'NONE'}`);
     }
   }, DISPUTE_WINDOW_MS);
 
   activeTimers.set(itemId, timer);
-}
-
-/**
- * Membatalkan dispute window secara eksplisit (dipanggil saat reporter manual approve).
- * Mencegah Gale-Shapley auto-resolve berjalan setelah item sudah resolved.
- */
-export function cancelDisputeWindow(itemId: string): void {
-  const timer = activeTimers.get(itemId);
-  if (timer) {
-    clearTimeout(timer);
-    activeTimers.delete(itemId);
-    console.log(`[Dispute] Window cancelled for ${itemId} (manual resolve by reporter).`);
-  }
 }
 
 /**
