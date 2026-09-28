@@ -22,6 +22,7 @@
         npm: "21081010001",
         contact: "6281234567891",
         gender: "male",
+        role: "student",
       });
     } else if (urlUser === "siti" || urlUser === "2") {
       currentPlayer.set({
@@ -29,6 +30,17 @@
         npm: "21081020045",
         contact: "6281234567892",
         gender: "female",
+        role: "student",
+      });
+    } else if (urlUser === "satpam" || urlUser === "security") {
+      currentPlayer.set({
+        name: "Komandan Satpam",
+        npm: "SATPAM-KOMANDAN",
+        contact: "Pos Keamanan Induk",
+        gender: "male",
+        avatarSeed: "OfficerBambang",
+        role: "satpam",
+        accessKey: "satpamganteng",
       });
     }
 
@@ -41,6 +53,9 @@
       unsubTemp();
       if (p && socket?.connected) {
         socket.emit("user_join", p);
+        if (p.role === "satpam") {
+          socket.emit("satpam_join", { accessKey: p.accessKey || "satpamganteng" });
+        }
       }
     };
 
@@ -52,6 +67,9 @@
         currentScene.set("board");
         if (socket?.connected) {
           socket.emit("user_join", player);
+          if (player.role === "satpam") {
+            socket.emit("satpam_join", { accessKey: player.accessKey || "satpamganteng" });
+          }
         }
       } else {
         currentScene.set("lobby");

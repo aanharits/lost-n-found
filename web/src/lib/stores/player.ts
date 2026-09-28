@@ -1,5 +1,7 @@
-import { writable } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
+
+export type UserRole = 'student' | 'satpam';
 
 // Tipe data profil pemain
 export interface Player {
@@ -8,6 +10,8 @@ export interface Player {
   contact: string;
   gender: 'male' | 'female';
   avatarSeed?: string;
+  role?: UserRole;
+  accessKey?: string;
 }
 
 // Store reaktif pemain yang disinkronkan dengan storage browser
@@ -56,3 +60,6 @@ function createPlayerStore() {
 }
 
 export const currentPlayer = createPlayerStore();
+
+// Derived store untuk mengecek apakah session aktif adalah Petugas Satpam
+export const isSatpamSession = derived(currentPlayer, ($player) => $player?.role === 'satpam');
