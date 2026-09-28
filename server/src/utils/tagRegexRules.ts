@@ -1,5 +1,5 @@
 /**
- * Kamus aturan regex klasifikasi barang Lost & Found
+ * Kamus aturan regex klasifikasi barang Lost & Found (44 Item Desain Resmi)
  */
 
 export interface TagRule {
@@ -15,37 +15,51 @@ export interface TagResult {
   label: string;
 }
 
-// 1. Gadget
+// ==========================================
+// 1. GADGET (12 Items)
+// ==========================================
 export const GADGET_REGEX_RULES: TagRule[] = [
   {
-    tag: 'hp',
+    tag: 'handphone',
     category: 'Gadget',
-    label: 'HP',
+    label: 'Handphone / HP',
     regex: /\b(hp|handphone|smartphone|ponsel|telepon|iphone|samsung|xiaomi|redmi|oppo|vivo|realme|infinix|poco|pixel|android|ios|rog phone)\b/i,
   },
   {
     tag: 'laptop',
     category: 'Gadget',
     label: 'Laptop',
-    regex: /\b(laptop|macbook|notebook|thinkpad|asus|acer|lenovo|dell|pavilion|rog|tuf|legion|ideapad|msi|chromebook)\b/i,
+    regex: /(?<!\btas\s+)\b(laptop|macbook|notebook|thinkpad|asus|acer|lenovo|dell|pavilion|rog|tuf|legion|ideapad|msi|chromebook)\b/i,
   },
   {
-    tag: 'tws',
+    tag: 'tablet',
     category: 'Gadget',
-    label: 'TWS',
-    regex: /\b(tws|airpod\w*|earbud\w*|headset|earphone|headphone|buds|galaxy buds|head-set|ear-phone)\b/i,
+    label: 'Tablet / iPad',
+    regex: /\b(tablet|ipad|tab|galaxy tab|ipad air|ipad pro|ipad mini)\b/i,
   },
   {
-    tag: 'casan',
+    tag: 'earphone',
     category: 'Gadget',
-    label: 'Casan',
-    regex: /\b(casan|charger|kabel data|type[- ]?c|lightning|adapter|adaptor|powerbank|power bank|colokan|kabel cas)\b/i,
+    label: 'Earphone / TWS',
+    regex: /\b(earphone|ear-phone|tws|airpod\w*|earbud\w*|in-ear|galaxy buds)\b/i,
   },
   {
-    tag: 'kalkulator',
+    tag: 'hedset',
     category: 'Gadget',
-    label: 'Kalkulator',
-    regex: /\b(kalkulator|calculator|casio|citiz\w*)\b/i,
+    label: 'Headset / Headphone',
+    regex: /\b(hedset|headset|headphone|head-set|head-phone)\b/i,
+  },
+  {
+    tag: 'adapter',
+    category: 'Gadget',
+    label: 'Adapter / Charger',
+    regex: /\b(adapter|adaptor|charger|casan|colokan|kabel data|type[- ]?c|lightning|kabel cas|kepala charger)\b/i,
+  },
+  {
+    tag: 'powerbank',
+    category: 'Gadget',
+    label: 'Powerbank',
+    regex: /\b(powerbank|power bank|pb|anker|baseus|remax)\b/i,
   },
   {
     tag: 'smartwatch',
@@ -53,45 +67,107 @@ export const GADGET_REGEX_RULES: TagRule[] = [
     label: 'Smartwatch',
     regex: /\b(smartwatch|smart watch|apple watch|mi band|garmin|fitbit|galaxy watch|smart band|jam pintar)\b/i,
   },
+  {
+    tag: 'flashdisk',
+    category: 'Gadget',
+    label: 'Flashdisk / USB',
+    regex: /\b(flashdisk|flash disk|usb|thumbdrive|pendrive|sandisk)\b/i,
+  },
+  {
+    tag: 'mouse',
+    category: 'Gadget',
+    label: 'Mouse',
+    regex: /\b(mouse|mousepad|logitech|razer)\b/i,
+  },
+  {
+    tag: 'kalulator',
+    category: 'Gadget',
+    label: 'Kalkulator',
+    regex: /\b(kalulator|kalkulator|calculator|casio|citiz\w*)\b/i,
+  },
 ];
 
-// 2. Pakaian & Aksesoris
+// ==========================================
+// 2. PAKAIAN & AKSESORIS (14 Items)
+// ==========================================
 export const PAKAIAN_REGEX_RULES: TagRule[] = [
   {
-    tag: 'kacamata',
+    tag: 'anting',
     category: 'Pakaian & Aksesoris',
-    label: 'Kacamata',
-    regex: /\b(kacamata|kaca mata|sunglasses|eyewear|frame kacamata)\b/i,
+    label: 'Anting',
+    regex: /\b(anting|anting-anting|earring\w*|giwang)\b/i,
+  },
+  {
+    tag: 'baju',
+    category: 'Pakaian & Aksesoris',
+    label: 'Baju / Kaos',
+    regex: /\b(baju|kaos|t-shirt|tshirt|kemeja|polo|blouse|jersey|singlet)\b/i,
+  },
+  {
+    tag: 'celana',
+    category: 'Pakaian & Aksesoris',
+    label: 'Celana',
+    regex: /\b(celana|jeans|chino|kulot|training|boxer|rok|trousers|pants)\b/i,
+  },
+  {
+    tag: 'cincin',
+    category: 'Pakaian & Aksesoris',
+    label: 'Cincin',
+    regex: /\b(cincin|ring|cincin tunangan|cincin emas|cincin perak)\b/i,
+  },
+  {
+    tag: 'gelang',
+    category: 'Pakaian & Aksesoris',
+    label: 'Gelang',
+    regex: /\b(gelang|bracelet|bangle|gelang emas|gelang perak)\b/i,
   },
   {
     tag: 'jaket',
     category: 'Pakaian & Aksesoris',
-    label: 'Jaket',
-    regex: /\b(jaket|jacket|hoodie|sweater|cardigan|rompi|outer|parka|varsity|windbreaker|almamater|jas lab)\b/i,
+    label: 'Jaket / Hoodie',
+    regex: /\b(jaket|jacket|hoodie|sweater|cardigan|rompi|outer|parka|varsity|windbreaker|almamater|jas lab|jas)\b/i,
   },
   {
-    tag: 'sepatu',
+    tag: 'jam_tangan',
     category: 'Pakaian & Aksesoris',
-    label: 'Sepatu',
-    regex: /\b(sepatu|sneaker\w*|pantofel|boots|flat shoes|heels|sandal|sendal|vans|converse|nike|adidas|ventela|compass)\b/i,
+    label: 'Jam Tangan',
+    regex: /\b(jam tangan|arloji|jam analog|jam digital|casio watch|g-shock|seiko)\b/i,
   },
   {
-    tag: 'tas',
+    tag: 'kacamata',
     category: 'Pakaian & Aksesoris',
-    label: 'Tas',
-    regex: /\b(tas|ransel|backpack|tote bag|totebag|waist bag|waistbag|sling bag|slingbag|carrier|tas punggung|tas jinjing|tas selempang)\b/i,
+    label: 'Kacamata',
+    regex: /\b(kacamata|kaca mata|sunglasses|eyewear|frame kacamata|kacamata minus|kacamata baca)\b/i,
   },
   {
-    tag: 'perhiasan',
+    tag: 'kalung',
     category: 'Pakaian & Aksesoris',
-    label: 'Perhiasan',
-    regex: /\b(perhiasan|cincin|kalung|gelang|anting|liontin|emas|perak|jewelry|bracelet|necklace|ring)\b/i,
+    label: 'Kalung',
+    regex: /\b(kalung|necklace|liontin|kalung emas|kalung perak)\b/i,
   },
   {
     tag: 'kaos_kaki',
     category: 'Pakaian & Aksesoris',
     label: 'Kaos Kaki',
     regex: /\b(kaos kaki|kaoskaki|socks)\b/i,
+  },
+  {
+    tag: 'sabuk',
+    category: 'Pakaian & Aksesoris',
+    label: 'Sabuk / Gesper',
+    regex: /\b(sabuk|ikat pinggang|gesper|belt)\b/i,
+  },
+  {
+    tag: 'sendal',
+    category: 'Pakaian & Aksesoris',
+    label: 'Sandal / Sendal',
+    regex: /\b(sendal|sandal|slippers|flip[- ]?flop|crocs|swallow)\b/i,
+  },
+  {
+    tag: 'sepatu',
+    category: 'Pakaian & Aksesoris',
+    label: 'Sepatu',
+    regex: /\b(sepatu|sneaker\w*|pantofel|boots|flat shoes|heels|vans|converse|nike|adidas|ventela|compass)\b/i,
   },
   {
     tag: 'topi',
@@ -101,13 +177,21 @@ export const PAKAIAN_REGEX_RULES: TagRule[] = [
   },
 ];
 
-// 3. Personal
+// ==========================================
+// 3. PERSONAL (15 Items)
+// ==========================================
 export const PERSONAL_REGEX_RULES: TagRule[] = [
   {
-    tag: 'kunci',
+    tag: 'kunci_rumah',
     category: 'Personal',
-    label: 'Kunci',
-    regex: /\b(kunci|key|kontak|remote|gantungan kunci|vario|beat|scoopy|nmax|pcx|aerox|mio|cbr|ninja|klx|brio|avanza|innova|motor|mobil)\b/i,
+    label: 'Kunci Rumah',
+    regex: /\b(kunci rumah|kunci kos|kunci kosan|kunci kost|kunci kamar|kunci pintu|kunci gembok|gembok)\b/i,
+  },
+  {
+    tag: 'kunci_kendaraan',
+    category: 'Personal',
+    label: 'Kunci Kendaraan',
+    regex: /\b(kunci motor|kunci mobil|kunci kendaraan|remote motor|remote mobil|kontak motor|kontak mobil|gantungan kunci|kunci)\b/i,
   },
   {
     tag: 'helm',
@@ -119,74 +203,100 @@ export const PERSONAL_REGEX_RULES: TagRule[] = [
     tag: 'dompet',
     category: 'Personal',
     label: 'Dompet',
-    regex: /\b(dompet|wallet|purse|pouch|card holder|cardholder)\b/i,
+    regex: /\b(dompet|wallet|purse|card holder|cardholder)\b/i,
+  },
+  {
+    tag: 'botol_minum',
+    category: 'Personal',
+    label: 'Botol Minum',
+    regex: /\b(botol minum|botol air|water bottle|botol)\b/i,
+  },
+  {
+    tag: 'tumbler',
+    category: 'Personal',
+    label: 'Tumbler / Termos',
+    regex: /\b(tumbler|termos|thermos|corkcicle|stanley|hydroflask)\b/i,
   },
   {
     tag: 'tempat_makan',
     category: 'Personal',
     label: 'Tempat Makan',
-    regex: /\b(tempat makan|kotak makan|lunch box|lunchbox|tupperware|tumbler|botol|botol minum|thermos|termos|mistin)\b/i,
+    regex: /\b(tempat makan|kotak makan|lunch box|lunchbox|tupperware|mistin|tempat bekal|kotak bekal|bekal)\b/i,
   },
   {
-    tag: 'buku',
+    tag: 'tas_laptop',
     category: 'Personal',
-    label: 'Buku',
-    regex: /\b(buku|book|binder|novel|komik|catatan|modul|diktat|kitab)\b/i,
+    label: 'Tas Laptop',
+    regex: /\b(tas laptop|laptop bag|sleeve laptop|softcase laptop)\b/i,
   },
   {
-    tag: 'alat_tulis',
+    tag: 'totebag',
     category: 'Personal',
-    label: 'Alat Tulis',
-    regex: /\b(alat tulis|pulpen|bolpoin|pen|pensil|pencil|penghapus|tipex|tip-ex|penggaris|spidol|pencil case|kotak pensil|tempat pensil|stabilo)\b/i,
+    label: 'Totebag',
+    regex: /\b(totebag|tote bag|tas jinjing)\b/i,
+  },
+  {
+    tag: 'slipbag',
+    category: 'Personal',
+    label: 'Sling Bag / Waist Bag',
+    regex: /\b(slipbag|sling bag|slingbag|waist bag|waistbag|tas selempang)\b/i,
+  },
+  {
+    tag: 'ransel',
+    category: 'Personal',
+    label: 'Ransel / Backpack',
+    regex: /\b(ransel|backpack|tas punggung|tas gendong|carrier|tas)\b/i,
+  },
+  {
+    tag: 'pouch',
+    category: 'Personal',
+    label: 'Pouch / Kotak Pensil',
+    regex: /\b(pouch|pouch bag|tempat pensil|kotak pensil|pencil case)\b/i,
   },
   {
     tag: 'make_up',
     category: 'Personal',
-    label: 'Make Up',
-    regex: /\b(make up|makeup|lipstik|lipstick|lip balm|lip gloss|bedak|cushion|sunscreen|parfum|perfume|skincare|eyeliner|maskara|mascara|sisir|cermin)\b/i,
+    label: 'Make Up / Kosmetik',
+    regex: /\b(make up|makeup|lipstik|lipstick|lip balm|lip gloss|bedak|cushion|sunscreen|parfum|perfume|skincare|eyeliner|maskara|mascara)\b/i,
+  },
+  {
+    tag: 'barang_pribadi_lainnya',
+    category: 'Personal',
+    label: 'Barang Pribadi Lainnya',
+    regex: /\b(barang pribadi|payung|umbrella|sisir|cermin|kipas|buku|book|binder|novel|komik|catatan|modul|diktat|alat tulis|pulpen|bolpoin|pen|pensil|penghapus|tipex|penggaris|spidol)\b/i,
   },
 ];
 
-// 4. Dokumen & Kartu
+// ==========================================
+// 4. DOKUMEN & KARTU (3 Items)
+// ==========================================
 export const DOKUMEN_REGEX_RULES: TagRule[] = [
   {
-    tag: 'ktm',
+    tag: 'kartu_atm',
     category: 'Dokumen & Kartu',
-    label: 'KTM',
-    regex: /\b(ktm|kartu tanda mahasiswa|kartu mahasiswa|id card kampus)\b/i,
+    label: 'Kartu ATM / Bank',
+    regex: /\b(atm|kartu atm|kartu debit|kartu kredit|bca|mandiri|bni|bri|bsi|cimb|flazz|e-toll|emoney|e-money)\b/i,
   },
   {
-    tag: 'ktp',
+    tag: 'stnk',
     category: 'Dokumen & Kartu',
-    label: 'KTP',
-    regex: /\b(ktp|kartu tanda penduduk|e-ktp)\b/i,
+    label: 'STNK',
+    regex: /\b(stnk|surat tanda nomor kendaraan|surat kendaraan)\b/i,
   },
   {
-    tag: 'sim',
+    tag: 'tanda_pengenal',
     category: 'Dokumen & Kartu',
-    label: 'SIM',
-    regex: /\b(sim [abc]|surat izin mengemudi)\b/i,
-  },
-  {
-    tag: 'atm',
-    category: 'Dokumen & Kartu',
-    label: 'ATM',
-    regex: /\b(atm|kartu debit|kartu kredit|bca|mandiri|bni|bri|bsi|cimb|flazz|e-toll|emoney|e-money)\b/i,
-  },
-  {
-    tag: 'kartu_praktikum',
-    category: 'Dokumen & Kartu',
-    label: 'Kartu Praktikum',
-    regex: /\b(kartu praktikum|kartu lab|kartu ujian|kartu perpus\w*|kartu perpustakaan)\b/i,
+    label: 'Tanda Pengenal (KTP, SIM, KTM)',
+    regex: /\b(ktm|ktp|sim|kartu tanda mahasiswa|kartu mahasiswa|e-ktp|kartu tanda penduduk|sim [abc]|surat izin mengemudi|id card|kartu praktikum|kartu identitas)\b/i,
   },
 ];
 
-// Gabungan seluruh aturan regex
+// Gabungan seluruh aturan regex (Dokumen dan Personal diprioritaskan agar frasa majemuk seperti tas laptop tidak tertimpa nama merek)
 export const ALL_REGEX_RULES: TagRule[] = [
+  ...DOKUMEN_REGEX_RULES,
+  ...PERSONAL_REGEX_RULES,
   ...GADGET_REGEX_RULES,
   ...PAKAIAN_REGEX_RULES,
-  ...PERSONAL_REGEX_RULES,
-  ...DOKUMEN_REGEX_RULES,
 ];
 
 // Evaluasi teks terhadap daftar regex rule (0ms)

@@ -3,6 +3,7 @@
   import { items } from '$lib/stores/items.js';
   import { currentPlayer } from '$lib/stores/player.js';
   import { getSocket } from '$lib/socket.js';
+  import TagIcon from './TagIcon.svelte';
   import { fade, fly } from 'svelte/transition';
 
   let claimText = $state('');
@@ -157,10 +158,11 @@
         return;
       }
 
-      // 4c. Kirim semua proof yang berhasil ke Socket Backend
+      // 4c. Kirim semua proof dan teks klaim asli ke Socket Backend
       socket.emit('claim_submit', {
         itemId: targetItem.id,
         proofs: proofs,
+        text: claimText.trim(),
         claimantName: player?.name || '',
         claimantNpm: player?.npm || '',
         claimantContact: player?.contact || ''
@@ -203,11 +205,10 @@
       const claim = result.claim;
 
       if (claim.status === 'pending' || claim.status === 'approved') {
-        // Karena sistem sekarang memakai Dispute Window, status awal klaim adalah 'pending'
         errorClass = 'bg-green-200 border-green-600 text-green-800';
-        errorMsg = targetItem.type === 'found' 
-            ? `Klaim Disetujui! Ciri-cirimu terbukti benar. Menunggu 1 menit (Masa Sanggah) untuk memastikan tidak ada pengklaim lain...`
-            : `Ciri cocok! Menunggu 1 menit (Masa Sanggah) untuk memastikan tidak ada penemu palsu lain...`;
+        errorMsg = targetItem.type === 'found'
+            ? `Klaim ZKP diverifikasi! Klaim masuk ke antrian review pelapor. Pantau status di INBOX > KLAIM SAYA.`
+            : `Ciri cocok dan terverifikasi! Pantau keputusan pelapor di INBOX > KLAIM SAYA.`;
         finished = true;
         claimText = '';
         
@@ -231,7 +232,7 @@
       console.error(err);
       loading = false;
       errorMsg = targetItem.type === 'found'
-          ? 'Klaim Ditolak Satpam AI: Ciri-ciri rahasia yang kamu sebutkan keliru dan tidak terbukti cocok!'
+          ? 'Klaim Ditolak: Ciri-ciri rahasia yang kamu sebutkan keliru dan tidak terbukti cocok!'
           : 'Pencocokan Gagal: Ciri-ciri rahasia barang di tanganmu berbeda dengan data pelapor!';
       errorClass = 'bg-red-200 border-red-600 text-red-800';
     }
@@ -241,21 +242,20 @@
 {#if targetItem}
   <div class="modal-overlay backdrop-blur-xs" transition:fade={{ duration: 150 }}>
     <div
-      class="relative max-w-md w-full m-4 border-4 border-[#1c120c] shadow-[inset_0_2px_0_rgba(255,255,255,0.25),inset_0_-4px_0_rgba(0,0,0,0.25),6px_6px_0px_#0a060f] rounded-lg p-5 select-none flex flex-col gap-3.5"
-      style="background: #ba804e linear-gradient(180deg, #c48956 0%, #b07746 100%);"
+      class="relative max-w-md w-full m-4 bg-white border-4 border-[#1c120c] shadow-[6px_6px_0px_#0a060f] rounded flex flex-col overflow-hidden select-none"
       transition:fly={{ y: 20, duration: 250 }}
     >
-      <!-- Header Modal: Modern Minimalist Nintendo Title Bar -->
-      <div class="flex items-center justify-between pb-3 border-b-2 border-[#1c120c]/40">
-        <h2
-          class="font-pixel text-xs md:text-sm text-white tracking-wider font-bold"
-          style="text-shadow: 2px 2px 0 #1c120c;"
-        >
-          {targetItem.type === 'found' ? 'KLAIM KEPEMILIKAN' : 'KEMBALIKAN BARANG'}
-        </h2>
+      <!-- Header Modal: Modern Minimalist Nintendo Blue Title Bar -->
+      <div class="bg-[#2563eb] text-white px-3.5 py-2.5 font-pixel text-[9px] md:text-[10px] flex justify-between items-center border-b-2 border-[#1c120c]">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-green-400 border border-[#0c0812] animate-pulse"></span>
+          <span class="font-bold tracking-wider">
+            {targetItem.type === 'found' ? 'KLAIM KEPEMILIKAN' : 'KEMBALIKAN BARANG'}
+          </span>
+        </div>
         <button
           onclick={closeModal}
-          class="text-[#1c120c] hover:text-red-600 font-pixel text-xs px-2 py-0.5 rounded bg-white hover:bg-red-100 border-2 border-[#1c120c] transition-colors cursor-pointer font-bold shadow-[2px_2px_0_#1c120c] active:translate-y-0.5"
+          class="text-white hover:text-red-200 font-pixel text-xs px-1.5 py-0.5 cursor-pointer leading-none"
           type="button"
           aria-label="Tutup"
         >
@@ -263,78 +263,82 @@
         </button>
       </div>
 
-      <!-- Info Singkat Barang Target -->
-      <div class="bg-[#fef9c3] border-2 border-[#1c120c] rounded p-3 flex items-center gap-3 shadow-[1px_1px_0px_#1c120c]">
-        <div class="w-10 h-10 rounded bg-white border-2 border-[#1c120c] flex items-center justify-center text-xl shrink-0">
-          {targetItem.icon}
-        </div>
-        <div class="flex flex-col min-w-0">
-          <div class="flex items-center gap-2">
-            <span class="font-pixel text-[10px] text-[#1c120c] font-bold truncate">
-              {targetItem.title}
-            </span>
-            <span class="font-pixel text-[7px] px-1.5 py-0.5 rounded border border-[#1c120c] font-bold {targetItem.type === 'found' ? 'bg-[#16a34a] text-white' : 'bg-[#dc2626] text-white'}">
-              {targetItem.type === 'found' ? 'KETEMU' : 'HILANG'}
-            </span>
+      <!-- Body Form Minimalis Modern 8-Bit Canvas -->
+      <div class="p-4 md:p-5 flex flex-col gap-3.5 bg-[#f8fafc]">
+        
+        <!-- Info Singkat Barang Target (Warna Warm Amber Bubble User) -->
+        <div class="bg-[#fef3c7] border-2 border-[#1c120c] rounded p-3 flex items-center gap-3 shadow-[2px_2px_0px_#1c120c]">
+          <div class="w-10 h-10 rounded bg-white border-2 border-[#1c120c] flex items-center justify-center shrink-0 shadow-[1px_1px_0px_#1c120c]">
+            <TagIcon tag={targetItem.tag} fallback={targetItem.icon} size={28} title={targetItem.title} />
           </div>
-          <p class="font-sans text-[11px] text-stone-700 font-bold truncate mt-0.5">
-            Lokasi: {targetItem.desc}
-          </p>
-        </div>
-      </div>
-
-      <!-- Panel Form Klaim -->
-      <div class="bg-[#fefce8] border-2 border-[#1c120c] shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)] rounded p-3.5 md:p-4 flex flex-col gap-3">
-        <div class="flex flex-col gap-1.5">
-          <label for="claim-desc" class="font-pixel text-[8px] md:text-[9px] text-[#1c120c] font-bold flex items-center justify-between">
-            <span>BUKTI CIRI KHAS BARANG</span>
-            <span class="text-red-600 font-sans text-xs font-black">*</span>
-          </label>
-          <textarea
-            id="claim-desc"
-            bind:value={claimText}
-            rows="3"
-            disabled={finished}
-            class="bg-white border-2 border-[#1c120c] focus:border-[#2563eb] text-[#1c120c] rounded py-2 px-3 font-sans text-xs md:text-sm font-bold resize-none placeholder-stone-400 shadow-[inset_1px_1px_0_rgba(0,0,0,0.1)] outline-none transition-all disabled:opacity-60"
-            {placeholder}
-          ></textarea>
+          <div class="flex flex-col min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-pixel text-[10px] text-[#1c120c] font-bold truncate">
+                {targetItem.title}
+              </span>
+              <span class="font-pixel text-[7px] px-1.5 py-0.5 rounded border border-[#1c120c] font-bold {targetItem.type === 'found' ? 'bg-[#16a34a] text-white' : 'bg-[#dc2626] text-white'}">
+                {targetItem.type === 'found' ? 'KETEMU' : 'HILANG'}
+              </span>
+            </div>
+            <p class="font-sans text-[11px] text-stone-700 font-bold truncate mt-0.5">
+              Lokasi: {targetItem.desc}
+            </p>
+          </div>
         </div>
 
-        <!-- Notifikasi Respon AI Satpam -->
-        {#if errorMsg}
-          <div
-            class="p-2.5 rounded text-xs font-sans font-bold text-center border-2 {errorClass}"
-            transition:fly={{ y: -5, duration: 150 }}
-          >
-            {@html errorMsg}
-            {#if waLink}
-              <a
-                href={waLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="bg-[#16a34a] hover:bg-[#15803d] active:translate-y-0.5 text-white font-pixel text-[8px] md:text-[9px] py-2 px-3 rounded block text-center mt-2.5 border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] transition-all font-bold"
-                style="text-decoration:none;"
-              >
-                LANJUT CHAT WHATSAPP
-              </a>
-            {/if}
+        <!-- Section Bukti Ciri Khas Barang (Warna Pastel Mint Green Bubble Satpam AI) -->
+        <div class="bg-[#dcfce7] border-2 border-[#1c120c] rounded p-3.5 flex flex-col gap-2.5 shadow-[2px_2px_0px_#1c120c]">
+          <div class="flex flex-col gap-1.5">
+            <label for="claim-desc" class="font-pixel text-[8.5px] md:text-[9.5px] text-[#1c120c] font-bold flex items-center justify-between">
+              <span>BUKTI CIRI KHAS BARANG</span>
+              <span class="text-red-600 font-sans text-xs font-black">*</span>
+            </label>
+            <textarea
+              id="claim-desc"
+              bind:value={claimText}
+              rows="3"
+              disabled={finished}
+              class="bg-white border-2 border-[#1c120c] focus:border-[#2563eb] text-[#1c120c] rounded py-2 px-3 font-sans text-xs md:text-sm font-bold resize-none placeholder-stone-400 shadow-[inset_1px_1px_0_rgba(0,0,0,0.08)] outline-none transition-all disabled:opacity-60"
+              {placeholder}
+            ></textarea>
           </div>
-        {/if}
 
-        <!-- Status Loading AI Verifikasi -->
-        {#if loading}
-          <div
-            class="text-[#2563eb] font-pixel text-[8px] md:text-[9px] text-center animate-pulse py-1 flex items-center justify-center gap-1.5 font-bold"
-            transition:fade={{ duration: 150 }}
-          >
-            <span class="w-2 h-2 rounded-full bg-[#2563eb] animate-ping"></span>
-            AI SEDANG MEMVERIFIKASI CIRI KHAS...
-          </div>
-        {/if}
+          <!-- Notifikasi Respon AI Satpam -->
+          {#if errorMsg}
+            <div
+              class="p-2.5 rounded text-xs font-sans font-bold text-center border-2 shadow-[2px_2px_0px_#1c120c] {errorClass}"
+              transition:fly={{ y: -5, duration: 150 }}
+            >
+              {@html errorMsg}
+              {#if waLink}
+                <a
+                  href={waLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="bg-[#16a34a] hover:bg-[#15803d] active:translate-y-0.5 text-white font-pixel text-[8px] md:text-[9px] py-2 px-3 rounded block text-center mt-2.5 border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] transition-all font-bold"
+                  style="text-decoration:none;"
+                >
+                  LANJUT CHAT WHATSAPP
+                </a>
+              {/if}
+            </div>
+          {/if}
+
+          <!-- Status Loading AI Verifikasi -->
+          {#if loading}
+            <div
+              class="text-[#2563eb] font-pixel text-[8px] md:text-[9px] text-center animate-pulse py-1 flex items-center justify-center gap-1.5 font-bold"
+              transition:fade={{ duration: 150 }}
+            >
+              <span class="w-2 h-2 rounded-full bg-[#2563eb] animate-ping"></span>
+              AI SEDANG MEMVERIFIKASI CIRI KHAS...
+            </div>
+          {/if}
+        </div>
       </div>
 
       <!-- Tombol Aksi Bawah Minimalis Modern Nintendo -->
-      <div class="flex gap-2.5 mt-1">
+      <div class="p-3.5 md:p-4 bg-white border-t-2 border-[#1c120c] flex gap-2.5">
         {#if finished}
           <button
             onclick={closeModal}

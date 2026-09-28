@@ -15,27 +15,65 @@ export interface TagInfo {
   label: string;
 }
 
-// Taksonomi kategori dan sub-tag resmi
+// Taksonomi kategori dan sub-tag resmi (42 Aset Desain)
 export const TAG_CATALOG = {
   gadget: {
     name: 'Gadget',
-    tags: ['hp', 'laptop', 'tws', 'casan', 'kalkulator', 'smartwatch'],
+    tags: [
+      'handphone',
+      'laptop',
+      'tablet',
+      'earphone',
+      'hedset',
+      'adapter',
+      'powerbank',
+      'smartwatch',
+      'flashdisk',
+      'mouse',
+      'kalulator',
+    ],
   },
   pakaian_aksesoris: {
     name: 'Pakaian & Aksesoris',
-    tags: ['kacamata', 'jaket', 'sepatu', 'tas', 'perhiasan', 'kaos_kaki', 'topi'],
+    tags: [
+      'baju',
+      'celana',
+      'jaket',
+      'sepatu',
+      'sendal',
+      'topi',
+      'kaos_kaki',
+      'sabuk',
+      'kacamata',
+      'jam_tangan',
+      'cincin',
+      'kalung',
+      'gelang',
+      'anting',
+    ],
   },
   personal: {
     name: 'Personal',
-    tags: ['kunci', 'helm', 'dompet', 'tempat_makan', 'buku', 'alat_tulis', 'make_up'],
+    tags: [
+      'dompet',
+      'helm',
+      'kunci_kendaraan',
+      'kunci_rumah',
+      'botol_minum',
+      'tumbler',
+      'tempat_makan',
+      'ransel',
+      'totebag',
+      'slipbag',
+      'tas_laptop',
+      'pouch',
+      'make_up',
+      'barang_pribadi_lainnya',
+    ],
   },
   dokumen_kartu: {
     name: 'Dokumen & Kartu',
-    tags: ['ktm', 'ktp', 'sim', 'atm', 'kartu_praktikum'],
-  },
-  lainnya: {
-    name: 'Lainnya',
-    tags: ['lainnya'],
+    tags: ['tanda_pengenal', 'kartu_atm', 'stnk'],
   },
 } as const;
 
@@ -44,23 +82,22 @@ export async function classifyWithAI(itemName: string, itemDesc: string = ''): P
   if (!isGroqConfigured()) return null;
 
   const prompt = `Kamu adalah AI pengkategorian barang Lost & Found kampus.
-Tugasmu: Tentukan Kategori dan Tag barang berikut ini.
+Tugasmu: Tentukan Kategori dan Tag barang berikut ini berdasarkan 42 aset resmi.
 
 Nama Barang: "${itemName}"
 Deskripsi/Lokasi: "${itemDesc}"
 
 Daftar Pilihan Kategori dan Tag yang VALID:
-1. Gadget -> hp, laptop, tws, casan, kalkulator, smartwatch
-2. Pakaian & Aksesoris -> kacamata, jaket, sepatu, tas, perhiasan, kaos_kaki, topi
-3. Personal -> kunci, helm, dompet, tempat_makan, buku, alat_tulis, make_up
-4. Dokumen & Kartu -> ktm, ktp, sim, atm, kartu_praktikum
-5. Lainnya -> lainnya
+1. Gadget -> handphone, laptop, tablet, earphone, hedset, adapter, powerbank, smartwatch, flashdisk, mouse, kalulator
+2. Pakaian & Aksesoris -> baju, celana, jaket, sepatu, sendal, topi, kaos_kaki, sabuk, kacamata, jam_tangan, cincin, kalung, gelang, anting
+3. Personal -> dompet, helm, kunci_kendaraan, kunci_rumah, botol_minum, tumbler, tempat_makan, ransel, totebag, slipbag, tas_laptop, pouch, make_up, barang_pribadi_lainnya
+4. Dokumen & Kartu -> tanda_pengenal, kartu_atm, stnk
 
 Kembalikan HANYA format JSON persis seperti ini:
 {
   "category": "Gadget",
-  "tag": "hp",
-  "label": "HP"
+  "tag": "handphone",
+  "label": "Handphone / HP"
 }`;
 
   const parsed = await callGroqJson<{ category?: string; tag?: string; label?: string }>({
@@ -101,8 +138,8 @@ export async function autoClassifyItem(itemName: string, itemDesc: string = ''):
 
   // 3. Fallback default jika tidak terklasifikasi
   return {
-    category: 'Lainnya',
-    tag: 'lainnya',
-    label: 'Lainnya',
+    category: 'Personal',
+    tag: 'barang_pribadi_lainnya',
+    label: 'Barang Pribadi Lainnya',
   };
 }
