@@ -88,6 +88,11 @@ export function initSocket(): Socket {
     });
   });
 
+  // Menangani error jika laporan gagal disimpan di server
+  socket.on('item_add_error', (data: { message?: string }) => {
+    showToast(data?.message || 'Gagal menyimpan laporan barang', 'danger');
+  });
+
   // Sinkronisasi posisi kartu barang yang digeser user lain
   socket.on('item_moved', (posData: { id: string; x: number; y: number }) => {
     items.update((current) =>

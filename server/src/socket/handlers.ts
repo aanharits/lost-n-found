@@ -9,62 +9,54 @@ import { handleChatMessage } from '../handlers/chat.handler.js';
 
 // Wiring event Socket.IO ke handler domain masing-masing
 export function setupSocketHandlers(io: SocketIOServer): void {
-  io.on('connection', async (socket) => {
+  io.on('connection', (socket) => {
     console.log(`[Socket] Client connected: ${socket.id}`);
 
+    // Daftarkan seluruh event listener secara synchronous terlebih dahulu
+    // agar event yang dikirim langsung oleh client tidak hilang (race condition)
     try {
-      // Kirim data item awal dari DB ke client yang baru terhubung
-      const items = await dbGetItems();
-      // Sanitasi reporter_token & evidencePhoto sebelum broadcast ke client publik
-      const sanitized = items.map(({ reporterToken: _, evidencePhoto: __, ...rest }) => rest);
-      socket.emit('items_init', sanitized);
+      // Handler autentikasi & room khusus Petugas Satpam
+      const SATPAM_SECRET_KEY = process.env.SATPAM_ACCESS_KEY || 'satpamganteng';
+
+      socket.on('satpam_join', async (data: { accessKey?: string }) => {
+        const key = data?.accessKey?.trim();
+        if (key === SATPAM_SECRET_KEY) {
+          socket.join('satpam_room');
+          console.log(`[Socket] Satpam verified and joined satpam_room: ${socket.id}`);
+          try {
+            const allItems = await dbGetItems();
+            // Satpam boleh melihat evidencePhoto, hanya reporterToken yang disanitasi
+            const satpamItems = allItems.map(({ reporterToken: _, ...rest }) => rest);
+            socket.emit('satpam_auth_success', { ok: true });
+            socket.emit('satpam_items_init', satpamItems);
+          } catch (err) {
+            console.error('[Socket] Failed to load satpam items:', err);
+            socket.emit('satpam_items_init', []);
+          }
+        } else {
+          console.warn(`[Socket] Satpam auth failed for ${socket.id}: Invalid key`);
+          socket.emit('satpam_auth_failed', { message: 'Access key Satpam tidak valid.' });
+        }
+      });
+
+      socket.on('satpam_get_items', async (data: { accessKey?: string }) => {
+        const key = data?.accessKey?.trim();
+        if (key === SATPAM_SECRET_KEY) {
+          try {
+            const allItems = await dbGetItems();
+            const satpamItems = allItems.map(({ reporterToken: _, ...rest }) => rest);
+            socket.emit('satpam_items_response', satpamItems);
+          } catch (err) {
+            console.error('[Socket] Failed to load satpam items:', err);
+            socket.emit('satpam_items_response', []);
+          }
+        } else {
+          socket.emit('satpam_auth_failed', { message: 'Access key Satpam tidak valid.' });
+        }
+      });
     } catch (err) {
-      console.error('[Socket] Failed to load items from DB:', err);
-      socket.emit('items_init', []);
+      console.error('[Socket] Failed to register satpam handlers:', err);
     }
-
-    // Handler autentikasi & room khusus Petugas Satpam
-    const SATPAM_SECRET_KEY = process.env.SATPAM_ACCESS_KEY || 'satpamganteng';
-
-    socket.on('satpam_join', async (data: { accessKey?: string }) => {
-      const key = data?.accessKey?.trim();
-      if (key === SATPAM_SECRET_KEY) {
-        socket.join('satpam_room');
-        console.log(`[Socket] Satpam verified and joined satpam_room: ${socket.id}`);
-        try {
-          const allItems = await dbGetItems();
-          // Satpam boleh melihat evidencePhoto, hanya reporterToken yang disanitasi
-          const satpamItems = allItems.map(({ reporterToken: _, ...rest }) => rest);
-          socket.emit('satpam_auth_success', { ok: true });
-          socket.emit('satpam_items_init', satpamItems);
-        } catch (err) {
-          console.error('[Socket] Failed to load satpam items:', err);
-          socket.emit('satpam_items_init', []);
-        }
-      } else {
-        console.warn(`[Socket] Satpam auth failed for ${socket.id}: Invalid key`);
-        socket.emit('satpam_auth_failed', { message: 'Access key Satpam tidak valid.' });
-      }
-    });
-
-    socket.on('satpam_get_items', async (data: { accessKey?: string }) => {
-      const key = data?.accessKey?.trim();
-      if (key === SATPAM_SECRET_KEY) {
-        try {
-          const allItems = await dbGetItems();
-          const satpamItems = allItems.map(({ reporterToken: _, ...rest }) => rest);
-          socket.emit('satpam_items_response', satpamItems);
-        } catch (err) {
-          console.error('[Socket] Failed to load satpam items:', err);
-          socket.emit('satpam_items_response', []);
-        }
-      } else {
-        socket.emit('satpam_auth_failed', { message: 'Access key Satpam tidak valid.' });
-      }
-    });
-
-    // Broadcast jumlah user aktif ke semua client
-    io.emit('users_count', getConnectedUsersCount());
 
     // Event bergabung dan terputusnya user
     socket.on('user_join', (data) => handleUserJoin(io, socket, data));
@@ -87,5 +79,20 @@ export function setupSocketHandlers(io: SocketIOServer): void {
 
     // Event percakapan dengan Satpam AI
     socket.on('chat_message', (data) => handleChatMessage(socket, data));
+
+    // Broadcast jumlah user aktif ke semua client
+    io.emit('users_count', getConnectedUsersCount());
+
+    // Kirim data item awal dari DB ke client secara asynchronous
+    // (setelah semua listener teregistrasi, sanitasi reporter_token & evidencePhoto untuk publik)
+    dbGetItems()
+      .then((items) => {
+        const sanitized = items.map(({ reporterToken: _, evidencePhoto: __, ...rest }) => rest);
+        socket.emit('items_init', sanitized);
+      })
+      .catch((err) => {
+        console.error('[Socket] Failed to load items from DB:', err);
+        socket.emit('items_init', []);
+      });
   });
 }

@@ -265,11 +265,15 @@
       y: safeY,
     };
 
-    // Broadcast item baru ke server untuk disimpan dan disebarkan ke user lain
-    if (socket?.connected) {
-      socket.emit('item_add', newItem);
+    // Pastikan koneksi socket aktif sebelum mengirim laporan
+    if (!socket || !socket.connected) {
+      errorMsg = 'Gagal menyimpan: Tidak terhubung ke server backend!';
+      loading = false;
+      return;
     }
 
+    // Broadcast item baru ke server untuk disimpan dan disebarkan ke user lain
+    socket.emit('item_add', newItem);
     closeModal();
   }
 </script>
