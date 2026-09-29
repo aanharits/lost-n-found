@@ -16,11 +16,11 @@ export function setupSocketHandlers(io: SocketIOServer): void {
     // agar event yang dikirim langsung oleh client tidak hilang (race condition)
     try {
       // Handler autentikasi & room khusus Petugas Satpam
-      const SATPAM_SECRET_KEY = process.env.SATPAM_ACCESS_KEY || 'satpamganteng';
+      const SATPAM_SECRET_KEY = (process.env.SATPAM_ACCESS_KEY || '').trim();
 
       socket.on('satpam_join', async (data: { accessKey?: string }) => {
         const key = data?.accessKey?.trim();
-        if (key === SATPAM_SECRET_KEY) {
+        if (SATPAM_SECRET_KEY && key === SATPAM_SECRET_KEY) {
           socket.join('satpam_room');
           console.log(`[Socket] Satpam verified and joined satpam_room: ${socket.id}`);
           try {

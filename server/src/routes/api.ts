@@ -4,7 +4,7 @@ import { sanitizeEvidencePhoto } from '../utils/imageSanitizer.js';
 import { dbGetItems } from '../db/db-store.js';
 
 const api = new Hono();
-const SATPAM_SECRET_KEY = process.env.SATPAM_ACCESS_KEY || 'satpamganteng';
+const SATPAM_SECRET_KEY = (process.env.SATPAM_ACCESS_KEY || '').trim();
 
 // Endpoint untuk mengekstrak keyword dari teks bebas pengguna
 // Endpoint ini dipanggil oleh frontend sebelum melakukan generate proof ZKP
@@ -80,7 +80,7 @@ api.post('/satpam/verify', async (c) => {
     key = '';
   }
 
-  if (key === SATPAM_SECRET_KEY) {
+  if (SATPAM_SECRET_KEY && key === SATPAM_SECRET_KEY) {
     return c.json({ success: true, message: 'Autentikasi Satpam berhasil' });
   }
 
@@ -92,7 +92,7 @@ api.get('/satpam/items', async (c) => {
   const authHeader = c.req.header('x-satpam-key') || c.req.header('authorization') || '';
   const cleanKey = authHeader.replace(/^Bearer\s+/i, '').trim();
 
-  if (cleanKey !== SATPAM_SECRET_KEY) {
+  if (!SATPAM_SECRET_KEY || cleanKey !== SATPAM_SECRET_KEY) {
     return c.json({ error: 'Akses ditolak: Access key Satpam tidak valid' }, 403);
   }
 
