@@ -7,7 +7,7 @@
   import { highlight } from '$lib/stores/highlight.js';
   import { getSocket } from '$lib/socket.js';
   import ItemCard from './ItemCard.svelte';
-  import SatpamArchiveCard from './SatpamArchiveCard.svelte';
+  import SatpamFolderCabinet from './SatpamFolderCabinet.svelte';
   import SatpamFolderModal from './SatpamFolderModal.svelte';
   import Avatar from './Avatar.svelte';
   import ReportModal from './ReportModal.svelte';
@@ -23,15 +23,67 @@
 
   // Role Satpam & state Layer 2 Arsip Berkas
   const isSatpam = $derived($currentPlayer?.role === 'satpam');
-  let activeArchiveItem = $state<Item | null>(null);
-  let satpamViewMode = $state<'archive' | 'cards'>('archive');
 
-  function openArchiveDetail(item: Item) {
-    activeArchiveItem = item;
+  // Kelompok arsip folder satpam: temuan aktif, kehilangan aktif, selesai diklaim
+  const satpamFolders = $derived.by(() => {
+    const active = $items.filter((i) => i.status !== 'resolved');
+    return {
+      found: active.filter((i) => i.type === 'found'),
+      lost: active.filter((i) => i.type === 'lost'),
+      resolved: $items.filter((i) => i.status === 'resolved'),
+    };
+  });
+
+  // Posisi folder di board (state lokal, bukan DB)
+  type FolderPos = Record<'found' | 'lost' | 'resolved', { x: number; y: number }>;
+  let folderPositions = $state<FolderPos>({
+    found: { x: 40, y: 40 },
+    lost: { x: 300, y: 40 },
+    resolved: { x: 560, y: 40 },
+  });
+
+  // Folder yang sedang dibuka di Layer 2
+  let openFolder = $state<'found' | 'lost' | 'resolved' | null>(null);
+
+  const FOLDER_META = {
+    found: { label: 'BARANG KETEMU' },
+    lost: { label: 'BARANG HILANG' },
+    resolved: { label: 'SELESAI DIKLAIM' },
+  } as const;
+
+  function openFolderDetail(kind: 'found' | 'lost' | 'resolved') {
+    openFolder = kind;
   }
 
-  function closeArchiveDetail() {
-    activeArchiveItem = null;
+  function closeFolderDetail() {
+    openFolder = null;
+  }
+
+  function handleFolderDragEnd(kind: 'found' | 'lost' | 'resolved', x: number, y: number) {
+    folderPositions = { ...folderPositions, [kind]: { x, y } };
+  }
+
+  // Susun ulang 3 folder satpam ke dalam grid rapi (tanpa broadcast ke server)
+  function organizeFolders() {
+    const boardWidth = boardContainer ? boardContainer.offsetWidth : 1024;
+    const layout = calculateGridLayout(boardWidth);
+    const kinds: Array<'found' | 'lost' | 'resolved'> = ['found', 'lost', 'resolved'];
+
+    folderPositions = {
+      found: layout.getPos(0),
+      lost: layout.getPos(1),
+      resolved: layout.getPos(2),
+    };
+
+    // Geser DOM langsung agar folder beranimasi seketika
+    kinds.forEach((kind, index) => {
+      const { x, y } = layout.getPos(index);
+      const el = document.getElementById(`folder_${kind}`);
+      if (el) {
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+      }
+    });
   }
 
   onMount(() => {
@@ -45,6 +97,11 @@
 
   // Susun ulang posisi kartu ke dalam grid rapi
   function organizeBoard() {
+    if (isSatpam) {
+      organizeFolders();
+      return;
+    }
+
     const boardWidth = boardContainer ? boardContainer.offsetWidth : 1024;
     const layout = calculateGridLayout(boardWidth);
 
@@ -351,17 +408,14 @@
     >
       {isSatpam ? "Retro Evidence & Case Archives" : "AI Image Match System"}
     </p>
-    {#if isSatpam}
-      <span class="mt-1 text-[8px] md:text-[8.5px] font-pixel bg-[#0f766e] text-white px-2.5 py-0.5 rounded border border-[#140b05] shadow-[1px_1px_0px_#140b05] tracking-wide">
-        👮 HAK AKSES RESMI: PETUGAS KEAMANAN KAMPUS
-      </span>
-    {/if}
   </div>
 
   <!-- Kontainer utama board -->
   <div class="relative w-full max-w-5xl flex-grow flex flex-col items-center">
-    <!-- Gamepad kontrol kategori -->
-    <CategoryGamepad />
+    <!-- Gamepad kontrol kategori (khusus mode mahasiswa — satpam memakai folder arsip) -->
+    {#if !isSatpam}
+      <CategoryGamepad />
+    {/if}
 
     <!-- Area papan kartu -->
     <div
@@ -369,30 +423,22 @@
       bind:this={boardContainer}
       class="board-container w-full flex-grow rounded-xl overflow-hidden relative shadow-[8px_8px_0px_rgba(0,0,0,0.5)] cursor-default"
     >
-    <!-- Tombol aksi (lapor, rapihkan, dan toggle mode arsip satpam) -->
+    <!-- Tombol aksi (lapor khusus mahasiswa, rapihkan untuk semua) -->
     <div class="absolute top-4 left-4 z-20 flex gap-2">
-      <button
-        onclick={openReportModal}
-        class="bg-[#22c55e] hover:bg-[#16a34a] active:translate-y-0.5 text-[#1c120c] font-pixel text-[9px] md:text-[10px] py-2 px-3.5 rounded border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] active:shadow-none cursor-pointer transition-all select-none font-bold tracking-wider"
-      >
-        + LAPOR (AI)
-      </button>
+      {#if !isSatpam}
+        <button
+          onclick={openReportModal}
+          class="bg-[#22c55e] hover:bg-[#16a34a] active:translate-y-0.5 text-[#1c120c] font-pixel text-[9px] md:text-[10px] py-2 px-3.5 rounded border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] active:shadow-none cursor-pointer transition-all select-none font-bold tracking-wider"
+        >
+          + LAPOR (AI)
+        </button>
+      {/if}
       <button
         onclick={organizeBoard}
         class="bg-[#facc15] hover:bg-[#eab308] active:translate-y-0.5 text-[#1c120c] font-pixel text-[9px] md:text-[10px] py-2 px-3.5 rounded border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] active:shadow-none cursor-pointer transition-all select-none font-bold tracking-wider"
       >
         RAPIHKAN
       </button>
-      {#if isSatpam}
-        <button
-          type="button"
-          onclick={() => satpamViewMode = satpamViewMode === 'archive' ? 'cards' : 'archive'}
-          class="bg-[#0d9488] hover:bg-[#0f766e] active:translate-y-0.5 text-white font-pixel text-[8.5px] md:text-[9.5px] py-2 px-3 rounded border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] active:shadow-none cursor-pointer transition-all select-none font-bold tracking-wider"
-          title="Beralih antara Map Arsip dan Kartu Standar"
-        >
-          {satpamViewMode === 'archive' ? '🎴 VIEW KARTU' : '📁 VIEW MAP ARSIP'}
-        </button>
-      {/if}
     </div>
 
     <!-- Filter status hilang / ketemu -->
@@ -423,16 +469,41 @@
       </button>
     </div>
 
-    <!-- Area render kartu barang (Diferensiasi: Map Berkas untuk Satpam vs ItemCard untuk Mahasiswa) -->
+    <!-- Area render: Folder Kabinet untuk Satpam vs ItemCard untuk Mahasiswa -->
     <div id="cards-area" class="cards-area">
-      {#each $items as item (item.id)}
-        {#if isSatpam && satpamViewMode === 'archive'}
-          <SatpamArchiveCard
-            {item}
-            onOpenArchive={() => openArchiveDetail(item)}
-            onDragEnd={(x, y) => handleItemDragEnd(item.id, x, y)}
-          />
-        {:else}
+      {#if isSatpam}
+        <SatpamFolderCabinet
+          folderId="folder_found"
+          label="BARANG KETEMU"
+          kind="found"
+          count={satpamFolders.found.length}
+          photoCount={satpamFolders.found.filter((i) => i.evidencePhoto && i.evidencePhoto.trim() !== '').length}
+          position={folderPositions.found}
+          onOpen={() => openFolderDetail('found')}
+          onDragEnd={(x, y) => handleFolderDragEnd('found', x, y)}
+        />
+        <SatpamFolderCabinet
+          folderId="folder_lost"
+          label="BARANG HILANG"
+          kind="lost"
+          count={satpamFolders.lost.length}
+          photoCount={satpamFolders.lost.filter((i) => i.evidencePhoto && i.evidencePhoto.trim() !== '').length}
+          position={folderPositions.lost}
+          onOpen={() => openFolderDetail('lost')}
+          onDragEnd={(x, y) => handleFolderDragEnd('lost', x, y)}
+        />
+        <SatpamFolderCabinet
+          folderId="folder_resolved"
+          label="SELESAI DIKLAIM"
+          kind="resolved"
+          count={satpamFolders.resolved.length}
+          photoCount={satpamFolders.resolved.filter((i) => i.evidencePhoto && i.evidencePhoto.trim() !== '').length}
+          position={folderPositions.resolved}
+          onOpen={() => openFolderDetail('resolved')}
+          onDragEnd={(x, y) => handleFolderDragEnd('resolved', x, y)}
+        />
+      {:else}
+        {#each $items as item (item.id)}
           <ItemCard
             {item}
             currentPlayerNpm={$currentPlayer?.npm || ''}
@@ -441,8 +512,8 @@
             onDelete={() => openDeleteModal(item.id)}
             onDragEnd={(x, y) => handleItemDragEnd(item.id, x, y)}
           />
-        {/if}
-      {/each}
+        {/each}
+      {/if}
     </div>
 
     <!-- Area avatar Satpam AI -->
@@ -453,11 +524,12 @@
 </div>
 </div>
 
-<!-- Modal Layer 2: Animasi Membuka Map Berkas Rahasia Satpam -->
-{#if activeArchiveItem}
+<!-- Modal Layer 2: Jendela Isi Folder Arsip Satpam (list file + preview bukti) -->
+{#if openFolder}
   <SatpamFolderModal
-    item={activeArchiveItem}
-    onClose={closeArchiveDetail}
+    folderTitle={FOLDER_META[openFolder].label}
+    folderItems={satpamFolders[openFolder]}
+    onClose={closeFolderDetail}
   />
 {/if}
 
