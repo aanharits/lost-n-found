@@ -1,14 +1,18 @@
 <script lang="ts">
-  import { items, type Item } from "$lib/stores/items.js";
+  import type { Item } from "$lib/stores/items.js";
   import TagIcon from "./TagIcon.svelte";
   import { formatShortCode } from "$lib/utils/shortCode.js";
   import { fade, scale } from "svelte/transition";
 
   let {
-    item,
+    folderTitle,
+    folderPath,
+    folderItems,
     onClose,
   }: {
-    item: Item | null;
+    folderTitle: string;
+    folderPath: string;
+    folderItems: Item[];
     onClose: () => void;
   } = $props();
 
@@ -21,7 +25,7 @@
   // List arsip digroup per tanggal untuk panel kiri explorer (full evidence board)
   const archiveGroups = $derived.by(() => {
     const groups = new Map<string, Item[]>();
-    for (const it of $items) {
+    for (const it of folderItems) {
       const key = it.date || "NO-DATE";
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(it);
@@ -35,17 +39,17 @@
     return entries;
   });
 
-  // Item terpilih: mengikuti item yang diklik dari board, atau selection user di list
+  // Item terpilih dari list file di dalam folder
   const selected = $derived(
     selectedId
-      ? ($items.find((i) => i.id === selectedId) ?? null)
-      : item
+      ? (folderItems.find((i) => i.id === selectedId) ?? null)
+      : null
   );
 
   const displayCode = $derived(selected ? formatShortCode(selected.shortCode, selected.id) : "#ITEM");
   const hasPhoto = $derived(Boolean(selected?.evidencePhoto && selected.evidencePhoto.trim() !== ""));
-  const totalObjects = $derived($items.length);
-  const photoObjects = $derived($items.filter((i) => i.evidencePhoto && i.evidencePhoto.trim() !== "").length);
+  const totalObjects = $derived(folderItems.length);
+  const photoObjects = $derived(folderItems.filter((i) => i.evidencePhoto && i.evidencePhoto.trim() !== "").length);
 
   // Filter pencarian (nama barang / short ID / lokasi) untuk list kiri
   const filteredGroups = $derived.by(() => {
@@ -81,18 +85,26 @@
     }, 2000);
   }
 
-  // Reset selection saat modal ditutup/dibuka dengan item berbeda
+  // Auto-pilih file pertama saat folder dibuka agar preview tidak kosong
   $effect(() => {
-    if (item) {
-      selectedId = item.id;
-      isImageZoomed = false;
-      copyFeedback = false;
-      searchQuery = "";
+    if (folderItems.length > 0 && (!selectedId || !folderItems.some((i) => i.id === selectedId))) {
+      const first = [...folderItems].sort((a, b) =>
+        sortMode === "newest"
+          ? `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`)
+          : `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)
+      )[0];
+      selectedId = first.id;
     }
+    if (folderItems.length === 0) {
+      selectedId = null;
+    }
+    isImageZoomed = false;
+    copyFeedback = false;
+    searchQuery = "";
   });
 </script>
 
-{#if item}
+{#if folderItems}
   <div
     class="modal-overlay backdrop-blur-xs z-50 flex items-center justify-center p-3"
     transition:fade={{ duration: 150 }}
@@ -115,7 +127,7 @@
         <div class="flex items-center gap-2 min-w-0">
           <span class="w-4 h-4 bg-white border-2 border-[#1c120c] flex items-center justify-center text-[9px] shrink-0">📁</span>
           <span class="font-pixel text-[10px] md:text-[11px] text-white font-bold tracking-wide truncate">
-            C:\ARSIP_SATPAM\{selected ? `LAP_${displayCode.replace('#', '')}` : "BERKAS"}
+            {folderPath}{selected ? `\\LAP_${displayCode.replace('#', '')}` : ""}
           </span>
         </div>
         <div class="flex items-center gap-1 shrink-0">
@@ -147,7 +159,7 @@
         <span class="font-pixel text-[9px] text-[#78716c]">Alamat:</span>
         <div class="flex-1 min-w-[180px] bg-white border-2 border-[#1c120c] shadow-[inset_2px_2px_0_#e2e8f0] px-2 py-1 flex items-center gap-1.5">
           <span class="text-[10px]">📁</span>
-          <span class="font-mono text-[10.5px] font-bold text-[#1c120c] truncate">C:\ARSIP_SATPAM\KEAMANAN_KAMPUS</span>
+          <span class="font-mono text-[10.5px] font-bold text-[#1c120c] truncate">{folderPath}</span>
         </div>
         <button
           type="button"
@@ -198,7 +210,7 @@
                   <span class="font-mono text-[8.5px] text-[#78716c] font-bold ml-auto">({groupItems.length})</span>
                 </div>
                 {#each groupItems as it (it.id)}
-                  {@const isSelected = selectedId === it.id || (!selectedId && item.id === it.id)}
+                  {@const isSelected = selectedId === it.id}
                   <button
                     type="button"
                     onclick={() => selectItem(it.id)}
@@ -389,7 +401,7 @@
           {totalObjects} object(s) • {photoObjects} dengan foto bukti
         </span>
         <span class="font-mono text-[9.5px] text-[#44403c] font-bold">
-          {selected ? displayCode : "-"} • C:\ARSIP_SATPAM
+          {selected ? displayCode : "-"} • {folderPath}
         </span>
       </div>
     </div>
