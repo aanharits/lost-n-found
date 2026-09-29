@@ -28,12 +28,6 @@ export function handleUserJoin(io: SocketIOServer, socket: Socket, data: unknown
   connectedUsers.set(socket.id, profile);
   console.log(`[User] Joined: ${profile.name} (${profile.npm || '-'})`);
 
-  // Kirim notifikasi toast ke user lain bahwa ada user baru bergabung
-  socket.broadcast.emit('user_joined_toast', {
-    name: profile.name,
-    npm: profile.npm,
-  });
-
   // Broadcast pembaruan jumlah user dan daftar user aktif
   io.emit('users_count', connectedUsers.size);
   io.emit('active_users_list', Array.from(connectedUsers.values()));
@@ -45,7 +39,6 @@ export function handleDisconnect(io: SocketIOServer, socket: Socket): void {
   if (user) {
     console.log(`[User] Left: ${user.name}`);
     connectedUsers.delete(socket.id);
-    io.emit('user_left_toast', { name: user.name });
   }
 
   // Broadcast pembaruan jumlah user setelah ada yang keluar
