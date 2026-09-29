@@ -14,8 +14,12 @@ export async function resolveDisputes(itemId: string): Promise<string | null> {
   const claims = await dbGetClaimsByItemId(itemId);
   const pendingClaims = claims.filter((c) => c.status === 'pending');
 
+  // Tidak ada klaim pending: jangan paksa 'resolved'. Kembalikan ke 'open'
+  // agar item tetap bisa diklaim (mis. klaim dibatalkan sebelum diproses).
   if (pendingClaims.length === 0) {
-    await dbUpdateItemStatus(itemId, 'resolved');
+    if (item.status === 'disputed') {
+      await dbUpdateItemStatus(itemId, 'open');
+    }
     return null;
   }
 

@@ -2,8 +2,9 @@ import { dbGetItems, dbGetItem } from '../db/db-store.js';
 import { resolveDisputes } from './resolveDisputes.js';
 import type { Server as SocketIOServer } from 'socket.io';
 
-// 1 Menit window dispute untuk PoC Hackathon (Gale-Shapley auto-resolve)
-const DISPUTE_WINDOW_MS = 1 * 60 * 1000;
+// 24 Jam window dispute: masa tampung klaim sebelum Gale-Shapley auto-resolve.
+// (Terpisah dari auto-expire item > 7 hari di expireItems.ts)
+const DISPUTE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 // In-memory map untuk melacak timer dispute per barang
 const activeTimers = new Map<string, NodeJS.Timeout>();

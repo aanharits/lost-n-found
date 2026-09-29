@@ -29,9 +29,13 @@ const COMMON_SUFFIXES = ["nya", "ku", "mu", "kah", "lah", "pun"] as const;
 
 /**
  * Awalan (prefix) umum. Hanya dibuang jika sisa katanya masih cukup panjang
- * (>= 3 huruf) supaya tidak merusak kata pendek yang memang utuh.
+ * supaya tidak merusak kata dasar yang memang utuh.
+ *
+ * Panjang sisa minimal 4 huruf: mencegah kasus seperti "pecah" -> "cah"
+ * atau "merek" -> "rek" yang bukan kata berimbuhan.
  */
 const COMMON_PREFIXES = ["meng", "meny", "mem", "men", "me", "di", "ter", "ber", "pe"] as const;
+const MIN_STEM_LENGTH = 4;
 
 /**
  * Membuang akhiran umum dari satu token.
@@ -54,7 +58,7 @@ function stripPrefix(token: string): string {
   for (const prefix of COMMON_PREFIXES) {
     if (token.startsWith(prefix) && token.length > prefix.length) {
       const stem = token.slice(prefix.length);
-      if (stem.length >= 3) {
+      if (stem.length >= MIN_STEM_LENGTH) {
         return stem;
       }
     }
