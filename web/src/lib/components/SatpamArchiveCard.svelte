@@ -16,245 +16,169 @@
     onDragEnd: (x: number, y: number) => void;
   } = $props();
 
-  // Evaluasi status highlight kartu
   const isHighlighted = $derived(isItemHighlighted(item, $highlight));
   const isDimmed = $derived(!!$highlight && !isHighlighted);
   const displayCode = $derived(formatShortCode(item.shortCode, item.id));
-
-  const hasPhoto = $derived(Boolean(item.evidencePhoto && item.evidencePhoto.trim() !== ''));
+  const hasPhoto = $derived(Boolean(item.evidencePhoto && item.evidencePhoto.trim() !== ""));
   const pendingClaimsCount = $derived(
     (item.claims || []).filter((c) => c.status === "pending").length
+  );
+
+  // Nomor jendela file retro agar tiap kartu terasa seperti file unik di desktop
+  const fileNo = $derived(Math.abs([...item.id].reduce((a, c) => a + c.charCodeAt(0), 0)) % 8999 + 1000);
+
+  const statusLabel = $derived(
+    item.status === "resolved" ? "SELESAI" : item.status === "disputed" ? "DISPUTE" : "AKTIF"
   );
 </script>
 
 <div
-  class="satpam-folder-card {item.status === 'resolved'
-    ? 'resolved-folder'
-    : ''} {isHighlighted ? 'highlighted-folder' : ''} {isDimmed
-    ? 'dimmed-card'
+  class="satpam-file-window {item.status === 'resolved'
+    ? 'file-resolved'
+    : ''} {isHighlighted ? 'file-highlighted' : ''} {isDimmed
+    ? 'file-dimmed'
     : ''}"
   id={item.id}
   style="left: {item.x}px; top: {item.y}px;"
   use:draggable={{ itemId: item.id, containerId: "board-container", onDragEnd }}
   transition:fly={{ y: -30, duration: 400 }}
+  ondblclick={onOpenArchive}
   onclick={onOpenArchive}
   role="button"
   tabindex="0"
   onkeydown={(e) => { if (e.key === 'Enter') onOpenArchive(); }}
-  title="Klik untuk membuka arsip berkas #{displayCode}"
+  title="Klik dua kali membuka berkas #{displayCode}"
 >
-  <!-- Manila Folder Tab (Layer 1 Atas) -->
-  <div class="folder-tab">
-    <div class="flex items-center gap-1.5 min-w-0">
-      <span class="w-1.5 h-1.5 rounded-full bg-amber-400 border border-[#140b05]"></span>
-      <span class="font-mono font-bold text-[8.5px] text-[#140b05] truncate">
-        {item.date || "NO-DATE"}
-      </span>
-    </div>
-    <!-- Short ID Badge pada Tab -->
-    <span class="bg-[#140b05] text-[#fde047] font-mono font-bold text-[7.5px] px-1.5 py-0.2 rounded border border-amber-300/40 shrink-0">
-      {displayCode}
+  <!-- Title Bar Gaya Retro OS: Navy + Tombol Kotak -->
+  <div class="win95-titlebar">
+    <span class="font-pixel text-[7px] text-white font-bold tracking-wide truncate ml-0.5">
+      LAP-{fileNo}_{item.date || "NO-DATE"}
     </span>
+    <div class="flex items-center gap-[3px] shrink-0">
+      <span class="win95-btn flex items-center justify-center text-[6px] leading-none pb-[2px]">_</span>
+      <span class="win95-btn flex items-center justify-center text-[6px] leading-none">□</span>
+      <span class="win95-btn win95-close flex items-center justify-center text-[6px] leading-none pb-[1px]">✕</span>
+    </div>
   </div>
 
-  <!-- Klip Kertas Retro di Pojok Kanan Atas -->
-  <div class="paper-clip-retro pointer-events-none"></div>
+  <!-- Menu Bar Mini File Window -->
+  <div class="win95-menubar font-pixel text-[6.5px] text-[#5a5a5a] flex items-center gap-2 px-1.5 py-[2px] select-none">
+    <span>File</span><span>Edit</span><span>View</span><span>Help</span>
+  </div>
 
-  <!-- Folder Body (Map Arsip Berkas) -->
-  <div class="folder-body flex flex-col justify-between p-2.5">
-    <!-- Header Berkas: Type & Status Stempel -->
-    <div class="flex items-start justify-between gap-1 border-b border-[#140b05]/20 pb-1.5">
-      <div class="flex flex-col">
-        <span class="text-[7px] font-pixel text-[#854d0e] tracking-widest leading-none">
-          BERKAS SATPAM
-        </span>
-        <span class="text-[9px] font-pixel font-bold {item.type === 'found' ? 'text-emerald-800' : 'text-rose-800'} mt-0.5">
-          {item.type === 'found' ? 'TEMUAN' : 'KEHILANGAN'}
-        </span>
+  <!-- Badan Jendela: Icon File Besar + Label -->
+  <div class="flex flex-col items-center justify-center gap-1 flex-1 bg-[#c0c0c0] px-2 pb-1">
+    <div class="relative">
+      <div class="w-12 h-12 bg-white border-2 border-[#808080] border-t-white border-l-white flex items-center justify-center overflow-hidden relative">
+        {#if hasPhoto}
+          <img
+            src={item.evidencePhoto}
+            alt="Bukti fisik"
+            class="w-full h-full object-cover"
+          />
+          <span class="absolute bottom-0 right-0 bg-[#000080] text-white text-[5.5px] font-mono px-0.5 font-bold">FOTO</span>
+        {:else}
+          <TagIcon tag={item.tag} fallback={item.icon} size={30} title={item.title} />
+        {/if}
       </div>
-
-      <!-- Stempel Confidential / Status -->
-      {#if item.status === "resolved"}
-        <span class="stamp-badge stamp-resolved font-pixel">
-          ARSIP SELESAI
-        </span>
-      {:else if item.status === "disputed"}
-        <span class="stamp-badge stamp-disputed font-pixel">
-          DISPUTE
-        </span>
-      {:else}
-        <span class="stamp-badge stamp-active font-pixel">
-          AKTIF
+      {#if pendingClaimsCount > 0}
+        <span class="absolute -top-1.5 -right-1.5 bg-[#dc2626] text-white font-pixel text-[6px] px-1 py-[1px] border border-[#808080] font-bold z-20">
+          {pendingClaimsCount}
         </span>
       {/if}
     </div>
 
-    <!-- Center Content: Mini Foto Bukti / Icon & Info Barang -->
-    <div class="flex items-center gap-2 my-1.5 bg-[#fefce8]/70 p-1.5 rounded border border-[#140b05]/20 shadow-[inset_1px_1px_0_rgba(0,0,0,0.06)]">
-      <!-- Thumbnail Bukti Fisik jika ada, atau Pixel TagIcon jika tidak -->
-      <div class="w-12 h-12 bg-white rounded border border-[#140b05] shadow-[1px_1px_0_#140b05] flex items-center justify-center overflow-hidden shrink-0 relative">
-        {#if hasPhoto}
-          <img
-            src={item.evidencePhoto}
-            alt="Bukti foto fisik"
-            class="w-full h-full object-cover"
-          />
-          <span class="absolute bottom-0 right-0 bg-[#0d9488] text-white text-[6px] font-mono px-0.5 py-0 font-bold">
-            FOTO
-          </span>
-        {:else}
-          <TagIcon
-            tag={item.tag}
-            fallback={item.icon}
-            size={28}
-            title={item.title}
-          />
-        {/if}
-      </div>
+    <p class="font-sans text-[10px] font-bold text-[#1c120c] text-center truncate w-full leading-tight" title={item.title}>
+      {item.title}
+    </p>
+    <p class="font-mono text-[7.5px] text-[#404040] truncate w-full text-center">
+      {displayCode} • {statusLabel} • {item.type === 'found' ? 'TEMUAN' : 'HILANG'}
+    </p>
+  </div>
 
-      <div class="min-w-0 flex-1 flex flex-col justify-center">
-        <p class="font-bold text-[12px] leading-tight text-[#1c120c] font-sans truncate" title={item.title}>
-          {item.title}
-        </p>
-        <p class="text-[9.5px] text-[#713f12] font-medium font-sans truncate mt-0.5" title={item.desc}>
-          📍 {item.desc || "-"}
-        </p>
-        <p class="text-[9px] text-stone-500 font-sans truncate">
-          👤 {item.reporterName || item.reporterNpm || "Anonim"}
-        </p>
-      </div>
-    </div>
-
-    <!-- Footer Map Berkas: Indikator Bukti Foto & Tombol Buka Map -->
-    <div class="pt-1.5 border-t border-[#140b05]/20 flex items-center justify-between gap-1">
-      <div class="flex items-center gap-1 text-[8px] font-pixel {hasPhoto ? 'text-emerald-700' : 'text-stone-500'}">
-        <span>{hasPhoto ? '📸 ADA FOTO' : '📄 TEKS'}</span>
-        {#if pendingClaimsCount > 0}
-          <span class="bg-amber-500 text-white px-1 py-0.2 rounded text-[7px] font-bold">
-            {pendingClaimsCount} KLAIM
-          </span>
-        {/if}
-      </div>
-
-      <button
-        type="button"
-        onclick={(e) => {
-          e.stopPropagation();
-          onOpenArchive();
-        }}
-        class="bg-[#b45309] hover:bg-[#92400e] active:translate-y-0.5 text-white font-pixel text-[8px] px-2 py-1 rounded border border-[#140b05] shadow-[1px_1px_0_#140b05] cursor-pointer flex items-center gap-1 font-bold"
-      >
-        <span>📂</span> BUKA BERKAS
-      </button>
-    </div>
+  <!-- Status Bar Mini ala Explorer -->
+  <div class="win95-statusbar flex items-center justify-between px-1.5 py-[2px]">
+    <span class="font-mono text-[6.5px] text-[#404040] truncate">{item.desc || "-"}</span>
+    <span class="font-mono text-[6.5px] text-[#404040] shrink-0 ml-1">{item.time || "--:--"}</span>
   </div>
 </div>
 
 <style>
-  .satpam-folder-card {
+  .satpam-file-window {
     position: absolute;
     width: 220px;
-    height: 175px;
+    height: 190px;
+    display: flex;
+    flex-direction: column;
     user-select: none;
     cursor: grab;
     z-index: 10;
+    background: #c0c0c0;
+    border: 2px solid;
+    border-color: #ffffff #808080 #808080 #ffffff;
+    box-shadow: 1px 1px 0 #0a0a0a, 2px 2px 0 2px #0a0a0a55;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
 
-  .satpam-folder-card:active {
+  .satpam-file-window:hover {
+    transform: translateY(-2px);
+  }
+
+  .satpam-file-window:active {
     cursor: grabbing;
     z-index: 100;
   }
 
-  .satpam-folder-card:hover {
-    transform: translateY(-2px);
-  }
-
-  .folder-tab {
-    position: relative;
-    width: 150px;
-    height: 24px;
-    background: #d97706 linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
-    border: 3px solid #140b05;
-    border-bottom: none;
-    border-top-left-radius: 6px;
-    border-top-right-radius: 6px;
+  .win95-titlebar {
+    height: 20px;
+    background: linear-gradient(90deg, #000080 0%, #1084d0 100%);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 8px;
-    z-index: 1;
-    box-shadow: 2px -1px 0px rgba(0, 0, 0, 0.15);
+    padding: 0 3px 0 5px;
+    cursor: grab;
+    flex-shrink: 0;
   }
 
-  .folder-body {
-    position: relative;
-    width: 100%;
-    height: calc(100% - 22px);
-    background: #eab308 linear-gradient(180deg, #fef08a 0%, #fde047 30%, #eab308 100%);
-    border: 3px solid #140b05;
-    border-radius: 4px;
-    border-top-left-radius: 0;
-    box-shadow: 4px 4px 0px #140b05;
-    z-index: 2;
+  .win95-btn {
+    width: 13px;
+    height: 12px;
+    background: #c0c0c0;
+    border: 1px solid;
+    border-color: #ffffff #808080 #808080 #ffffff;
+    color: #1c120c;
   }
 
-  .resolved-folder .folder-body {
-    background: #cbd5e1 linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 40%, #cbd5e1 100%);
-    opacity: 0.9;
+  .win95-close {
+    color: #1c120c;
   }
 
-  .resolved-folder .folder-tab {
-    background: #94a3b8;
+  .win95-menubar {
+    background: #c0c0c0;
+    border-bottom: 1px solid #808080;
+    box-shadow: 0 1px 0 #ffffff;
+    flex-shrink: 0;
   }
 
-  .paper-clip-retro {
-    position: absolute;
-    top: 2px;
-    right: 14px;
-    width: 8px;
-    height: 22px;
-    border: 2px solid #64748b;
-    border-radius: 4px;
-    background: transparent;
-    z-index: 15;
-    box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.4);
+  .win95-statusbar {
+    background: #c0c0c0;
+    border-top: 1px solid #ffffff;
+    box-shadow: inset 0 1px 0 #808080;
+    flex-shrink: 0;
   }
 
-  .stamp-badge {
-    font-size: 7px;
-    padding: 1px 4px;
-    border-radius: 2px;
-    border: 1.5px dashed;
-    letter-spacing: 0.5px;
-    transform: rotate(-3deg);
+  .file-resolved {
+    filter: grayscale(70%);
+    opacity: 0.92;
   }
 
-  .stamp-active {
-    color: #b91c1c;
-    border-color: #b91c1c;
-    background-color: rgba(254, 226, 226, 0.7);
-  }
-
-  .stamp-resolved {
-    color: #15803d;
-    border-color: #15803d;
-    background-color: rgba(220, 252, 231, 0.7);
-  }
-
-  .stamp-disputed {
-    color: #c2410c;
-    border-color: #c2410c;
-    background-color: rgba(255, 237, 213, 0.7);
-  }
-
-  .highlighted-folder {
+  .file-highlighted {
     outline: 4px solid #38bdf8;
-    box-shadow: 0 0 16px rgba(56, 189, 248, 0.8), 4px 4px 0px #140b05;
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.8), 2px 2px 0 2px #0a0a0a55;
     z-index: 50;
   }
 
-  .dimmed-card {
+  .file-dimmed {
     opacity: 0.35;
     filter: grayscale(60%);
   }
