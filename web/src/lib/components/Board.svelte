@@ -7,7 +7,7 @@
   import { highlight } from '$lib/stores/highlight.js';
   import { getSocket } from '$lib/socket.js';
   import ItemCard from './ItemCard.svelte';
-  import SatpamFolderCabinet from './SatpamFolderCabinet.svelte';
+  import SatpamArchiveCard from './SatpamArchiveCard.svelte';
   import SatpamFolderModal from './SatpamFolderModal.svelte';
   import Avatar from './Avatar.svelte';
   import ReportModal from './ReportModal.svelte';
@@ -23,67 +23,14 @@
 
   // Role Satpam & state Layer 2 Arsip Berkas
   const isSatpam = $derived($currentPlayer?.role === 'satpam');
+  let activeArchiveItem = $state<Item | null>(null);
 
-  // Kelompok arsip folder satpam: temuan aktif, kehilangan aktif, selesai diklaim
-  const satpamFolders = $derived.by(() => {
-    const active = $items.filter((i) => i.status !== 'resolved');
-    return {
-      found: active.filter((i) => i.type === 'found'),
-      lost: active.filter((i) => i.type === 'lost'),
-      resolved: $items.filter((i) => i.status === 'resolved'),
-    };
-  });
-
-  // Posisi folder di board (state lokal, bukan DB)
-  type FolderPos = Record<'found' | 'lost' | 'resolved', { x: number; y: number }>;
-  let folderPositions = $state<FolderPos>({
-    found: { x: 40, y: 40 },
-    lost: { x: 300, y: 40 },
-    resolved: { x: 560, y: 40 },
-  });
-
-  // Folder yang sedang dibuka di Layer 2
-  let openFolder = $state<'found' | 'lost' | 'resolved' | null>(null);
-
-  const FOLDER_META = {
-    found: { label: 'BARANG KETEMU' },
-    lost: { label: 'BARANG HILANG' },
-    resolved: { label: 'SELESAI DIKLAIM' },
-  } as const;
-
-  function openFolderDetail(kind: 'found' | 'lost' | 'resolved') {
-    openFolder = kind;
+  function openArchiveDetail(item: Item) {
+    activeArchiveItem = item;
   }
 
-  function closeFolderDetail() {
-    openFolder = null;
-  }
-
-  function handleFolderDragEnd(kind: 'found' | 'lost' | 'resolved', x: number, y: number) {
-    folderPositions = { ...folderPositions, [kind]: { x, y } };
-  }
-
-  // Susun ulang 3 folder satpam ke dalam grid rapi (tanpa broadcast ke server)
-  function organizeFolders() {
-    const boardWidth = boardContainer ? boardContainer.offsetWidth : 1024;
-    const layout = calculateGridLayout(boardWidth);
-    const kinds: Array<'found' | 'lost' | 'resolved'> = ['found', 'lost', 'resolved'];
-
-    folderPositions = {
-      found: layout.getPos(0),
-      lost: layout.getPos(1),
-      resolved: layout.getPos(2),
-    };
-
-    // Geser DOM langsung agar folder beranimasi seketika
-    kinds.forEach((kind, index) => {
-      const { x, y } = layout.getPos(index);
-      const el = document.getElementById(`folder_${kind}`);
-      if (el) {
-        el.style.left = `${x}px`;
-        el.style.top = `${y}px`;
-      }
-    });
+  function closeArchiveDetail() {
+    activeArchiveItem = null;
   }
 
   onMount(() => {
@@ -97,11 +44,6 @@
 
   // Susun ulang posisi kartu ke dalam grid rapi
   function organizeBoard() {
-    if (isSatpam) {
-      organizeFolders();
-      return;
-    }
-
     const boardWidth = boardContainer ? boardContainer.offsetWidth : 1024;
     const layout = calculateGridLayout(boardWidth);
 
@@ -469,41 +411,16 @@
       </button>
     </div>
 
-    <!-- Area render: Folder Kabinet untuk Satpam vs ItemCard untuk Mahasiswa -->
+    <!-- Area render: File Window Evidence untuk Satpam vs ItemCard untuk Mahasiswa -->
     <div id="cards-area" class="cards-area">
-      {#if isSatpam}
-        <SatpamFolderCabinet
-          folderId="folder_found"
-          label="BARANG KETEMU"
-          kind="found"
-          count={satpamFolders.found.length}
-          photoCount={satpamFolders.found.filter((i) => i.evidencePhoto && i.evidencePhoto.trim() !== '').length}
-          position={folderPositions.found}
-          onOpen={() => openFolderDetail('found')}
-          onDragEnd={(x, y) => handleFolderDragEnd('found', x, y)}
-        />
-        <SatpamFolderCabinet
-          folderId="folder_lost"
-          label="BARANG HILANG"
-          kind="lost"
-          count={satpamFolders.lost.length}
-          photoCount={satpamFolders.lost.filter((i) => i.evidencePhoto && i.evidencePhoto.trim() !== '').length}
-          position={folderPositions.lost}
-          onOpen={() => openFolderDetail('lost')}
-          onDragEnd={(x, y) => handleFolderDragEnd('lost', x, y)}
-        />
-        <SatpamFolderCabinet
-          folderId="folder_resolved"
-          label="SELESAI DIKLAIM"
-          kind="resolved"
-          count={satpamFolders.resolved.length}
-          photoCount={satpamFolders.resolved.filter((i) => i.evidencePhoto && i.evidencePhoto.trim() !== '').length}
-          position={folderPositions.resolved}
-          onOpen={() => openFolderDetail('resolved')}
-          onDragEnd={(x, y) => handleFolderDragEnd('resolved', x, y)}
-        />
-      {:else}
-        {#each $items as item (item.id)}
+      {#each $items as item (item.id)}
+        {#if isSatpam}
+          <SatpamArchiveCard
+            {item}
+            onOpenArchive={() => openArchiveDetail(item)}
+            onDragEnd={(x, y) => handleItemDragEnd(item.id, x, y)}
+          />
+        {:else}
           <ItemCard
             {item}
             currentPlayerNpm={$currentPlayer?.npm || ''}
@@ -512,8 +429,8 @@
             onDelete={() => openDeleteModal(item.id)}
             onDragEnd={(x, y) => handleItemDragEnd(item.id, x, y)}
           />
-        {/each}
-      {/if}
+        {/if}
+      {/each}
     </div>
 
     <!-- Area avatar Satpam AI -->
@@ -524,12 +441,11 @@
 </div>
 </div>
 
-<!-- Modal Layer 2: Jendela Isi Folder Arsip Satpam (list file + preview bukti) -->
-{#if openFolder}
+<!-- Modal Layer 2: Explorer Evidence Bikas Satpam (list arsip pilih + preview foto) -->
+{#if activeArchiveItem}
   <SatpamFolderModal
-    folderTitle={FOLDER_META[openFolder].label}
-    folderItems={satpamFolders[openFolder]}
-    onClose={closeFolderDetail}
+    item={activeArchiveItem}
+    onClose={closeArchiveDetail}
   />
 {/if}
 
