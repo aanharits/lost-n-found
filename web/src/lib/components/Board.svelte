@@ -36,10 +36,29 @@
 
   // Posisi folder di desktop (state lokal, bukan DB)
   type FolderPos = Record<'found' | 'lost' | 'resolved', { x: number; y: number }>;
+
+  // Susunan folder agak di tengah board (bukan menempel di pojok) supaya tidak sepi
+  // Icon 150px + gap; dihitung dari lebar board saat dibutuhkan
+  function computeDefaultFolderPositions(): FolderPos {
+    const boardWidth = boardContainer ? boardContainer.offsetWidth : 1024;
+    const iconWidth = 150;
+    const gap = 48;
+    const totalW = kindCount * iconWidth + (kindCount - 1) * gap;
+    const startX = Math.max(24, Math.round((boardWidth - totalW) / 2));
+    const startY = 150;
+    return {
+      found: { x: startX, y: startY },
+      lost: { x: startX + (iconWidth + gap), y: startY },
+      resolved: { x: startX + (iconWidth + gap) * 2, y: startY },
+    };
+  }
+
+  const kindCount = 3;
+
   let folderPositions = $state<FolderPos>({
-    found: { x: 48, y: 48 },
-    lost: { x: 200, y: 48 },
-    resolved: { x: 352, y: 48 },
+    found: { x: 300, y: 150 },
+    lost: { x: 498, y: 150 },
+    resolved: { x: 696, y: 150 },
   });
 
   // Folder yang sedang dibuka di explorer
@@ -63,16 +82,12 @@
     folderPositions = { ...folderPositions, [kind]: { x, y } };
   }
 
-  // Susun ulang 3 folder ke dalam baris rapi di desktop (tanpa broadcast ke server)
+  // Susun ulang 3 folder ke dalam baris rapi di tengah desktop (tanpa broadcast ke server)
   function organizeFolders() {
     const kinds: Array<'found' | 'lost' | 'resolved'> = ['found', 'lost', 'resolved'];
-    folderPositions = {
-      found: { x: 48, y: 48 },
-      lost: { x: 200, y: 48 },
-      resolved: { x: 352, y: 48 },
-    };
+    folderPositions = computeDefaultFolderPositions();
 
-    // Geser DOM langsung agar folder beranimasi seketika
+    // Geser DOM langsung agar folder beranimasi seketika (CSS transition menangani smoothness)
     kinds.forEach((kind) => {
       const pos = folderPositions[kind];
       const el = document.getElementById(`folder_${kind}`);
@@ -84,11 +99,13 @@
   }
 
   onMount(() => {
+    // Posisi awal folder dihitung dari lebar board nyata agar rapi di tengah
     if ($currentPlayer?.role === 'satpam') {
       const socket = getSocket();
       if (socket?.connected) {
         socket.emit('satpam_join', { accessKey: $currentPlayer.accessKey || 'satpamganteng' });
       }
+      folderPositions = computeDefaultFolderPositions();
     }
   });
 

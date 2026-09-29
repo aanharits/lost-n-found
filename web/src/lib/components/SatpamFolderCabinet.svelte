@@ -55,11 +55,11 @@
   >
     <!-- SVG Folder Icon Win95 Asli (pixel-perfect, outline hitam, kuning bevel) -->
     <svg
-      width="72"
-      height="58"
+      width="132"
+      height="107"
       viewBox="0 0 32 26"
       shape-rendering="crispEdges"
-      class="{isSelected ? 'icon-selected-img' : ''}"
+      class="folder-svg {isSelected ? 'icon-selected-img' : ''}"
       aria-hidden="true"
     >
       <!-- Outline hitam dasar folder -->
@@ -101,10 +101,19 @@
 <style>
   .desktop-icon {
     position: absolute;
-    width: 108px;
+    width: 150px;
     user-select: none;
     cursor: grab;
     z-index: 10;
+    /* Smooth motion ala main board: posisi & hover transform bertransisi halus */
+    transition:
+      left 0.3s cubic-bezier(0.2, 0, 0, 1),
+      top 0.3s cubic-bezier(0.2, 0, 0, 1),
+      transform 0.2s ease;
+  }
+
+  .desktop-icon:hover {
+    transform: translateY(-6px) scale(1.04);
   }
 
   .desktop-icon:active {
@@ -112,21 +121,30 @@
     z-index: 100;
   }
 
+  /* Saat sedang didrag, matikan transition left/top agar mengikuti pointer instan */
+  .desktop-icon:global(.is-dragging) {
+    transition: transform 0.2s ease;
+  }
+
   .icon-click {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
     background: transparent;
     border: none;
-    padding: 6px 4px;
+    padding: 10px 6px;
     cursor: pointer;
     width: 100%;
   }
 
   .icon-click:focus-visible {
-    outline: 2px dashed #ffffff;
+    outline: 3px dashed #ffffff;
     outline-offset: 2px;
+  }
+
+  .folder-svg {
+    transition: transform 0.18s ease, filter 0.18s ease;
   }
 
   /* Label desktop Win95: putih dengan shadow hitam tipis */
@@ -135,10 +153,10 @@
     width: 100%;
     text-align: center;
     color: #ffffff;
-    font-size: 9px;
+    font-size: 11px;
     font-weight: bold;
     line-height: 1.35;
-    padding: 2px 4px;
+    padding: 3px 4px;
     letter-spacing: 0.5px;
     text-shadow: 1px 1px 0 #000000;
     word-wrap: break-word;
@@ -161,6 +179,6 @@
 
   /* Glow saat memuat item yang di-highlight AI */
   .icon-glow svg {
-    filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.95));
+    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.95));
   }
 </style>
