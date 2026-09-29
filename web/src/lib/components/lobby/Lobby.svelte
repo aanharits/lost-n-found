@@ -4,6 +4,7 @@
   import { goto } from "$app/navigation";
   import Avatar from "../shared/Avatar.svelte";
   import RetroTerminalModal from "./RetroTerminalModal.svelte";
+  import SatpamLoginModal from "./SatpamLoginModal.svelte";
   import { fade, fly } from "svelte/transition";
 
   // Presets 8 Tipe Gaya Karakter Mahasiswa Game & Kampus (Tanpa Emote)
@@ -68,6 +69,7 @@
   let contact = $state("");
   let errorMsg = $state("");
   let isTerminalOpen = $state(false);
+  let isSatpamLoginOpen = $state(false);
 
   // Pindah ke karakter sebelumnya
   function prevChar() {
@@ -143,16 +145,29 @@
       </span>
     </div>
 
-    <!-- Tombol Launcher Playground Retro CLI (Warna cerah, menarik, no emote) -->
-    <button
-      type="button"
-      onclick={() => (isTerminalOpen = true)}
-      class="bg-[#ffd700] hover:bg-[#facc15] active:translate-y-0.5 text-[#1c120c] border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] active:shadow-none px-3 py-1 font-pixel text-[8px] md:text-[9px] font-bold flex items-center gap-1.5 cursor-pointer transition-all select-none tracking-wider"
-      title="Buka Playground Retro Terminal"
-    >
-      <span class="bg-[#1c120c] text-[#ffd700] px-1 py-0.5 font-mono text-[7.5px] font-black leading-none">&gt;_</span>
-      <span>PLAYGROUND</span>
-    </button>
+    <div class="flex items-center gap-2">
+      <!-- Tombol Launcher Playground Retro CLI (Warna cerah, menarik, no emote) -->
+      <button
+        type="button"
+        onclick={() => (isTerminalOpen = true)}
+        class="bg-[#ffd700] hover:bg-[#facc15] active:translate-y-0.5 text-[#1c120c] border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] active:shadow-none px-3 py-1 font-pixel text-[8px] md:text-[9px] font-bold flex items-center gap-1.5 cursor-pointer transition-all select-none tracking-wider"
+        title="Buka Playground Retro Terminal"
+      >
+        <span class="bg-[#1c120c] text-[#ffd700] px-1 py-0.5 font-mono text-[7.5px] font-black leading-none">&gt;_</span>
+        <span>PLAYGROUND</span>
+      </button>
+
+      <!-- Tombol Login Satpam (gate terpisah, di luar Playground) -->
+      <button
+        type="button"
+        onclick={() => (isSatpamLoginOpen = true)}
+        class="bg-[#b91c1c] hover:bg-[#991b1b] active:translate-y-0.5 text-white border-2 border-[#7f1d1d] shadow-[2px_2px_0px_#140b05] active:shadow-none px-3 py-1 font-pixel text-[8px] md:text-[9px] font-bold flex items-center gap-1.5 cursor-pointer transition-all select-none tracking-wider"
+        title="Masuk sebagai Petugas Satpam"
+      >
+        <span class="bg-[#1c120c] text-[#f87171] px-1 py-0.5 font-mono text-[7.5px] font-black leading-none">!</span>
+        <span>MASUK SATPAM</span>
+      </button>
+    </div>
   </div>
 
   <!-- Main Dialog Window: Papan Buletin Terang & Colorful -->
@@ -413,8 +428,14 @@
   </div>
 </div>
 
-<!-- Modal MS-DOS CLI Terminal Playground & Satpam Backdoor -->
+<!-- Modal MS-DOS CLI Terminal Playground -->
 <RetroTerminalModal
   isOpen={isTerminalOpen}
   onClose={() => (isTerminalOpen = false)}
+/>
+
+<!-- Modal Login Satpam (gate terpisah dengan field access key) -->
+<SatpamLoginModal
+  isOpen={isSatpamLoginOpen}
+  onClose={() => (isSatpamLoginOpen = false)}
 />

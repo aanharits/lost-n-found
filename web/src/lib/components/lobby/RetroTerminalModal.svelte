@@ -1,13 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
   import { fade, fly } from "svelte/transition";
-  import { goto } from "$app/navigation";
-  import { currentPlayer, type Player } from "$lib/stores/player.js";
-  import { currentScene } from "$lib/stores/ui.js";
   import { items } from "$lib/stores/items.js";
-  import { PUBLIC_SATPAM_KEY } from "$env/static/public";
-
-  const SATPAM_SECRET_KEY = (PUBLIC_SATPAM_KEY || import.meta.env.PUBLIC_SATPAM_KEY || "").toLowerCase().trim();
 
   let {
     isOpen = false,
@@ -100,43 +94,6 @@
     const lower = trimmed.toLowerCase();
     const args = lower.split(" ");
     const command = args[0];
-
-    // ==========================================
-    // BACKDOOR RAHASIA: SATPAM ACCESS KEY (via .env: PUBLIC_SATPAM_KEY)
-    // Tidak tercatat di daftar perintah help!
-    // ==========================================
-    if (SATPAM_SECRET_KEY && lower === SATPAM_SECRET_KEY) {
-      isAuthenticating = true;
-      history = [
-        ...history,
-        createLine("[!] SYSTEM OVERRIDE CREDENTIAL DETECTED...", "warning"),
-        createLine("[+] MEMVERIFIKASI ACCESS KEY: [SECURE KEY OVERRIDE]", "system"),
-        createLine("[+] STATUS: OTENTIKASI BERHASIL! [AKSES LEVEL 4 - POSKO PUSAT]", "success"),
-        createLine("[+] IDENTITAS RESMI: PAK SATPAM (KEPALA POS KEAMANAN KAMPUS)", "success"),
-        createLine("[>] MENGALIHKAN KE POS ARSIP BUKTI & BUKU MUTASI...", "system"),
-      ];
-      scrollToBottom();
-
-      setTimeout(() => {
-        const satpamPlayer: Player = {
-          name: "Pak Satpam",
-          npm: "SATPAM-KOMANDAN",
-          contact: "Pos Keamanan Kampus",
-          gender: "male",
-          avatarSeed: "OfficerBambang",
-          role: "satpam",
-          accessKey: SATPAM_SECRET_KEY,
-        };
-
-        currentPlayer.set(satpamPlayer);
-        currentScene.set("board");
-        onClose();
-        goto("/arsip");
-      }, 700);
-
-      currentInput = "";
-      return;
-    }
 
     // Perintah umum
     switch (command) {
