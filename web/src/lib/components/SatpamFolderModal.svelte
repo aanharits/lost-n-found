@@ -106,7 +106,7 @@
 
 {#if folderItems}
   <div
-    class="modal-overlay backdrop-blur-xs z-50 flex items-center justify-center p-4"
+    class="modal-overlay backdrop-blur-xs z-50 flex items-center justify-center p-3"
     transition:fade={{ duration: 150 }}
     onclick={(e) => {
       if (e.target === e.currentTarget) onClose();
@@ -117,13 +117,13 @@
       if (e.key === "Escape") onClose();
     }}
   >
-    <!-- Explorer Window: Struktur Win95, Border Pixel NES.css Autentik -->
+    <!-- Explorer Window ala NES.css: Flat, Square, Border Tebal, Hard Shadow -->
     <div
-      class="nes-box explorer-window relative w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden bg-[#f8fafc]"
+      class="nes-window relative w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden select-none"
       transition:scale={{ start: 0.93, duration: 200 }}
     >
-      <!-- Title Bar: Biru Flat NES + Tombol Kotak -->
-      <div class="explorer-titlebar flex items-center justify-between px-3 py-2">
+      <!-- Title Bar: Biru Flat + Judul Putih + Tombol Kotak -->
+      <div class="nes-titlebar flex items-center justify-between px-2.5 py-2">
         <div class="flex items-center gap-2 min-w-0">
           <span class="w-4 h-4 bg-white border-2 border-[#1c120c] flex items-center justify-center text-[9px] shrink-0">📁</span>
           <span class="font-pixel text-[10px] md:text-[11px] text-white font-bold tracking-wide truncate">
@@ -131,13 +131,13 @@
           </span>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <span class="ex-btn flex items-center justify-center text-[8px] leading-none pb-1">_</span>
-          <span class="ex-btn flex items-center justify-center text-[8px] leading-none">□</span>
+          <span class="nes-btn-sm flex items-center justify-center text-[8px] leading-none pb-[2px]">_</span>
+          <span class="nes-btn-sm flex items-center justify-center text-[8px] leading-none">□</span>
           <button
             type="button"
             onclick={onClose}
             aria-label="Tutup Explorer"
-            class="ex-btn ex-btn-close flex items-center justify-center text-[8px] leading-none cursor-pointer font-bold"
+            class="nes-btn-sm nes-btn-close flex items-center justify-center text-[8px] leading-none cursor-pointer font-bold"
           >
             ✕
           </button>
@@ -145,17 +145,17 @@
       </div>
 
       <!-- Menu Bar -->
-      <div class="win95-menubar font-pixel text-[9px] md:text-[10px] text-[#78716c] flex items-center gap-4 px-3 py-2 border-b-2 border-[#1c120c] shrink-0">
+      <div class="win95-menubar font-pixel text-[9px] md:text-[10px] text-[#78716c] flex items-center gap-4 px-2.5 py-1.5 border-b-2 border-[#1c120c] shrink-0">
         <span class="hover:bg-[#2563eb] hover:text-white px-1.5 py-0.5 cursor-default">File</span>
         <span class="hover:bg-[#2563eb] hover:text-white px-1.5 py-0.5 cursor-default">Edit</span>
         <span class="hover:bg-[#2563eb] hover:text-white px-1.5 py-0.5 cursor-default">View</span>
         <span class="hover:bg-[#2563eb] hover:text-white px-1.5 py-0.5 cursor-default">Tools</span>
         <span class="hover:bg-[#2563eb] hover:text-white px-1.5 py-0.5 cursor-default">Help</span>
-        <span class="ml-auto font-mono text-[9px] text-[#b45309] font-bold">[DOKUMEN RAHASIA SATPAM]</span>
+        <span class="ml-auto font-mono text-[9px] text-[#1c120c] font-bold">[DOKUMEN RAHASIA SATPAM]</span>
       </div>
 
       <!-- Address Bar + Sort Control -->
-      <div class="flex items-center gap-2 px-3 py-2 bg-[#f8fafc] border-b-2 border-[#1c120c] shrink-0 flex-wrap">
+      <div class="flex items-center gap-2 px-2.5 py-2 bg-[#f8fafc] border-b-2 border-[#1c120c] shrink-0 flex-wrap">
         <span class="font-pixel text-[9px] text-[#78716c]">Alamat:</span>
         <div class="flex-1 min-w-[180px] bg-white border-2 border-[#1c120c] px-2 py-1 flex items-center gap-1.5">
           <span class="text-[10px]">📁</span>
@@ -164,7 +164,7 @@
         <button
           type="button"
           onclick={() => sortMode = sortMode === "newest" ? "oldest" : "newest"}
-          class="nes-btn-8bit font-pixel text-[9px] py-1.5 px-3 cursor-pointer font-bold text-[#1c120c] bg-white shrink-0"
+          class="nes-btn font-pixel text-[9px] py-1.5 px-3 cursor-pointer font-bold text-[#1c120c] shrink-0"
           title="Ubah urutan arsip"
         >
           {sortMode === "newest" ? "▼ TERBARU" : "▲ TERLAMA"}
@@ -172,19 +172,19 @@
       </div>
 
       <!-- Search Bar -->
-      <div class="flex items-center gap-2 px-3 py-2 bg-[#f8fafc] border-b-2 border-[#1c120c] shrink-0">
+      <div class="flex items-center gap-2 px-2.5 py-2 bg-[#f8fafc] border-b-2 border-[#1c120c] shrink-0">
         <span class="text-[11px]">🔍</span>
         <input
           type="text"
           bind:value={searchQuery}
           placeholder="Cari nama barang / short ID / lokasi..."
-          class="nes-input-8bit flex-1 bg-white py-1.5 px-2.5 font-sans text-xs md:text-sm font-bold text-[#1c120c] placeholder-stone-400 outline-none"
+          class="flex-1 bg-white border-2 border-[#1c120c] rounded-none py-1.5 px-2.5 font-sans text-xs md:text-sm font-bold text-[#1c120c] placeholder-stone-400 outline-none focus:border-[#2563eb] transition-colors"
         />
         {#if searchQuery}
           <button
             type="button"
             onclick={() => searchQuery = ""}
-            class="nes-btn-8bit font-pixel text-[8.5px] py-1.5 px-2.5 cursor-pointer font-bold text-[#1c120c] bg-white shrink-0"
+            class="nes-btn font-pixel text-[8.5px] py-1.5 px-2.5 cursor-pointer font-bold text-[#1c120c] shrink-0"
           >
             RESET
           </button>
@@ -192,11 +192,11 @@
       </div>
 
       <!-- Body Explorer: Panel Kiri List + Panel Kanan Preview -->
-      <div class="flex-1 flex flex-col md:flex-row gap-[10px] min-h-0 bg-[#f8fafc] p-[10px] overflow-hidden">
+      <div class="flex-1 flex flex-col md:flex-row gap-[8px] min-h-0 bg-[#f1f5f9] p-[8px] overflow-hidden">
 
         <!-- Panel Kiri: Tree List Arsip per Tanggal -->
-        <div class="nes-box w-full md:w-[320px] shrink-0 bg-white flex flex-col min-h-[150px] md:min-h-0 overflow-hidden">
-          <div class="ex-panel-header font-pixel text-[9.5px] text-[#1c120c] px-2.5 py-2 border-b-2 border-[#1c120c] flex items-center justify-between shrink-0">
+        <div class="w-full md:w-[320px] shrink-0 bg-white border-3 border-[#1c120c] flex flex-col min-h-[150px] md:min-h-0 overflow-hidden">
+          <div class="nes-panel-header font-pixel text-[9.5px] text-[#1c120c] px-2.5 py-2 border-b-2 border-[#1c120c] flex items-center justify-between shrink-0">
             <span>📁 ARSIP_TANGGAL</span>
             <span class="font-mono text-[9px] text-[#78716c] font-bold">{totalObjects} OBJ</span>
           </div>
@@ -216,7 +216,7 @@
                     onclick={() => selectItem(it.id)}
                     class="w-full flex items-center gap-2 px-2 py-1.5 text-left cursor-pointer border-2 mt-1 transition-colors {isSelected
                       ? 'bg-[#2563eb] text-white border-[#1c120c]'
-                      : 'border-transparent hover:border-[#dbe3ec] hover:bg-[#f1f5f9] text-[#1c120c]'}"
+                      : 'border-transparent hover:border-[#e2e8f0] hover:bg-[#f8fafc] text-[#1c120c]'}"
                   >
                     <span class="text-[11px] shrink-0">
                       {it.evidencePhoto && it.evidencePhoto.trim() !== '' ? '📷' : '📄'}
@@ -241,10 +241,10 @@
         </div>
 
         <!-- Panel Kanan: Preview Berkas Aktif -->
-        <div class="nes-box flex-1 bg-white flex flex-col min-h-0 overflow-hidden">
+        <div class="flex-1 bg-white border-3 border-[#1c120c] flex flex-col min-h-0 overflow-hidden">
           {#if selected}
             <!-- Preview Header -->
-            <div class="ex-panel-header-accent font-pixel text-[9.5px] text-white px-2.5 py-2 border-b-2 border-[#1c120c] flex items-center justify-between gap-2 shrink-0">
+            <div class="nes-panel-header-accent font-pixel text-[9.5px] text-white px-2.5 py-2 border-b-2 border-[#1c120c] flex items-center justify-between gap-2 shrink-0">
               <span class="truncate font-bold tracking-wide">🔍 {selected.title}</span>
               <button
                 type="button"
@@ -258,9 +258,9 @@
 
             <!-- Preview Body: Foto Bukti Kiri + Properties Kanan -->
             <div class="flex-1 overflow-y-auto p-3 flex flex-col sm:flex-row gap-3 min-h-0">
-              <!-- Preview Pane Foto Bukti -->
+              <!-- Preview Pane Foto Bukti (Frame Kotak ala NES.css) -->
               <div class="sm:w-[44%] shrink-0 flex flex-col items-center gap-2.5">
-                <div class="w-full aspect-square bg-[#1e293b] border-4 border-[#1c120c] border-image-none overflow-hidden flex items-center justify-center relative group">
+                <div class="w-full aspect-square bg-[#1e293b] border-4 border-[#1c120c] shadow-[4px_4px_0px_#1c120c] overflow-hidden flex items-center justify-center relative group">
                   {#if hasPhoto}
                     <button
                       type="button"
@@ -287,13 +287,13 @@
 
                 <!-- Stempel status -->
                 <div class="w-full flex gap-2">
-                  <div class="flex-1 bg-[#f8fafc] border-2 border-[#1c120c] px-2 py-1 text-center">
+                  <div class="flex-1 bg-[#f8fafc] border-2 border-[#1c120c] px-2 py-1 text-center shadow-[2px_2px_0px_#1c120c]">
                     <span class="font-pixel text-[8px] text-[#78716c] block">STATUS</span>
                     <span class="font-mono text-[10px] font-bold {selected.status === 'resolved' ? 'text-emerald-700' : selected.status === 'disputed' ? 'text-orange-600' : 'text-[#2563eb]'}">
                       {selected.status.toUpperCase()}
                     </span>
                   </div>
-                  <div class="flex-1 bg-[#f8fafc] border-2 border-[#1c120c] px-2 py-1 text-center">
+                  <div class="flex-1 bg-[#f8fafc] border-2 border-[#1c120c] px-2 py-1 text-center shadow-[2px_2px_0px_#1c120c]">
                     <span class="font-pixel text-[8px] text-[#78716c] block">JENIS</span>
                     <span class="font-mono text-[10px] font-bold {selected.type === 'found' ? 'text-emerald-700' : 'text-rose-700'}">
                       {selected.type === 'found' ? 'TEMUAN' : 'HILANG'}
@@ -305,33 +305,33 @@
               <!-- Properties Dialog Kanan -->
               <div class="flex-1 min-w-0 flex flex-col gap-2">
                 <!-- Field Grid Properties -->
-                <div class="bg-[#f8fafc] border-2 border-[#1c120c] p-2.5 flex flex-col gap-1.5">
-                  <div class="flex items-start border-b border-[#dbe3ec] pb-1.5">
+                <div class="bg-[#f8fafc] border-2 border-[#1c120c] shadow-[3px_3px_0px_#1c120c] p-2.5 flex flex-col gap-1.5">
+                  <div class="flex items-start border-b border-[#e2e8f0] pb-1.5">
                     <span class="font-pixel text-[8.5px] text-[#78716c] w-[104px] shrink-0 pt-0.5">NAMA_FILE:</span>
                     <span class="font-sans text-xs md:text-[13px] font-bold text-[#1c120c] truncate">{selected.title}</span>
                   </div>
-                  <div class="flex items-start border-b border-[#dbe3ec] pb-1.5">
+                  <div class="flex items-start border-b border-[#e2e8f0] pb-1.5">
                     <span class="font-pixel text-[8.5px] text-[#78716c] w-[104px] shrink-0 pt-0.5">WAKTU:</span>
                     <span class="font-mono text-[11px] font-bold text-[#1c120c]">{selected.date || "-"} • {selected.time || "-"}</span>
                   </div>
-                  <div class="flex items-start border-b border-[#dbe3ec] pb-1.5">
+                  <div class="flex items-start border-b border-[#e2e8f0] pb-1.5">
                     <span class="font-pixel text-[8.5px] text-[#78716c] w-[104px] shrink-0 pt-0.5">LOKASI:</span>
                     <span class="font-sans text-[11.5px] font-bold text-[#1c120c] truncate">📍 {selected.desc || "-"}</span>
                   </div>
-                  <div class="flex items-start border-b border-[#dbe3ec] pb-1.5">
+                  <div class="flex items-start border-b border-[#e2e8f0] pb-1.5">
                     <span class="font-pixel text-[8.5px] text-[#78716c] w-[104px] shrink-0 pt-0.5">KATEGORI:</span>
                     <span class="font-mono text-[10.5px] font-bold text-[#1c120c] truncate">{selected.category || "Umum"} • {selected.tag || "Barang"}</span>
                   </div>
-                  <div class="flex items-start border-b border-[#dbe3ec] pb-1.5">
+                  <div class="flex items-start border-b border-[#e2e8f0] pb-1.5">
                     <span class="font-pixel text-[8.5px] text-[#78716c] w-[104px] shrink-0 pt-0.5">PELAPOR:</span>
                     <span class="font-sans text-[11.5px] font-bold text-[#1c120c] truncate">{selected.reporterName || "Anonim"}</span>
                   </div>
-                  <div class="flex items-start border-b border-[#dbe3ec] pb-1.5">
+                  <div class="flex items-start border-b border-[#e2e8f0] pb-1.5">
                     <span class="font-pixel text-[8.5px] text-[#78716c] w-[104px] shrink-0 pt-0.5">NPM:</span>
                     <span class="font-mono text-[11px] font-bold text-[#1c120c]">{selected.reporterNpm || "-"}</span>
                   </div>
                   {#if selected.reporterContact}
-                    <div class="flex items-start border-b border-[#dbe3ec] pb-1.5">
+                    <div class="flex items-start border-b border-[#e2e8f0] pb-1.5">
                       <span class="font-pixel text-[8.5px] text-[#78716c] w-[104px] shrink-0 pt-0.5">KONTAK:</span>
                       <span class="font-mono text-[11px] font-bold text-[#2563eb] truncate">{selected.reporterContact}</span>
                     </div>
@@ -348,7 +348,7 @@
 
                 <!-- Riwayat Klaim List -->
                 {#if selected.claims && selected.claims.length > 0}
-                  <div class="bg-[#f8fafc] border-2 border-[#1c120c] p-2">
+                  <div class="bg-[#f8fafc] border-2 border-[#1c120c] shadow-[3px_3px_0px_#1c120c] p-2">
                     <span class="font-pixel text-[8.5px] text-[#78716c] block mb-1.5">
                       RIWAYAT_KLAIM.TXT ({selected.claims.length})
                     </span>
@@ -368,19 +368,19 @@
                   </div>
                 {/if}
 
-                <!-- Tombol Aksi ala nes-btn -->
-                <div class="mt-auto flex gap-3 pt-1">
+                <!-- Tombol Aksi ala NES.css -->
+                <div class="mt-auto flex gap-2 pt-1">
                   <button
                     type="button"
                     onclick={copyCode}
-                    class="nes-btn-8bit flex-1 font-pixel text-[9.5px] py-2 cursor-pointer font-bold text-[#1c120c] bg-white"
+                    class="nes-btn flex-1 font-pixel text-[9.5px] py-2 cursor-pointer font-bold text-[#1c120c]"
                   >
                     SALIN ID
                   </button>
                   <button
                     type="button"
                     onclick={onClose}
-                    class="nes-btn-8bit flex-1 font-pixel text-[9.5px] py-2 cursor-pointer font-bold text-white bg-[#2563eb]"
+                    class="nes-btn flex-1 font-pixel text-[9.5px] py-2 cursor-pointer font-bold text-white"
                   >
                     TUTUP
                   </button>
@@ -396,11 +396,11 @@
       </div>
 
       <!-- Status Bar Bawah ala Explorer -->
-      <div class="win95-statusbar flex items-center gap-2 px-3 py-2 shrink-0 border-t-2 border-[#1c120c] bg-[#f8fafc]">
-        <span class="font-mono text-[9.5px] text-[#44403c] font-bold flex-1">
-          {totalObjects} object(s) • {photoObjects} dengan foto bukti
+      <div class="win95-statusbar font-pixel text-[8.5px] md:text-[9px] flex items-center gap-2 px-2.5 py-2 shrink-0">
+        <span class="text-[#1c120c] font-bold flex-1">
+          {totalObjects} FILE • {photoObjects} FOTO BUKTI
         </span>
-        <span class="font-mono text-[9.5px] text-[#44403c] font-bold">
+        <span class="text-[#1c120c] font-bold truncate ml-2">
           {selected ? displayCode : "-"} • {folderPath}
         </span>
       </div>
@@ -417,17 +417,17 @@
       tabindex="-1"
       onkeydown={(e) => { if (e.key === "Escape") isImageZoomed = false; }}
     >
-      <div class="nes-box relative max-w-3xl bg-[#f8fafc] p-2.5 flex flex-col items-center">
-        <div class="explorer-titlebar w-full flex items-center justify-between px-2.5 py-1.5 mb-2 shrink-0">
+      <div class="relative max-w-3xl bg-[#f8fafc] p-2.5 border-4 border-[#1c120c] shadow-[8px_8px_0px_#0c0812] flex flex-col items-center">
+        <div class="nes-titlebar w-full flex items-center justify-between px-2.5 py-1.5 mb-2 shrink-0">
           <span class="font-pixel text-[9px] text-white font-bold truncate">{displayCode}_FOTO_BUKTI.BMP</span>
-          <span class="ex-btn flex items-center justify-center text-[8px] leading-none">✕</span>
+          <span class="nes-btn-sm flex items-center justify-center text-[8px] leading-none">✕</span>
         </div>
         <img
           src={selected.evidencePhoto}
           alt="Foto bukti fisik diperbesar"
           class="max-w-full max-h-[70vh] object-contain border-3 border-[#1c120c]"
         />
-        <div class="mt-2 font-mono text-[9.5px] text-[#78716c] font-bold pb-1">
+        <div class="mt-2 font-pixel text-[8.5px] text-[#78716c] font-bold pb-1">
           Klik di mana saja untuk menutup
         </div>
       </div>
@@ -436,29 +436,37 @@
 {/if}
 
 <style>
-  /* Title bar: biru NES flat, tanpa gradient */
-  .explorer-titlebar {
+  /* Jendela utama ala NES.css: flat, square, border tebal, hard shadow */
+  .nes-window {
+    background: #f8fafc;
+    border: 4px solid #1c120c;
+    border-radius: 0;
+    box-shadow: 6px 6px 0px #0c0812;
+  }
+
+  /* Title bar flat biru tanpa gradasi */
+  .nes-titlebar {
     background: #2563eb;
-    border-bottom: 2px solid #1c120c;
+    border-bottom: 4px solid #1c120c;
     cursor: default;
     flex-shrink: 0;
   }
 
-  /* Tombol kotak mini ala nes-btn (title bar) */
-  .ex-btn {
+  /* Tombol kotak kecil ala NES.css */
+  .nes-btn-sm {
     width: 18px;
     height: 15px;
     background: #ffffff;
     border: 2px solid #1c120c;
+    border-radius: 0;
     color: #1c120c;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    box-shadow: 2px 2px 0px #1c120c;
   }
 
-  .ex-btn-close {
+  .nes-btn-close {
     background: #dc2626;
     color: #ffffff;
+    box-shadow: 2px 2px 0px #1c120c;
   }
 
   .win95-menubar {
@@ -466,31 +474,46 @@
     flex-shrink: 0;
   }
 
-  /* Header panel list: abu NES klasik */
-  .ex-panel-header {
+  /* Header panel list: abu flat */
+  .nes-panel-header {
     background: #e2e8f0;
   }
 
-  /* Header preview: biru NES flat */
-  .ex-panel-header-accent {
+  /* Header panel preview: biru flat */
+  .nes-panel-header-accent {
     background: #2563eb;
   }
 
-  /* Search input ala nes-input: border pixel tanpa radius */
-  .nes-input-8bit {
-    border: 4px solid #1c120c;
-    border-image-slice: 2;
-    border-image-width: 2;
-    border-image-repeat: stretch;
-    border-image-source: url("data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8' ?><svg version='1.1' width='5' height='5' xmlns='http://www.w3.org/2000/svg'><path d='M2 1 h1 v1 h-1 z M1 2 h1 v1 h-1 z M3 2 h1 v1 h-1 z M2 3 h1 v1 h-1 z' fill='rgb(28,18,12)' /></svg>");
+  /* Tombol ala NES.css: putih, border tebal, hard shadow, tekan = turun */
+  .nes-btn {
+    background: #ffffff;
+    border: 3px solid #1c120c;
+    border-radius: 0;
+    box-shadow: 4px 4px 0px #1c120c;
+    transition: none;
   }
 
-  .nes-input-8bit:focus {
-    border-image-source: url("data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8' ?><svg version='1.1' width='5' height='5' xmlns='http://www.w3.org/2000/svg'><path d='M2 1 h1 v1 h-1 z M1 2 h1 v1 h-1 z M3 2 h1 v1 h-1 z M2 3 h1 v1 h-1 z' fill='rgb(37,99,235)' /></svg>");
+  .nes-btn:hover {
+    background: #f1f5f9;
   }
 
-  /* Foto frame: pixel border polos tanpa border-image */
-  .border-image-none {
-    border-image: none;
+  .nes-btn:active {
+    box-shadow: none;
+    transform: translate(4px, 4px);
+  }
+
+  /* TUTUP primary: biru */
+  button.nes-btn:where(.text-white) {
+    background: #2563eb;
+  }
+
+  button.nes-btn:where(.text-white):hover {
+    background: #1d4ed8;
+  }
+
+  /* Status bar flat */
+  .win95-statusbar {
+    background: #f8fafc;
+    border-top: 4px solid #1c120c;
   }
 </style>
