@@ -3,7 +3,7 @@
   import { items } from '$lib/stores/items.js';
   import { currentPlayer } from '$lib/stores/player.js';
   import { fade, fly } from 'svelte/transition';
-  import TagIcon from './TagIcon.svelte';
+  import TagIcon from '../shared/TagIcon.svelte';
 
   // Mencari data barang yang sedang ditinjau riwayat klaimnya
   let targetItem = $derived(

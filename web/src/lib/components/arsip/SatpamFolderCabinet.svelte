@@ -1,32 +1,44 @@
 <script lang="ts">
-  import { draggable } from "$lib/actions/draggable.js";
   import { fly } from "svelte/transition";
   import { highlight } from "$lib/stores/highlight.js";
+
+  // Warna aksen lebih tegas & kontras untuk strip pengganti warna hitam di samping tab
+  export const FOLDER_ACCENTS: Record<string, string> = {
+    found: "#16a34a",    // Hijau emerald kontras & tegas
+    lost: "#2563eb",     // Biru royal kontras
+    resolved: "#9333ea", // Ungu vibran
+    gadget: "#0891b2",   // Cyan / Deep aqua
+    pakaian: "#db2777",  // Pink / Deep rose
+    personal: "#ea580c", // Orange tegas
+    dokumen: "#dc2626",  // Merah kontras
+  };
 
   let {
     folderId,
     label,
     kind,
     count,
-    position,
+    accentColor,
     onOpen,
-    onDragEnd,
   }: {
     folderId: string;
     label: string;
-    kind: "found" | "lost" | "resolved";
+    kind?: string;
     count: number;
-    position: { x: number; y: number };
+    accentColor?: string;
     onOpen: () => void;
-    onDragEnd: (x: number, y: number) => void;
   } = $props();
+
+  const stripColor = $derived(
+    accentColor || FOLDER_ACCENTS[kind || "found"] || FOLDER_ACCENTS.found,
+  );
 
   let isSelected = $state(false);
   let isPressed = $state(false);
 
   // Icon folder bersinar bila memuat item yang di-highlight Satpam AI
   const hasHighlight = $derived(
-    !!$highlight && $highlight.itemIds.length > 0 && count > 0
+    !!$highlight && $highlight.itemIds.length > 0 && count > 0,
   );
 
   // Klik = animasi tekan dulu, lalu modal terbuka (feedback ala game)
@@ -44,12 +56,12 @@
 <div
   id={folderId}
   class="desktop-icon {hasHighlight ? 'icon-glow' : ''}"
-  style="left: {position.x}px; top: {position.y}px;"
-  use:draggable={{ itemId: folderId, containerId: "board-container", onDragEnd }}
-  transition:fly={{ y: -30, duration: 400 }}
+  transition:fly={{ y: -20, duration: 350 }}
   role="button"
   tabindex="0"
-  onkeydown={(e) => { if (e.key === "Enter") onOpen(); }}
+  onkeydown={(e) => {
+    if (e.key === "Enter") onOpen();
+  }}
   aria-label="Folder {label}"
 >
   <!-- Area ikon folder: klik = buka folder (contextmenu = seleksi ala desktop) -->
@@ -57,10 +69,13 @@
     type="button"
     class="icon-click {isPressed ? 'icon-pressed' : ''}"
     onclick={handleClick}
-    oncontextmenu={(e) => { e.preventDefault(); isSelected = true; }}
+    oncontextmenu={(e) => {
+      e.preventDefault();
+      isSelected = true;
+    }}
     title="{label} ({count} file)"
   >
-    <!-- SVG Folder Icon Win95 Asli (pixel-perfect, outline hitam, kuning bevel) -->
+    <!-- SVG Folder Icon Win95: Bodi Kuning Asli + Strip Aksen Warna Pengganti Hitam -->
     <svg
       width="132"
       height="107"
@@ -71,16 +86,17 @@
     >
       <!-- Outline hitam dasar folder -->
       <rect x="1" y="3" width="30" height="22" fill="#000000" />
-      <!-- Tab folder (kiri atas) -->
       <rect x="1" y="1" width="14" height="4" fill="#000000" />
+
+      <!-- Strip warna per folder (menggantikan area hitam kosong di samping tab) -->
+      <rect x="14" y="4" width="16" height="3" fill={stripColor} />
 
       <!-- Bevel terang atas folder -->
       <rect x="2" y="6" width="28" height="2" fill="#ffe9a8" />
       <rect x="2" y="4" width="12" height="2" fill="#ffe9a8" />
-      <!-- Sisi kiri terang -->
       <rect x="2" y="6" width="1" height="18" fill="#ffe9a8" />
 
-      <!-- Body kuning utama folder -->
+      <!-- Body kuning utama folder (warna dasar tetap kuning retro) -->
       <rect x="3" y="8" width="27" height="16" fill="#ffce4b" />
       <rect x="2" y="6" width="28" height="2" fill="#ffd985" />
 
@@ -107,16 +123,12 @@
 
 <style>
   .desktop-icon {
-    position: absolute;
-    width: 150px;
+    position: relative;
+    width: 144px;
     user-select: none;
-    cursor: grab;
+    cursor: pointer;
     z-index: 10;
-    /* Smooth motion ala main board: posisi & hover transform bertransisi halus */
-    transition:
-      left 0.3s cubic-bezier(0.2, 0, 0, 1),
-      top 0.3s cubic-bezier(0.2, 0, 0, 1),
-      transform 0.2s ease;
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
   }
 
   .desktop-icon:hover {
@@ -124,13 +136,7 @@
   }
 
   .desktop-icon:active {
-    cursor: grabbing;
-    z-index: 100;
-  }
-
-  /* Saat sedang didrag, matikan transition left/top agar mengikuti pointer instan */
-  .desktop-icon:global(.is-dragging) {
-    transition: transform 0.2s ease;
+    transform: scale(0.96);
   }
 
   .icon-click {

@@ -102,72 +102,6 @@ body {
   cursor: not-allowed;
 }
 
-/* === NES.css Authentic Utils (pixel border-image technique) === */
-/* Replikasi teknik border-image SVG pixel-corner dari NES.css v2.3.0 dengan
-   warna project #1c120c. Tanpa install dependency (bundle NES.css 288KB).    */
-
-/* Kontainer: border pixel-art 4px dengan sudut tangga (ala .nes-container.is-rounded) */
-.nes-box {
-  border-style: solid;
-  border-width: 4px;
-  border-image-slice: 3;
-  border-image-width: 3;
-  border-image-repeat: stretch;
-  border-image-outset: 2px;
-  border-image-source: url("data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8' ?><svg version='1.1' width='8' height='8' xmlns='http://www.w3.org/2000/svg'><path d='M3 1 h1 v1 h-1 z M4 1 h1 v1 h-1 z M2 2 h1 v1 h-1 z M5 2 h1 v1 h-1 z M1 3 h1 v1 h-1 z M6 3 h1 v1 h-1 z M1 4 h1 v1 h-1 z M6 4 h1 v1 h-1 z M2 5 h1 v1 h-1 z M5 5 h1 v1 h-1 z M3 6 h1 v1 h-1 z M4 6 h1 v1 h-1 z' fill='rgb(28,18,12)' /></svg>");
-}
-
-/* Tombol: border pixel 2px (ala .nes-btn) + inset shade hover/active NES way.
-   Catatan: border-image-outset butuh margin untuk tidak menabrak layout.      */
-.nes-btn-8bit {
-  position: relative;
-  border-style: solid;
-  border-width: 4px;
-  border-image-slice: 2;
-  border-image-width: 2;
-  border-image-repeat: stretch;
-  border-image-outset: 2px;
-  border-image-source: url("data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8' ?><svg version='1.1' width='5' height='5' xmlns='http://www.w3.org/2000/svg'><path d='M2 1 h1 v1 h-1 z M1 2 h1 v1 h-1 z M3 2 h1 v1 h-1 z M2 3 h1 v1 h-1 z' fill='rgb(28,18,12)' /></svg>");
-}
-
-.nes-btn-8bit::after {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  bottom: -4px;
-  left: -4px;
-  content: '';
-  pointer-events: none;
-  box-shadow: inset -4px -4px #dbe3ec;
-}
-
-.nes-btn-8bit:hover:not(:disabled)::after {
-  box-shadow: inset -6px -6px #dbe3ec;
-}
-
-.nes-btn-8bit:active:not(:disabled)::after {
-  box-shadow: inset 4px 4px #dbe3ec;
-}
-
-.nes-btn-8bit:focus-visible {
-  outline: 0;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.35);
-}
-
-/* === NES Pixel Cursors (Main Board + Satpam Board) === */
-/* Panah default ala NES untuk seluruh area board; hand pointer ala NES.css
-   (.nes-pointer, hotspot 14 0) untuk elemen interaktif.                       */
-
-.board-container {
-  cursor: url("data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8' ?><svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' shape-rendering='crispEdges'><path d='M2 1h1v1H2zM3 2h1v1H3zM4 3h1v1H4zM5 4h1v1H5zM6 5h1v1H6zM7 6h1v1H7zM8 7h1v1H8zM9 8h1v1H9zM10 9h1v1h-1zM11 10h1v1h-1zM12 11h1v1h-1zM4 4h1v1H4zM5 5h1v1H5zM6 6h1v1H6zM7 7h1v1H7zM8 8h1v1H8zM9 9h1v1H9zM10 10h1v1h-1zM11 11h1v1h-1zM3 3h1v1H3zM2 2h1v1H2zM3 4h1v1H3zM2 3h1v1H2zM4 5h1v1H4zM3 5h1v1H3zM2 4h1v1H2zM5 6h1v1H5zM4 6h1v1H4zM3 6h1v1H3zM2 5h1v1H2zM6 7h1v1H6zM5 7h1v1H5zM4 7h1v1H4zM3 7h1v1H3zM2 6h1v1H2zM7 8h1v1H7zM6 8h1v1H6zM4 8h1v1H4zM3 8h1v1H3zM2 7h1v1H2zM8 9h1v1H8zM7 9h1v1H7zM5 9h1v1H5zM4 9h1v1H4zM2 8h1v1H2zM9 10h1v1H9zM8 10h1v1H8zM6 10h1v1H6zM5 10h1v1H5zM4 10h1v1H4zM2 9h1v1H2zM10 11h1v1h-1zM9 11h1v1h-1zM7 11h1v1H7zM6 11h1v1H6zM5 11h1v1H5zM4 11h1v1H4zM11 12h1v1h-1zM10 12h1v1h-1zM8 12h1v1H8zM7 12h1v1H7zM6 12h1v1H6zM12 13h1v1h-1zM11 13h1v1h-1zM9 13h1v1H9zM8 13h1v1H8zM7 13h1v1H7zM6 13h1v1H6zM13 14h1v1h-1zM12 14h1v1h-1zM11 14h1v1h-1zM10 14h1v1h-1zM9 14h1v1H9zM8 14h1v1H8zM7 14h1v1H7zM6 14h1v1H6zM5 14h1v1H5z' fill='%23ffffff' stroke='%231c120c' stroke-width='0.55'/></svg>") 2 2, default;
-}
-
-.board-container button:not(:disabled),
-.board-container a,
-.board-container [role='button'] {
-  cursor: url("data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8' ?><svg xmlns='http://www.w3.org/2000/svg' width='28' height='24' shape-rendering='crispEdges'><path d='M10 1h6v1H10zM8 2h2v1H8zM14 2h2v1h-2zM7 3h1v1H7zM16 3h2v1h-2zM6 4h1v1H6zM18 4h2v1h-2zM5 5h1v1H5zM20 5h2v1h-2zM4 6h1v1H4zM21 6h2v1h-2zM4 7h1v1H4zM22 7h2v1h-2zM3 8h1v1H3zM22 8h2v1h-2zM3 9h1v1H3zM22 9h2v1h-2zM3 10h1v1H3zM21 10h2v1h-2zM3 11h1v1H3zM20 11h2v1h-2zM4 12h1v1H4zM18 12h2v1h-2zM4 13h1v1H4zM16 13h2v1h-2zM5 14h1v1H5zM14 14h2v1h-2zM8 16h2v1H8zM6 17h2v1H6zM16 17h2v1h-2zM5 18h1v1H5zM18 18h2v1h-2zM5 19h1v1H5zM4 20h1v1H4zM20 20h1v1h-1zM4 21h1v1H4zM19 21h1v1h-1zM4 22h1v1H4zM4 23h1v1H4z' fill='%23ffffff' stroke='%231c120c' stroke-width='0.55'/></svg>") 8 2, pointer;
-}
-
 /* === Board Container (Modern 8-Bit Nintendo Bulletin Board) === */
 
 .board-container {
@@ -232,6 +166,59 @@ body {
   border: 2px solid;
   border-color: #ffffff #808080 #808080 #ffffff;
   border-radius: 0;
+}
+
+/* === Satpam Win95 Desktop Folders Grid (Always Centered by Default) === */
+
+.cards-area.satpam-cards-area {
+  padding-top: 55px;
+  padding-bottom: 95px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.satpam-folders-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  width: 100%;
+  margin: auto;
+  padding: 0 16px;
+}
+
+.satpam-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.satpam-row.status-row {
+  gap: 48px;
+}
+
+.satpam-row.category-row {
+  gap: 28px;
+}
+
+@media (max-width: 768px) {
+  .cards-area.satpam-cards-area {
+    justify-content: flex-start;
+  }
+  .satpam-row.status-row {
+    gap: 20px;
+  }
+  .satpam-row.category-row {
+    gap: 16px;
+  }
+  .satpam-folders-wrapper {
+    gap: 16px;
+  }
 }
 
 /* === Item Cards (Pinned Parchment Notes) === */

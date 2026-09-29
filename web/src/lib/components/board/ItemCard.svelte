@@ -3,7 +3,7 @@
   import { highlight, isItemHighlighted } from "$lib/stores/highlight.js";
   import { draggable } from "$lib/actions/draggable.js";
   import { fly } from "svelte/transition";
-  import TagIcon from "./TagIcon.svelte";
+  import TagIcon from "../shared/TagIcon.svelte";
   import { formatShortCode } from "$lib/utils/shortCode.js";
 
   let {

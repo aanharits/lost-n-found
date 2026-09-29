@@ -1,101 +1,20 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { currentScene } from "$lib/stores/ui.js";
+  import { goto } from "$app/navigation";
   import { currentPlayer } from "$lib/stores/player.js";
-  import { initSocket } from "$lib/socket.js";
-  import Lobby from "$lib/components/Lobby.svelte";
-  import Board from "$lib/components/Board.svelte";
-  import ToastContainer from "$lib/components/ToastContainer.svelte";
-  import { fade } from "svelte/transition";
 
-  // Inisialisasi socket dan penanganan status login user
   onMount(() => {
-    const socket = initSocket();
-
-    // Deteksi akun demo melalui query parameter URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlUser = urlParams.get("user");
-
-    if (urlUser === "budi" || urlUser === "1") {
-      currentPlayer.set({
-        name: "Budi Santoso",
-        npm: "21081010001",
-        contact: "6281234567891",
-        gender: "male",
-        role: "student",
-      });
-    } else if (urlUser === "siti" || urlUser === "2") {
-      currentPlayer.set({
-        name: "Siti Rahma",
-        npm: "21081020045",
-        contact: "6281234567892",
-        gender: "female",
-        role: "student",
-      });
-    } else if (urlUser === "satpam" || urlUser === "security") {
-      currentPlayer.set({
-        name: "Komandan Satpam",
-        npm: "SATPAM-KOMANDAN",
-        contact: "Pos Keamanan Induk",
-        gender: "male",
-        avatarSeed: "OfficerBambang",
-        role: "satpam",
-        accessKey: "satpamganteng",
-      });
+    // Arahkan ke endpoint yang sesuai status login pemain
+    if (!$currentPlayer) {
+      goto("/lobby", { replaceState: true });
+    } else if ($currentPlayer.role === "satpam") {
+      goto("/arsip", { replaceState: true });
+    } else {
+      goto("/board", { replaceState: true });
     }
-
-    // Sinkronisasi data user saat socket berhasil terhubung kembali
-    const onConnect = () => {
-      let p: any = null;
-      const unsubTemp = currentPlayer.subscribe((val) => {
-        p = val;
-      });
-      unsubTemp();
-      if (p && socket?.connected) {
-        socket.emit("user_join", p);
-        if (p.role === "satpam") {
-          socket.emit("satpam_join", { accessKey: p.accessKey || "satpamganteng" });
-        }
-      }
-    };
-
-    socket?.on("connect", onConnect);
-
-    // Beralih ke board jika user telah login atau ke lobby jika belum
-    const unsub = currentPlayer.subscribe((player) => {
-      if (player) {
-        currentScene.set("board");
-        if (socket?.connected) {
-          socket.emit("user_join", player);
-          if (player.role === "satpam") {
-            socket.emit("satpam_join", { accessKey: player.accessKey || "satpamganteng" });
-          }
-        }
-      } else {
-        currentScene.set("lobby");
-      }
-    });
-
-    return () => {
-      socket?.off("connect", onConnect);
-      unsub();
-    };
   });
 </script>
 
-<div class="h-screen w-screen flex flex-col items-center justify-center p-4">
-  <ToastContainer />
-
-  {#if $currentScene === "lobby"}
-    <div transition:fade={{ duration: 300 }}>
-      <Lobby />
-    </div>
-  {:else}
-    <div
-      transition:fade={{ duration: 300 }}
-      class="w-full h-full flex items-center justify-center"
-    >
-      <Board />
-    </div>
-  {/if}
+<div class="font-pixel text-xs text-white select-none animate-pulse">
+  MEMUAT SISTEM LOST &amp; FOUND...
 </div>

@@ -3,7 +3,7 @@
   import { items } from '$lib/stores/items.js';
   import { currentPlayer } from '$lib/stores/player.js';
   import { getSocket } from '$lib/socket.js';
-  import TagIcon from './TagIcon.svelte';
+  import TagIcon from '../shared/TagIcon.svelte';
   import { fade, fly } from 'svelte/transition';
 
   let claimText = $state('');
