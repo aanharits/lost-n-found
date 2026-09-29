@@ -6,6 +6,13 @@ import { handleClaimSubmit } from '../handlers/claim.handler.js';
 import { handleItemMove, handleItemsOrganize, handleResetDemo } from '../handlers/board.handler.js';
 import { handleItemDelete } from '../handlers/item.handler.js';
 import { handleChatMessage } from '../handlers/chat.handler.js';
+import {
+  handleArchiveRequestSubmit,
+  handleArchiveRequestApprove,
+  handleArchiveRequestReject,
+  handleArchiveRequestsGet,
+  handleArchiveRequestsMine,
+} from '../handlers/archive.handler.js';
 
 // Wiring event Socket.IO ke handler domain masing-masing
 export function setupSocketHandlers(io: SocketIOServer): void {
@@ -41,7 +48,7 @@ export function setupSocketHandlers(io: SocketIOServer): void {
 
       socket.on('satpam_get_items', async (data: { accessKey?: string }) => {
         const key = data?.accessKey?.trim();
-        if (key === SATPAM_SECRET_KEY) {
+        if (SATPAM_SECRET_KEY && key === SATPAM_SECRET_KEY) {
           try {
             const allItems = await dbGetItems();
             const satpamItems = allItems.map(({ reporterToken: _, ...rest }) => rest);
@@ -79,6 +86,13 @@ export function setupSocketHandlers(io: SocketIOServer): void {
 
     // Event percakapan dengan Satpam AI
     socket.on('chat_message', (data) => handleChatMessage(socket, data));
+
+    // Event archive request (Inbox Satpam dari Global Board)
+    socket.on('archive_request_submit', (data) => handleArchiveRequestSubmit(io, socket, data));
+    socket.on('archive_request_approve', (data) => handleArchiveRequestApprove(io, socket, data));
+    socket.on('archive_request_reject', (data) => handleArchiveRequestReject(io, socket, data));
+    socket.on('archive_requests_get', (data) => handleArchiveRequestsGet(socket, data));
+    socket.on('archive_requests_mine', (data) => handleArchiveRequestsMine(socket, data));
 
     // Broadcast jumlah user aktif ke semua client
     io.emit('users_count', getConnectedUsersCount());

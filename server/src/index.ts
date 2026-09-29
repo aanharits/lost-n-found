@@ -8,6 +8,8 @@ import { Server as SocketIOServer } from 'socket.io';
 import os from 'os';
 import { setupSocketHandlers } from './socket/handlers.js';
 import { rehydrateDisputes } from './zk/disputeTimer.js';
+import { startExpireJob } from './zk/expireItems.js';
+import { startArchiveCleanupJob } from './jobs/archiveCleanup.js';
 import api from './routes/api.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -97,6 +99,20 @@ try {
   });
 } catch (err) {
   console.error('[Server] Gagal inisialisasi dispute rehydration (degraded mode):', err);
+}
+
+// Jalankan periodic job untuk auto-expire item open > 7 hari
+try {
+  startExpireJob(io);
+} catch (err) {
+  console.error('[Server] Gagal memulai expire job (degraded mode):', err);
+}
+
+// Jalankan periodic job untuk membersihkan archive request yang sudah diproses (retensi 24 jam)
+try {
+  startArchiveCleanupJob();
+} catch (err) {
+  console.error('[Server] Gagal memulai archive cleanup job (degraded mode):', err);
 }
 
 // Tutup server secara bersih saat menerima sinyal terminasi

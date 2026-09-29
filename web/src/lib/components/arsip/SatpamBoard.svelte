@@ -10,12 +10,14 @@
   import SatpamFolderModal from "./SatpamFolderModal.svelte";
   import SatpamMutasiModal from "./SatpamMutasiModal.svelte";
   import SatpamChat from "../shared/SatpamChat.svelte";
+  import SatpamArchiveInbox from "./SatpamArchiveInbox.svelte";
   import { PUBLIC_SATPAM_KEY } from "$env/static/public";
 
   type FolderKey =
     | "found"
     | "lost"
     | "resolved"
+    | "expired"
     | "gadget"
     | "pakaian"
     | "personal"
@@ -25,6 +27,7 @@
     "found",
     "lost",
     "resolved",
+    "expired",
     "gadget",
     "pakaian",
     "personal",
@@ -38,6 +41,10 @@
       label: "BARANG SELESAI",
       path: "C:\\ARSIP_SATPAM\\BARANG_SELESAI",
     },
+    expired: {
+      label: "ARSIP EXPIRED",
+      path: "C:\\ARSIP_SATPAM\\EXPIRED",
+    },
     gadget: { label: "GADGET", path: "C:\\ARSIP_SATPAM\\KATEGORI_GADGET" },
     pakaian: { label: "PAKAIAN", path: "C:\\ARSIP_SATPAM\\KATEGORI_PAKAIAN" },
     personal: {
@@ -49,11 +56,12 @@
 
   // Kelompok folder per status & kategori
   const satpamFolders = $derived.by(() => {
-    const active = $items.filter((i) => i.status !== "resolved");
+    const active = $items.filter((i) => i.status !== "resolved" && i.status !== "expired");
     return {
       found: active.filter((i) => i.type === "found"),
       lost: active.filter((i) => i.type === "lost"),
       resolved: $items.filter((i) => i.status === "resolved"),
+      expired: $items.filter((i) => i.status === "expired"),
       gadget: $items.filter((i) =>
         (i.category || "").toLowerCase().includes("gadget"),
       ),
@@ -81,6 +89,9 @@
   const statsFound = $derived(satpamFolders.found.length);
   const statsLost = $derived(satpamFolders.lost.length);
   const statsResolved = $derived(satpamFolders.resolved.length);
+  const statsExpired = $derived(satpamFolders.expired.length);
+
+  let isInboxOpen = $state(false);
 
   // Derived hasil pencarian berkas global
   const searchResults = $derived.by(() => {
@@ -117,7 +128,9 @@
   // Buka langsung item dari hasil pencarian atau buku mutasi
   function openItemDetail(item: Item) {
     let targetFolder: FolderKey = "found";
-    if (item.status === "resolved") {
+    if (item.status === "expired") {
+      targetFolder = "expired";
+    } else if (item.status === "resolved") {
       targetFolder = "resolved";
     } else if (item.type === "lost") {
       targetFolder = "lost";
@@ -133,12 +146,27 @@
 
   onMount(() => {
     const socket = getSocket();
+    if (!socket) return;
+
     const defaultKey = (PUBLIC_SATPAM_KEY || import.meta.env.PUBLIC_SATPAM_KEY || "").trim();
-    if (socket?.connected && $currentPlayer?.role === "satpam") {
-      socket.emit("satpam_join", {
-        accessKey: $currentPlayer.accessKey || defaultKey,
-      });
+
+    // Pastikan satpam tetap masuk room walau socket belum connect saat mount
+    const joinSatpam = () => {
+      if ($currentPlayer?.role === "satpam") {
+        socket.emit("satpam_join", {
+          accessKey: $currentPlayer.accessKey || defaultKey,
+        });
+      }
+    };
+
+    if (socket.connected) {
+      joinSatpam();
     }
+    socket.on("connect", joinSatpam);
+
+    return () => {
+      socket.off("connect", joinSatpam);
+    };
   });
 
   function onWindowClick(e: MouseEvent) {
@@ -186,7 +214,7 @@
       id="board-container"
       class="board-container board-win95 w-full flex-grow overflow-hidden relative cursor-default shadow-[8px_8px_0px_rgba(0,0,0,0.5)]"
     >
-      <!-- Tombol Kiri Atas: BUKU MUTASI (NES 8-Bit Minimalist) -->
+      <!-- Tombol Kiri Atas: BUKU MUTASI + INBOX ARSIP -->
       <div class="absolute top-3.5 left-3.5 z-20 flex items-center gap-2">
         <button
           type="button"
@@ -200,9 +228,19 @@
           >
           <span>BUKU MUTASI</span>
         </button>
+
+        <!-- Tombol Inbox Arsip -->
+        <button
+          type="button"
+          onclick={() => (isInboxOpen = !isInboxOpen)}
+          class="relative bg-[#9333ea] hover:bg-[#7e22ce] active:translate-y-0.5 text-white font-pixel text-[8px] py-1.5 px-3 border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] active:shadow-none cursor-pointer transition-all select-none font-bold tracking-wider flex items-center gap-1.5"
+          title="Inbox Request dari Mahasiswa"
+        >
+          <span>📬 INBOX</span>
+        </button>
       </div>
 
-      <!-- Panel Tengah Atas: Mini KPI Metrics Center (KETEMU | HILANG | SELESAI) -->
+      <!-- Panel Tengah Atas: Mini KPI Metrics Center -->
       <div
         class="absolute top-3.5 left-1/2 -translate-x-1/2 z-20 pointer-events-none hidden sm:flex items-center"
       >
@@ -213,9 +251,9 @@
           <span class="text-stone-300">|</span>
           <span>HILANG: <span class="text-[#dc2626]">{statsLost}</span></span>
           <span class="text-stone-300">|</span>
-          <span
-            >SELESAI: <span class="text-[#2563eb]">{statsResolved}</span></span
-          >
+          <span>SELESAI: <span class="text-[#2563eb]">{statsResolved}</span></span>
+          <span class="text-stone-300">|</span>
+          <span>ARSIP: <span class="text-[#9333ea]">{statsExpired}</span></span>
         </div>
       </div>
 
@@ -336,9 +374,9 @@
       <!-- Area render 7 folder Win95 Desktop -->
       <div id="cards-area" class="cards-area win95-scrollbar satpam-cards-area">
         <div class="satpam-folders-wrapper">
-          <!-- Baris 1: 3 Folder Status -->
+          <!-- Baris 1: 4 Folder Status (termasuk EXPIRED) -->
           <div class="satpam-row status-row">
-            {#each ["found", "lost", "resolved"] as const as kind (kind)}
+            {#each ["found", "lost", "resolved", "expired"] as const as kind (kind)}
               <SatpamFolderIcon
                 folderId={`folder_${kind}`}
                 label={FOLDER_META[kind].label}
@@ -371,6 +409,29 @@
     </div>
   </div>
 </div>
+
+<!-- Slide-in Inbox Panel Arsip -->
+{#if isInboxOpen}
+  <div
+    class="fixed inset-y-0 left-0 w-[380px] max-w-[90vw] z-50 flex flex-col overflow-hidden shadow-[4px_0_16px_rgba(0,0,0,0.4)] border-r-4 border-[#1c120c] bg-white"
+    transition:fly={{ x: -380, duration: 250 }}
+  >
+    <SatpamArchiveInbox
+      onActivateItem={(item) => {
+        // Buka detail barang tanpa menutup inbox, agar Satpam bisa balik
+        // dan langsung klik PUBLISH setelah memeriksa barang.
+        openItemDetail(item);
+      }}
+    />
+    <button
+      type="button"
+      onclick={() => (isInboxOpen = false)}
+      class="shrink-0 w-full font-pixel text-[8px] py-2 bg-[#1c120c] text-white hover:bg-[#2d2d2d] cursor-pointer border-t-2 border-[#1c120c]"
+    >
+      ✕ TUTUP INBOX
+    </button>
+  </div>
+{/if}
 
 <!-- Modal Layer 2: Explorer isi folder satpam (list file + preview bukti asli) -->
 {#if openFolder}

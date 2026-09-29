@@ -1,6 +1,6 @@
 import { io, type Socket } from 'socket.io-client';
 import { browser } from '$app/environment';
-import { items, type Item } from './stores/items.js';
+import { items, archiveRequests, myArchiveRequests, type Item, type ArchiveRequest } from './stores/items.js';
 import { socketConnected, onlineCount } from './stores/ui.js';
 
 const SERVER_URL = browser
@@ -179,6 +179,69 @@ export function initSocket(): Socket {
   // Hapus kartu dari board ketika pemilik menghapus laporan
   socket.on('item_deleted', ({ id }: { id: string }) => {
     items.update((current) => current.filter((i) => i.id !== id));
+  });
+
+  // Sembunyikan item dari board ketika auto-expired (> 7 hari tanpa klaim)
+  socket.on('items_expired', ({ itemIds }: { itemIds: string[] }) => {
+    if (!Array.isArray(itemIds)) return;
+    items.update((current) =>
+      current.map((item) =>
+        itemIds.includes(item.id) ? { ...item, status: 'expired' as const } : item
+      )
+    );
+  });
+
+  // Tampilkan kembali item yang diaktifkan Satpam dari arsip (status: 'archived')
+  socket.on('item_archived_republished', ({ item: republished }: { item: Item }) => {
+    items.update((current) => {
+      const exists = current.some((i) => i.id === republished.id);
+      if (exists) {
+        return current.map((i) => (i.id === republished.id ? { ...i, ...republished } : i));
+      }
+      return [...current, republished];
+    });
+    showToast(`Barang "${republished.title}" diaktifkan kembali dari Arsip Satpam — Silakan klaim jika itu milikmu!`, 'success');
+  });
+
+  // Konfirmasi archive request terkirim
+  socket.on('archive_request_sent', (data: { message: string; requestId: string }) => {
+    showToast(data.message, 'success');
+  });
+
+  // Satpam: terima inbox request baru (murni data permintaan, tanpa AI matching)
+  socket.on('archive_request_inbox', (data: { request: ArchiveRequest }) => {
+    archiveRequests.update((current) => {
+      const exists = current.some((r) => r.id === data.request.id);
+      if (exists) return current;
+      return [data.request, ...current];
+    });
+  });
+
+  // Satpam: list semua requests
+  socket.on('archive_requests_list', (data: { requests: ArchiveRequest[] }) => {
+    if (Array.isArray(data.requests)) {
+      archiveRequests.set(data.requests);
+    }
+  });
+
+  // User: hasil pengecekan status request berdasarkan NPM / WA
+  socket.on('archive_requests_mine_result', (data: { requests: ArchiveRequest[] }) => {
+    myArchiveRequests.set(Array.isArray(data.requests) ? data.requests : []);
+  });
+
+  // Error pada alur archive request (mis. access key salah / data tidak lengkap)
+  socket.on('archive_request_error', (data: { message?: string }) => {
+    showToast(data?.message || 'Permintaan arsip gagal diproses.', 'danger');
+  });
+
+  // Satpam berhasil mengaktifkan item dari arsip
+  socket.on('archive_request_approved', (data: { message?: string }) => {
+    showToast(data?.message || 'Item berhasil diaktifkan kembali.', 'success');
+  });
+
+  // Satpam menolak request arsip
+  socket.on('archive_request_rejected', () => {
+    showToast('Request arsip ditolak.', 'info');
   });
 
   return socket;

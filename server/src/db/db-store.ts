@@ -1,6 +1,13 @@
-import { eq, asc, isNull } from 'drizzle-orm';
+import { eq, asc, isNull, and, ne, isNotNull, lt } from 'drizzle-orm';
 import { db } from './index.js';
-import { itemsTable, claimsTable, type ItemRecord, type ClaimRecord } from './schema.js';
+import {
+  itemsTable,
+  claimsTable,
+  archiveRequestsTable,
+  type ItemRecord,
+  type ClaimRecord,
+  type ArchiveRequestRecord,
+} from './schema.js';
 import { generateShortCode } from '../utils/shortCode.js';
 
 // ─── Type exports yang kompatibel dengan interface lama di store.ts ───────────
@@ -17,7 +24,7 @@ export interface Item {
   desc: string;           // alias 'description' untuk kompatibilitas frontend
   commitments: string[];
   claims: Claim[];
-  status: 'open' | 'disputed' | 'resolved';
+  status: 'open' | 'disputed' | 'resolved' | 'expired' | 'archived';
   date: string;
   time: string;
   evidencePhoto?: string; // Data URL foto bukti asli (hanya untuk Satpam)
@@ -62,7 +69,7 @@ function rowToItem(row: ItemRecord, claims: ClaimRecord[]): Item {
     desc: row.description,
     commitments: (row.commitments as string[]) ?? [],
     claims: claims.map(rowToClaim),
-    status: (row.status ?? 'open') as 'open' | 'disputed' | 'resolved',
+    status: (row.status ?? 'open') as 'open' | 'disputed' | 'resolved' | 'expired' | 'archived',
     date: row.date ?? '',
     time: row.time ?? '',
     evidencePhoto: row.evidencePhoto ?? '',
@@ -166,11 +173,62 @@ export async function dbBackfillShortCodes(): Promise<number> {
   return updatedCount;
 }
 
-/** Update status dan koordinat item */
-export async function dbUpdateItemStatus(id: string, status: 'open' | 'disputed' | 'resolved'): Promise<void> {
+/** Update status item */
+export async function dbUpdateItemStatus(id: string, status: 'open' | 'disputed' | 'resolved' | 'expired' | 'archived'): Promise<void> {
   await db.update(itemsTable)
     .set({ status, updatedAt: new Date() })
     .where(eq(itemsTable.id, id));
+}
+
+/**
+ * Publish ulang item dari arsip expired ke board publik (status → 'archived').
+ * Menandai republishedAt sebagai titik awal jendela expire 7 hari yang baru.
+ */
+export async function dbRepublishItem(id: string): Promise<void> {
+  const now = new Date();
+  await db.update(itemsTable)
+    .set({ status: 'archived', updatedAt: now, republishedAt: now })
+    .where(eq(itemsTable.id, id));
+}
+
+/**
+ * Expire item yang sudah lebih dari X hari.
+ * - Item 'open'  : dihitung dari createdAt (sejak dilaporkan).
+ * - Item 'archived': dihitung dari updatedAt (sejak dipublish ulang ke board),
+ *   sehingga item yang baru diaktifkan Satpam diberi jendela 7 hari baru.
+ * Item yang sudah 'expired'/'resolved'/'disputed' tidak disentuh.
+ */
+export async function dbExpireOldItems(olderThanDays: number): Promise<string[]> {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - olderThanDays);
+  const rows = await db.select().from(itemsTable);
+  const toExpire = rows.filter((r) => {
+    if (r.status !== 'open' && r.status !== 'archived') return false;
+    // Item archived dipatok dari waktu publish ulang (republishedAt), bukan createdAt lama
+    const ref = r.status === 'archived' ? (r.republishedAt ?? r.updatedAt) : r.createdAt;
+    return ref != null && ref < cutoff;
+  });
+  if (toExpire.length === 0) return [];
+  await Promise.all(
+    toExpire.map((r) =>
+      db.update(itemsTable)
+        .set({ status: 'expired', updatedAt: new Date() })
+        .where(eq(itemsTable.id, r.id))
+    )
+  );
+  return toExpire.map((r) => r.id);
+}
+
+/** Ambil semua item expired (untuk Satpam arsip) */
+export async function dbGetExpiredItems(): Promise<Item[]> {
+  const [rows, claimRows] = await Promise.all([
+    db.select().from(itemsTable).where(eq(itemsTable.status, 'expired')).orderBy(asc(itemsTable.createdAt)),
+    db.select().from(claimsTable).orderBy(asc(claimsTable.createdAt)),
+  ]);
+  return rows.map((row) => {
+    const claims = claimRows.filter((c) => c.itemId === row.id);
+    return rowToItem(row, claims);
+  });
 }
 
 /** Update posisi kartu di board */
@@ -233,4 +291,122 @@ export async function dbGetClaimsByItemId(itemId: string): Promise<Claim[]> {
     .where(eq(claimsTable.itemId, itemId))
     .orderBy(asc(claimsTable.createdAt));
   return rows.map(rowToClaim);
+}
+
+// ─── Archive Requests (Inbox Satpam dari Global Board) ────────────────────────
+
+export interface ArchiveRequest {
+  id: string;
+  senderName: string;
+  senderNpm: string;
+  senderContact: string;     // WA pengirim
+  itemTitle: string;         // Nama barang yang dicari
+  itemCategory?: string;     // Kategori barang
+  dateFrom?: string;         // Kira-kira kapan hilang (mulai)
+  dateTo?: string;           // Kira-kira kapan hilang (akhir)
+  locationHint?: string;     // Lokasi hilang
+  description: string;       // Deskripsi singkat (bukan ciri rahasia)
+  status: 'pending' | 'approved' | 'rejected'; // Pending = belum diproses satpam
+  matchedItemId?: string;    // Item expired yang di-publish manual oleh satpam
+  rejectMessage?: string;    // Pesan penolakan dari satpam untuk pengirim
+  createdAt: string;
+}
+
+// Konversi record DB → bentuk ArchiveRequest yang ramah frontend
+function rowToArchiveRequest(row: ArchiveRequestRecord): ArchiveRequest {
+  return {
+    id: row.id,
+    senderName: row.senderName,
+    senderNpm: row.senderNpm ?? '',
+    senderContact: row.senderContact,
+    itemTitle: row.itemTitle,
+    itemCategory: row.itemCategory ?? '',
+    dateFrom: row.dateFrom ?? '',
+    dateTo: row.dateTo ?? '',
+    locationHint: row.locationHint ?? '',
+    description: row.description,
+    status: (row.status ?? 'pending') as ArchiveRequest['status'],
+    matchedItemId: row.matchedItemId ?? undefined,
+    rejectMessage: row.rejectMessage ?? '',
+    createdAt: (row.createdAt ?? new Date()).toISOString(),
+  };
+}
+
+export async function dbInsertArchiveRequest(
+  req: Omit<ArchiveRequest, 'id' | 'status' | 'createdAt' | 'matchedItemId' | 'rejectMessage'>
+): Promise<ArchiveRequest> {
+  const newReq = {
+    ...req,
+    id: 'areq' + Date.now(),
+    status: 'pending' as const,
+    createdAt: new Date(),
+  };
+  await db.insert(archiveRequestsTable).values(newReq);
+  return {
+    id: newReq.id,
+    senderName: newReq.senderName,
+    senderNpm: newReq.senderNpm ?? '',
+    senderContact: newReq.senderContact,
+    itemTitle: newReq.itemTitle,
+    itemCategory: newReq.itemCategory ?? '',
+    dateFrom: newReq.dateFrom ?? '',
+    dateTo: newReq.dateTo ?? '',
+    locationHint: newReq.locationHint ?? '',
+    description: newReq.description,
+    status: 'pending',
+    matchedItemId: undefined,
+    rejectMessage: '',
+    createdAt: newReq.createdAt.toISOString(),
+  };
+}
+
+export async function dbGetArchiveRequests(): Promise<ArchiveRequest[]> {
+  const rows = await db.select().from(archiveRequestsTable).orderBy(asc(archiveRequestsTable.createdAt));
+  // newest first
+  return rows.map(rowToArchiveRequest).reverse();
+}
+
+/** Ambil semua request milik seorang pengirim berdasarkan NPM atau nomor WA (untuk cek status). */
+export async function dbGetArchiveRequestsBySender(npm: string, contact: string): Promise<ArchiveRequest[]> {
+  const cleanNpm = npm.trim().toLowerCase();
+  const cleanContact = contact.replace(/\D/g, '');
+  const rows = await db.select().from(archiveRequestsTable).orderBy(asc(archiveRequestsTable.createdAt));
+  const matched = rows.filter((r) => {
+    const byNpm = cleanNpm && (r.senderNpm ?? '').trim().toLowerCase() === cleanNpm;
+    const byContact = cleanContact && (r.senderContact ?? '').replace(/\D/g, '') === cleanContact;
+    return byNpm || byContact;
+  });
+  return matched.map(rowToArchiveRequest).reverse(); // newest first
+}
+
+export async function dbUpdateArchiveRequestStatus(
+  reqId: string,
+  status: 'approved' | 'rejected',
+  matchedItemId?: string,
+  rejectMessage?: string
+): Promise<ArchiveRequest | null> {
+  const patch: Partial<ArchiveRequestRecord> = { status, processedAt: new Date() };
+  if (matchedItemId) patch.matchedItemId = matchedItemId;
+  if (typeof rejectMessage === 'string') patch.rejectMessage = rejectMessage;
+  await db.update(archiveRequestsTable).set(patch).where(eq(archiveRequestsTable.id, reqId));
+  const rows = await db.select().from(archiveRequestsTable).where(eq(archiveRequestsTable.id, reqId)).limit(1);
+  return rows[0] ? rowToArchiveRequest(rows[0]) : null;
+}
+
+/**
+ * Hapus request yang sudah diproses (approved/rejected) lebih dari N jam.
+ * Request 'pending' tidak pernah dihapus. Mengembalikan jumlah yang dihapus.
+ */
+export async function dbCleanupProcessedArchiveRequests(olderThanHours: number): Promise<number> {
+  const cutoff = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
+  const deleted = await db.delete(archiveRequestsTable)
+    .where(
+      and(
+        ne(archiveRequestsTable.status, 'pending'),
+        isNotNull(archiveRequestsTable.processedAt),
+        lt(archiveRequestsTable.processedAt, cutoff)
+      )
+    )
+    .returning({ id: archiveRequestsTable.id });
+  return deleted.length;
 }
