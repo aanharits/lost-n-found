@@ -18,14 +18,19 @@ export const draggable: Action<HTMLElement, DraggableParams> = (node, params) =>
     return document.getElementById(params.containerId);
   }
 
-  // Memulai proses drag saat pointer ditekan di area kartu non-tombol
+  // Memulai proses drag saat pointer ditekan di area kartu non-tombol.
+  // Posisi dihitung relatif terhadap offsetParent (track), sehingga tetap
+  // benar meski track sedang digeser oleh pagination.
   function onPointerDown(e: PointerEvent) {
     if ((e.target as HTMLElement).tagName.toLowerCase() === 'button') return;
     if ((e.target as HTMLElement).closest('button')) return;
 
+    const origin = (node.offsetParent as HTMLElement) ?? getContainer() ?? node.parentElement;
+    const originRect = origin?.getBoundingClientRect();
+
     isDragging = true;
-    startX = e.clientX - node.offsetLeft;
-    startY = e.clientY - node.offsetTop;
+    startX = e.clientX - (originRect?.left ?? 0) - node.offsetLeft;
+    startY = e.clientY - (originRect?.top ?? 0) - node.offsetTop;
 
     node.classList.add('is-dragging');
     node.style.zIndex = '100';

@@ -1,22 +1,33 @@
 export interface GridLayout {
   columns: number;
+  rowsPerPage: number;
+  perPage: number;
   cardWidth: number;
   cardHeight: number;
   gapX: number;
   gapY: number;
   startX: number;
   startY: number;
+  pageWidth: number;
   getPos: (index: number) => { x: number; y: number };
 }
 
 /**
- * Menghitung tata letak grid kartu pada papan secara presisi dan dinamis
- * agar tidak ada ruang kosong canggung di samping kartu terakhir pada baris.
+ * Menghitung tata letak grid kartu pada papan secara presisi dan dinamis.
+ *
+ * Layout bersifat PAGINATED: kartu mengisi kolom lalu baris di satu halaman.
+ * Jika melebihi kapasitas halaman (columns x rowsPerPage), kartu berikutnya
+ * diletakkan di halaman selanjutnya (offset horizontal sebesar lebar papan),
+ * sehingga papan bergeser ke samping (swipe) alih-alih scroll ke bawah.
+ *
+ * @param boardWidth  lebar papan (px)
+ * @param boardHeight tinggi papan (px); dipakai untuk menentukan jumlah baris
  */
-export function calculateGridLayout(boardWidth: number): GridLayout {
+export function calculateGridLayout(boardWidth: number, boardHeight = 520): GridLayout {
   const cardWidth = 152;
   const cardHeight = 205;
   const minPadding = 16;
+  const bottomPadding = 90; // ruang untuk avatar Satpam di bawah
   const minGapX = 14;
   const gapY = 24;
   const startY = 70;
@@ -27,6 +38,14 @@ export function calculateGridLayout(boardWidth: number): GridLayout {
     1,
     Math.floor((boardWidth - 2 * minPadding + minGapX) / (cardWidth + minGapX))
   );
+
+  // Hitung jumlah baris yang muat dalam satu halaman
+  const usableHeight = boardHeight - startY - bottomPadding;
+  const rowsPerPage = Math.max(
+    1,
+    Math.floor((usableHeight + gapY) / (cardHeight + gapY))
+  );
+  const perPage = Math.max(1, columns * rowsPerPage);
 
   let gapX = minGapX;
   let startX = minPadding;
@@ -50,18 +69,25 @@ export function calculateGridLayout(boardWidth: number): GridLayout {
     startX = Math.max(minPadding, Math.round((boardWidth - cardWidth) / 2));
   }
 
+  const pageWidth = Math.max(boardWidth, 1);
+
   return {
     columns,
+    rowsPerPage,
+    perPage,
     cardWidth,
     cardHeight,
     gapX,
     gapY,
     startX,
     startY,
+    pageWidth,
     getPos: (index: number) => {
-      const col = index % columns;
-      const row = Math.floor(index / columns);
-      const x = Math.round(startX + col * (cardWidth + gapX));
+      const page = Math.floor(index / perPage);
+      const inPage = index % perPage;
+      const col = inPage % columns;
+      const row = Math.floor(inPage / columns);
+      const x = Math.round(page * pageWidth + startX + col * (cardWidth + gapX));
       const y = Math.round(startY + row * (cardHeight + gapY));
       return { x, y };
     },
@@ -70,12 +96,15 @@ export function calculateGridLayout(boardWidth: number): GridLayout {
 
 /**
  * Mencari posisi grid terbaik berikutnya untuk item baru yang akan ditambahkan.
+ * Mulai memindai dari slot halaman PERTAMA agar barang baru selalu tampil
+ * di halaman pertama bila masih ada ruang.
  */
 export function getNextAvailablePosition(
   existingItems: Array<{ x: number; y: number }>,
-  boardWidth: number
+  boardWidth: number,
+  boardHeight = 520
 ): { x: number; y: number } {
-  const layout = calculateGridLayout(boardWidth);
+  const layout = calculateGridLayout(boardWidth, boardHeight);
 
   // Cari slot grid terdekat yang belum ditempati kartu lain (overlap threshold 45px)
   for (let i = 0; i <= existingItems.length; i++) {

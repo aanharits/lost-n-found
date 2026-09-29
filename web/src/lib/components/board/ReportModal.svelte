@@ -306,10 +306,12 @@
       (typeof window !== "undefined"
         ? Math.min(1024, window.innerWidth - 32)
         : 1024);
+    const boardHeight = boardEl?.offsetHeight || 520;
 
     const { x: safeX, y: safeY } = getNextAvailablePosition(
       currentItems,
       boardWidth,
+      boardHeight,
     );
 
     const player = $currentPlayer;
