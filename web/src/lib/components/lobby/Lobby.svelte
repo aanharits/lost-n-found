@@ -1,7 +1,7 @@
 <script lang="ts">
   import { currentPlayer, type Player, type UserRole } from "$lib/stores/player.js";
   import { currentScene } from "$lib/stores/ui.js";
-  import Avatar from "./Avatar.svelte";
+  import Avatar from "../shared/Avatar.svelte";
   import { fade, fly } from "svelte/transition";
 
   // Presets 8 Tipe Gaya Karakter Mahasiswa Game & Kampus
