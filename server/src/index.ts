@@ -90,7 +90,14 @@ const io = new SocketIOServer(httpServer, {
 setupSocketHandlers(io);
 
 // Pulihkan dispute window yang masih berjalan setelah restart
-rehydrateDisputes(io);
+// Guard: kegagalan DB saat startup tidak boleh mematikan proses (degraded mode)
+try {
+  rehydrateDisputes(io).catch((err) => {
+    console.error('[Server] Gagal memulihkan dispute window (degraded mode):', err);
+  });
+} catch (err) {
+  console.error('[Server] Gagal inisialisasi dispute rehydration (degraded mode):', err);
+}
 
 // Tutup server secara bersih saat menerima sinyal terminasi
 const handleShutdown = () => {
