@@ -14,6 +14,7 @@ export default defineConfig({
 			adapter: adapter()
 		})
 	],
+	envPrefix: ['VITE_', 'PUBLIC_'],
 	server: {
 		port: 5173
 	}
