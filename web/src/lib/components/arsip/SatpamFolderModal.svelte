@@ -424,7 +424,7 @@
                   >
                   <span
                     class="font-sans text-xs md:text-[13.5px] font-bold text-[#1c120c] truncate"
-                    >📍 {selected.desc || "-"}</span
+                    >{selected.desc || "-"}</span
                   >
                 </div>
                 <div class="flex items-start border-b border-[#e2e8f0] pb-2">
@@ -434,8 +434,7 @@
                   >
                   <span
                     class="font-mono text-xs md:text-[13px] font-bold text-[#1c120c] truncate"
-                    >{selected.category || "Umum"} • {selected.tag ||
-                      "Barang"}</span
+                    >{selected.category || "Umum"}</span
                   >
                 </div>
                 <div class="flex items-start border-b border-[#e2e8f0] pb-2">
