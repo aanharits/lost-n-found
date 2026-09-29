@@ -97,14 +97,8 @@
   <div
     class="card-inner-frame w-full h-full flex flex-col overflow-hidden rounded-[1px]"
   >
-    <div class="card-header font-pixel {headerClass} px-2 flex justify-between items-center">
-      <span class="tracking-wide text-[9px]">{headerText}</span>
-      <span
-        class="bg-[#140b05]/65 text-[#fef08a] text-[7.5px] px-1.5 py-0.5 rounded-sm border border-[#fef08a]/40 font-mono font-bold tracking-wider shadow-[1px_1px_0px_rgba(0,0,0,0.4)]"
-        title="Short ID: {displayCode}"
-      >
-        {displayCode}
-      </span>
+    <div class="card-header font-pixel {headerClass}">
+      <span>{headerText}</span>
     </div>
     <div class="card-image flex items-center justify-center">
       <TagIcon
@@ -118,12 +112,20 @@
       class="p-2 bg-[#fefce8] flex-grow flex flex-col justify-between min-h-0"
     >
       <div class="min-h-0 flex flex-col gap-0.5">
-        <p
-          class="font-bold text-[15px] leading-tight text-[#2c1b0f] truncate font-sans"
-          title={item.title}
-        >
-          {item.title}
-        </p>
+        <div class="flex items-center justify-between gap-2 min-w-0">
+          <p
+            class="font-bold text-[15px] leading-tight text-[#2c1b0f] truncate font-sans min-w-0 flex-1"
+            title={item.title}
+          >
+            {item.title}
+          </p>
+          <span
+            class="font-mono text-[10px] font-bold text-stone-500 shrink-0 tracking-wider select-none"
+            title="ID: {displayCode}"
+          >
+            {displayCode}
+          </span>
+        </div>
         <p class="text-[10px] text-[#78350f] font-bold font-sans leading-none">
           {item.date || "-"} | {item.time || "-"}
         </p>

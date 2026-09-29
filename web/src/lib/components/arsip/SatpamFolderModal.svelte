@@ -155,9 +155,7 @@
         <span
           class="font-pixel text-[10px] md:text-[11px] text-white font-bold tracking-wide truncate"
         >
-          {folderPath}{selected
-            ? `\\LAP_${displayCode.replace("#", "")}`
-            : ""}
+          {folderPath}{selected ? `\\LAP_${displayCode.replace("#", "")}` : ""}
         </span>
       </div>
       <div class="flex items-center gap-2 shrink-0">
@@ -402,7 +400,7 @@
                 <div class="flex items-start border-b border-[#e2e8f0] pb-2">
                   <span
                     class="font-pixel text-[10px] md:text-[10.5px] text-[#78716c] w-[112px] shrink-0 pt-0.5"
-                    >NAMA_FILE:</span
+                    >NAMA BARANG:</span
                   >
                   <span
                     class="font-sans text-sm md:text-[15px] font-extrabold text-[#1c120c] truncate"
@@ -629,7 +627,9 @@
       </div>
 
       <!-- Petunjuk Singkat Bawah -->
-      <div class="mt-1.5 font-pixel text-[8px] text-[#78716c] font-bold text-center">
+      <div
+        class="mt-1.5 font-pixel text-[8px] text-[#78716c] font-bold text-center"
+      >
         Klik di luar frame untuk menutup
       </div>
     </div>
