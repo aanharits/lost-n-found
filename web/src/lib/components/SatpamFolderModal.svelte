@@ -3,6 +3,36 @@
   import TagIcon from "./TagIcon.svelte";
   import { formatShortCode } from "$lib/utils/shortCode.js";
   import { fade, scale } from "svelte/transition";
+  import { cubicIn, cubicOut } from "svelte/easing";
+
+  // ── Smooth open/close animations ala NES tapi halus ─────────────────────────
+  // Window explorer: pop naik dari bawah saat dibuka, turun manis saat ditutup
+  function folderWindowIn(node: Element, { duration = 280 } = {}) {
+    return {
+      duration,
+      easing: cubicOut,
+      css: (t: number) =>
+        `opacity: ${t}; transform: translateY(${(1 - t) * 28}px) scale(${0.9 + 0.1 * t});`,
+    };
+  }
+
+  function folderWindowOut(node: Element, { duration = 200 } = {}) {
+    return {
+      duration,
+      easing: cubicIn,
+      css: (t: number) =>
+        `opacity: ${t}; transform: translateY(${(1 - t) * 18}px) scale(${0.94 + 0.06 * t});`,
+    };
+  }
+
+  // Frame zoom foto: pop ringan saat diperbesar
+  function zoomFrameIn(node: Element, { duration = 220 } = {}) {
+    return {
+      duration,
+      easing: cubicOut,
+      css: (t: number) => `opacity: ${t}; transform: scale(${0.92 + 0.08 * t});`,
+    };
+  }
 
   let {
     folderTitle,
@@ -107,7 +137,8 @@
 {#if folderItems}
   <div
     class="modal-overlay backdrop-blur-xs z-50 flex items-center justify-center p-3"
-    transition:fade={{ duration: 150 }}
+    in:fade={{ duration: 200, easing: cubicOut }}
+    out:fade={{ duration: 180, easing: cubicIn }}
     onclick={(e) => {
       if (e.target === e.currentTarget) onClose();
     }}
@@ -120,7 +151,8 @@
     <!-- Explorer Window ala NES.css: Flat, Square, Border Tebal, Hard Shadow -->
     <div
       class="nes-window relative w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden select-none"
-      transition:scale={{ start: 0.93, duration: 200 }}
+      in:folderWindowIn
+      out:folderWindowOut
     >
       <!-- Title Bar: Biru Flat + Judul Putih + Tombol Kotak -->
       <div class="nes-titlebar flex items-center justify-between px-2.5 py-2">
@@ -144,36 +176,9 @@
         </div>
       </div>
 
-      <!-- Menu Bar -->
-      <div class="win95-menubar font-pixel text-[9px] md:text-[10px] text-[#78716c] flex items-center gap-4 px-2.5 py-1.5 border-b-2 border-[#1c120c] shrink-0">
-        <span class="hover:bg-[#2563eb] hover:text-white px-1.5 py-0.5 cursor-default">File</span>
-        <span class="hover:bg-[#2563eb] hover:text-white px-1.5 py-0.5 cursor-default">Edit</span>
-        <span class="hover:bg-[#2563eb] hover:text-white px-1.5 py-0.5 cursor-default">View</span>
-        <span class="hover:bg-[#2563eb] hover:text-white px-1.5 py-0.5 cursor-default">Tools</span>
-        <span class="hover:bg-[#2563eb] hover:text-white px-1.5 py-0.5 cursor-default">Help</span>
-        <span class="ml-auto font-mono text-[9px] text-[#1c120c] font-bold">[DOKUMEN RAHASIA SATPAM]</span>
-      </div>
-
-      <!-- Address Bar + Sort Control -->
-      <div class="flex items-center gap-2 px-2.5 py-2 bg-[#f8fafc] border-b-2 border-[#1c120c] shrink-0 flex-wrap">
-        <span class="font-pixel text-[9px] text-[#78716c]">Alamat:</span>
-        <div class="flex-1 min-w-[180px] bg-white border-2 border-[#1c120c] px-2 py-1 flex items-center gap-1.5">
-          <span class="text-[10px]">📁</span>
-          <span class="font-mono text-[10.5px] font-bold text-[#1c120c] truncate">{folderPath}</span>
-        </div>
-        <button
-          type="button"
-          onclick={() => sortMode = sortMode === "newest" ? "oldest" : "newest"}
-          class="nes-btn font-pixel text-[9px] py-1.5 px-3 cursor-pointer font-bold text-[#1c120c] shrink-0"
-          title="Ubah urutan arsip"
-        >
-          {sortMode === "newest" ? "▼ TERBARU" : "▲ TERLAMA"}
-        </button>
-      </div>
-
-      <!-- Search Bar -->
+      <!-- Search Bar + Sort Control -->
       <div class="flex items-center gap-2 px-2.5 py-2 bg-[#f8fafc] border-b-2 border-[#1c120c] shrink-0">
-        <span class="text-[11px]">🔍</span>
+        <span class="text-[12px]">🔍</span>
         <input
           type="text"
           bind:value={searchQuery}
@@ -184,18 +189,29 @@
           <button
             type="button"
             onclick={() => searchQuery = ""}
-            class="nes-btn font-pixel text-[8.5px] py-1.5 px-2.5 cursor-pointer font-bold text-[#1c120c] shrink-0"
+            class="nes-btn font-pixel text-[8.5px] md:text-[9px] py-1.5 px-2.5 cursor-pointer font-bold text-[#1c120c] shrink-0"
           >
             RESET
           </button>
         {/if}
+        <button
+          type="button"
+          onclick={() => sortMode = sortMode === "newest" ? "oldest" : "newest"}
+          class="nes-btn font-pixel text-[9px] md:text-[9.5px] py-1.5 px-3 cursor-pointer font-bold text-[#1c120c] shrink-0"
+          title="Ubah urutan arsip"
+        >
+          {sortMode === "newest" ? "▼ TERBARU" : "▲ TERLAMA"}
+        </button>
       </div>
 
       <!-- Body Explorer: Panel Kiri List + Panel Kanan Preview -->
       <div class="flex-1 flex flex-col md:flex-row gap-[8px] min-h-0 bg-[#f1f5f9] p-[8px] overflow-hidden">
 
         <!-- Panel Kiri: Tree List Arsip per Tanggal -->
-        <div class="w-full md:w-[320px] shrink-0 bg-white border-3 border-[#1c120c] flex flex-col min-h-[150px] md:min-h-0 overflow-hidden">
+        <div
+          class="w-full md:w-[320px] shrink-0 bg-white border-3 border-[#1c120c] flex flex-col min-h-[150px] md:min-h-0 overflow-hidden"
+          in:fade={{ delay: 120, duration: 200, easing: cubicOut }}
+        >
           <div class="nes-panel-header font-pixel text-[9.5px] text-[#1c120c] px-2.5 py-2 border-b-2 border-[#1c120c] flex items-center justify-between shrink-0">
             <span>📁 ARSIP_TANGGAL</span>
             <span class="font-mono text-[9px] text-[#78716c] font-bold">{totalObjects} OBJ</span>
@@ -241,15 +257,18 @@
         </div>
 
         <!-- Panel Kanan: Preview Berkas Aktif -->
-        <div class="flex-1 bg-white border-3 border-[#1c120c] flex flex-col min-h-0 overflow-hidden">
+        <div
+          class="flex-1 bg-white border-3 border-[#1c120c] flex flex-col min-h-0 overflow-hidden"
+          in:fade={{ delay: 160, duration: 200, easing: cubicOut }}
+        >
           {#if selected}
             <!-- Preview Header -->
-            <div class="nes-panel-header-accent font-pixel text-[9.5px] text-white px-2.5 py-2 border-b-2 border-[#1c120c] flex items-center justify-between gap-2 shrink-0">
+            <div class="nes-panel-header-accent font-pixel text-[10.5px] md:text-[11.5px] text-white px-3 py-2 border-b-2 border-[#1c120c] flex items-center justify-between gap-2 shrink-0">
               <span class="truncate font-bold tracking-wide">🔍 {selected.title}</span>
               <button
                 type="button"
                 onclick={copyCode}
-                class="px-2 py-1 bg-white text-[#1c120c] border-2 border-[#1c120c] font-mono text-[10px] font-bold cursor-pointer hover:bg-[#f1f5f9] active:translate-y-0.5 shrink-0"
+                class="px-2.5 py-1 bg-white text-[#1c120c] border-2 border-[#1c120c] font-mono text-xs font-bold cursor-pointer hover:bg-[#f1f5f9] active:translate-y-0.5 shrink-0"
                 title="Klik untuk menyalin short code"
               >
                 {displayCode} {copyFeedback ? '✓' : '📋'}
@@ -259,7 +278,7 @@
             <!-- Preview Body: Foto Bukti Kiri + Properties Kanan -->
             <div class="flex-1 overflow-y-auto p-3 flex flex-col sm:flex-row gap-3 min-h-0">
               <!-- Preview Pane Foto Bukti (Frame Kotak ala NES.css) -->
-              <div class="sm:w-[44%] shrink-0 flex flex-col items-center gap-2.5">
+              <div class="sm:w-[40%] shrink-0 flex flex-col items-center gap-2.5">
                 <div class="w-full aspect-square bg-[#1e293b] border-4 border-[#1c120c] shadow-[4px_4px_0px_#1c120c] overflow-hidden flex items-center justify-center relative group">
                   {#if hasPhoto}
                     <button
@@ -288,57 +307,57 @@
                 <!-- Stempel status -->
                 <div class="w-full flex gap-2">
                   <div class="flex-1 bg-[#f8fafc] border-2 border-[#1c120c] px-2 py-1 text-center shadow-[2px_2px_0px_#1c120c]">
-                    <span class="font-pixel text-[8px] text-[#78716c] block">STATUS</span>
-                    <span class="font-mono text-[10px] font-bold {selected.status === 'resolved' ? 'text-emerald-700' : selected.status === 'disputed' ? 'text-orange-600' : 'text-[#2563eb]'}">
+                    <span class="font-pixel text-[8.5px] md:text-[9px] text-[#78716c] block">STATUS</span>
+                    <span class="font-mono text-[11px] md:text-xs font-bold {selected.status === 'resolved' ? 'text-emerald-700' : selected.status === 'disputed' ? 'text-orange-600' : 'text-[#2563eb]'}">
                       {selected.status.toUpperCase()}
                     </span>
                   </div>
                   <div class="flex-1 bg-[#f8fafc] border-2 border-[#1c120c] px-2 py-1 text-center shadow-[2px_2px_0px_#1c120c]">
-                    <span class="font-pixel text-[8px] text-[#78716c] block">JENIS</span>
-                    <span class="font-mono text-[10px] font-bold {selected.type === 'found' ? 'text-emerald-700' : 'text-rose-700'}">
+                    <span class="font-pixel text-[8.5px] md:text-[9px] text-[#78716c] block">JENIS</span>
+                    <span class="font-mono text-[11px] md:text-xs font-bold {selected.type === 'found' ? 'text-emerald-700' : 'text-rose-700'}">
                       {selected.type === 'found' ? 'TEMUAN' : 'HILANG'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <!-- Properties Dialog Kanan -->
+              <!-- Properties Dialog Kanan (Keterangan Barang) -->
               <div class="flex-1 min-w-0 flex flex-col gap-2">
                 <!-- Field Grid Properties -->
-                <div class="bg-[#f8fafc] border-2 border-[#1c120c] shadow-[3px_3px_0px_#1c120c] p-2.5 flex flex-col gap-1.5">
-                  <div class="flex items-start border-b border-[#e2e8f0] pb-1.5">
-                    <span class="font-pixel text-[8.5px] text-[#78716c] w-[104px] shrink-0 pt-0.5">NAMA_FILE:</span>
-                    <span class="font-sans text-xs md:text-[13px] font-bold text-[#1c120c] truncate">{selected.title}</span>
+                <div class="bg-[#f8fafc] border-2 border-[#1c120c] shadow-[3px_3px_0px_#1c120c] p-3 md:p-3.5 flex flex-col gap-2 md:gap-2.5">
+                  <div class="flex items-start border-b border-[#e2e8f0] pb-2">
+                    <span class="font-pixel text-[10px] md:text-[10.5px] text-[#78716c] w-[112px] shrink-0 pt-0.5">NAMA_FILE:</span>
+                    <span class="font-sans text-sm md:text-[15px] font-extrabold text-[#1c120c] truncate">{selected.title}</span>
                   </div>
-                  <div class="flex items-start border-b border-[#e2e8f0] pb-1.5">
-                    <span class="font-pixel text-[8.5px] text-[#78716c] w-[104px] shrink-0 pt-0.5">WAKTU:</span>
-                    <span class="font-mono text-[11px] font-bold text-[#1c120c]">{selected.date || "-"} • {selected.time || "-"}</span>
+                  <div class="flex items-start border-b border-[#e2e8f0] pb-2">
+                    <span class="font-pixel text-[10px] md:text-[10.5px] text-[#78716c] w-[112px] shrink-0 pt-0.5">WAKTU:</span>
+                    <span class="font-mono text-xs md:text-[13px] font-bold text-[#1c120c]">{selected.date || "-"} • {selected.time || "-"}</span>
                   </div>
-                  <div class="flex items-start border-b border-[#e2e8f0] pb-1.5">
-                    <span class="font-pixel text-[8.5px] text-[#78716c] w-[104px] shrink-0 pt-0.5">LOKASI:</span>
-                    <span class="font-sans text-[11.5px] font-bold text-[#1c120c] truncate">📍 {selected.desc || "-"}</span>
+                  <div class="flex items-start border-b border-[#e2e8f0] pb-2">
+                    <span class="font-pixel text-[10px] md:text-[10.5px] text-[#78716c] w-[112px] shrink-0 pt-0.5">LOKASI:</span>
+                    <span class="font-sans text-xs md:text-[13.5px] font-bold text-[#1c120c] truncate">📍 {selected.desc || "-"}</span>
                   </div>
-                  <div class="flex items-start border-b border-[#e2e8f0] pb-1.5">
-                    <span class="font-pixel text-[8.5px] text-[#78716c] w-[104px] shrink-0 pt-0.5">KATEGORI:</span>
-                    <span class="font-mono text-[10.5px] font-bold text-[#1c120c] truncate">{selected.category || "Umum"} • {selected.tag || "Barang"}</span>
+                  <div class="flex items-start border-b border-[#e2e8f0] pb-2">
+                    <span class="font-pixel text-[10px] md:text-[10.5px] text-[#78716c] w-[112px] shrink-0 pt-0.5">KATEGORI:</span>
+                    <span class="font-mono text-xs md:text-[13px] font-bold text-[#1c120c] truncate">{selected.category || "Umum"} • {selected.tag || "Barang"}</span>
                   </div>
-                  <div class="flex items-start border-b border-[#e2e8f0] pb-1.5">
-                    <span class="font-pixel text-[8.5px] text-[#78716c] w-[104px] shrink-0 pt-0.5">PELAPOR:</span>
-                    <span class="font-sans text-[11.5px] font-bold text-[#1c120c] truncate">{selected.reporterName || "Anonim"}</span>
+                  <div class="flex items-start border-b border-[#e2e8f0] pb-2">
+                    <span class="font-pixel text-[10px] md:text-[10.5px] text-[#78716c] w-[112px] shrink-0 pt-0.5">PELAPOR:</span>
+                    <span class="font-sans text-xs md:text-[13.5px] font-bold text-[#1c120c] truncate">{selected.reporterName || "Anonim"}</span>
                   </div>
-                  <div class="flex items-start border-b border-[#e2e8f0] pb-1.5">
-                    <span class="font-pixel text-[8.5px] text-[#78716c] w-[104px] shrink-0 pt-0.5">NPM:</span>
-                    <span class="font-mono text-[11px] font-bold text-[#1c120c]">{selected.reporterNpm || "-"}</span>
+                  <div class="flex items-start border-b border-[#e2e8f0] pb-2">
+                    <span class="font-pixel text-[10px] md:text-[10.5px] text-[#78716c] w-[112px] shrink-0 pt-0.5">NPM:</span>
+                    <span class="font-mono text-xs md:text-[13px] font-bold text-[#1c120c]">{selected.reporterNpm || "-"}</span>
                   </div>
                   {#if selected.reporterContact}
-                    <div class="flex items-start border-b border-[#e2e8f0] pb-1.5">
-                      <span class="font-pixel text-[8.5px] text-[#78716c] w-[104px] shrink-0 pt-0.5">KONTAK:</span>
-                      <span class="font-mono text-[11px] font-bold text-[#2563eb] truncate">{selected.reporterContact}</span>
+                    <div class="flex items-start border-b border-[#e2e8f0] pb-2">
+                      <span class="font-pixel text-[10px] md:text-[10.5px] text-[#78716c] w-[112px] shrink-0 pt-0.5">KONTAK:</span>
+                      <span class="font-mono text-xs md:text-[13px] font-bold text-[#2563eb] truncate">{selected.reporterContact}</span>
                     </div>
                   {/if}
                   <div class="flex items-start">
-                    <span class="font-pixel text-[8.5px] text-[#78716c] w-[104px] shrink-0 pt-0.5">ZKP:</span>
-                    <span class="font-mono text-[10.5px] font-bold text-[#1c120c]">
+                    <span class="font-pixel text-[10px] md:text-[10.5px] text-[#78716c] w-[112px] shrink-0 pt-0.5">ZKP:</span>
+                    <span class="font-mono text-xs md:text-[13px] font-bold text-[#1c120c]">
                       {selected.commitments?.length
                         ? `${selected.commitments.length} COMMITMENT(S) POSEIDON`
                         : "TIDAK ADA"}
@@ -348,18 +367,18 @@
 
                 <!-- Riwayat Klaim List -->
                 {#if selected.claims && selected.claims.length > 0}
-                  <div class="bg-[#f8fafc] border-2 border-[#1c120c] shadow-[3px_3px_0px_#1c120c] p-2">
-                    <span class="font-pixel text-[8.5px] text-[#78716c] block mb-1.5">
+                  <div class="bg-[#f8fafc] border-2 border-[#1c120c] shadow-[3px_3px_0px_#1c120c] p-2.5">
+                    <span class="font-pixel text-[9px] md:text-[9.5px] text-[#78716c] block mb-1.5">
                       RIWAYAT_KLAIM.TXT ({selected.claims.length})
                     </span>
-                    <div class="max-h-[92px] overflow-y-auto flex flex-col gap-1 bg-white border-2 border-[#1c120c] p-1.5">
+                    <div class="max-h-[96px] overflow-y-auto flex flex-col gap-1 bg-white border-2 border-[#1c120c] p-1.5">
                       {#each selected.claims as claim}
                         <div class="flex items-center justify-between gap-2 px-1.5 py-1 border-b border-[#e2e8f0] last:border-0">
-                          <span class="font-sans text-[11px] truncate min-w-0 text-[#1c120c]">
+                          <span class="font-sans text-xs truncate min-w-0 text-[#1c120c]">
                             <strong>{claim.claimantName || "Anon"}</strong>
-                            <span class="font-mono text-[9.5px] text-[#78716c]">({claim.claimantNpm})</span>
+                            <span class="font-mono text-[10px] text-[#78716c]">({claim.claimantNpm})</span>
                           </span>
-                          <span class="font-mono text-[8.5px] px-1.5 py-0.5 shrink-0 font-bold border-2 border-[#1c120c] {claim.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : claim.status === 'rejected' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}">
+                          <span class="font-mono text-[9px] px-1.5 py-0.5 shrink-0 font-bold border-2 border-[#1c120c] {claim.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : claim.status === 'rejected' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}">
                             {claim.status.toUpperCase()}
                           </span>
                         </div>
@@ -369,18 +388,18 @@
                 {/if}
 
                 <!-- Tombol Aksi ala NES.css -->
-                <div class="mt-auto flex gap-2 pt-1">
+                <div class="mt-auto flex gap-2 pt-1.5">
                   <button
                     type="button"
                     onclick={copyCode}
-                    class="nes-btn flex-1 font-pixel text-[9.5px] py-2 cursor-pointer font-bold text-[#1c120c]"
+                    class="nes-btn flex-1 font-pixel text-[10px] md:text-[11px] py-2.5 cursor-pointer font-bold text-[#1c120c]"
                   >
                     SALIN ID
                   </button>
                   <button
                     type="button"
                     onclick={onClose}
-                    class="nes-btn flex-1 font-pixel text-[9.5px] py-2 cursor-pointer font-bold text-white"
+                    class="nes-btn flex-1 font-pixel text-[10px] md:text-[11px] py-2.5 cursor-pointer font-bold text-white"
                   >
                     TUTUP
                   </button>
@@ -411,13 +430,18 @@
   {#if isImageZoomed && selected && hasPhoto}
     <div
       class="fixed inset-0 z-60 bg-[#0c0812]/90 flex items-center justify-center p-4 cursor-zoom-out"
+      in:fade={{ duration: 180, easing: cubicOut }}
+      out:fade={{ duration: 150, easing: cubicIn }}
       onclick={() => isImageZoomed = false}
-      transition:fade={{ duration: 120 }}
       role="button"
       tabindex="-1"
       onkeydown={(e) => { if (e.key === "Escape") isImageZoomed = false; }}
     >
-      <div class="relative max-w-3xl bg-[#f8fafc] p-2.5 border-4 border-[#1c120c] shadow-[8px_8px_0px_#0c0812] flex flex-col items-center">
+      <div
+        class="relative max-w-3xl bg-[#f8fafc] p-2.5 border-4 border-[#1c120c] shadow-[8px_8px_0px_#0c0812] flex flex-col items-center"
+        in:zoomFrameIn
+        out:scale={{ start: 0.94, duration: 160, easing: cubicIn }}
+      >
         <div class="nes-titlebar w-full flex items-center justify-between px-2.5 py-1.5 mb-2 shrink-0">
           <span class="font-pixel text-[9px] text-white font-bold truncate">{displayCode}_FOTO_BUKTI.BMP</span>
           <span class="nes-btn-sm flex items-center justify-center text-[8px] leading-none">✕</span>
@@ -469,10 +493,6 @@
     box-shadow: 2px 2px 0px #1c120c;
   }
 
-  .win95-menubar {
-    background: #f8fafc;
-    flex-shrink: 0;
-  }
 
   /* Header panel list: abu flat */
   .nes-panel-header {
