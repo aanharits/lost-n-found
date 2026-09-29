@@ -37,6 +37,7 @@ export async function handleResetDemo(io: SocketIOServer): Promise<void> {
   // Jika ingin benar-benar menghapus semua data untuk demo, uncomment baris di bawah ini:
   // await db.delete(itemsTable);
   const items = await dbGetItems();
-  const sanitized = items.map(({ reporterToken: _, ...rest }) => rest);
+  // Sanitasi reporter_token & evidencePhoto sebelum broadcast publik
+  const sanitized = items.map(({ reporterToken: _, evidencePhoto: __, ...rest }) => rest);
   io.emit('items_init', sanitized);
 }
