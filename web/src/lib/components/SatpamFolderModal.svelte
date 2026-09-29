@@ -6,31 +6,31 @@
   import { cubicIn, cubicOut } from "svelte/easing";
 
   // ── Smooth open/close animations ala NES tapi halus ─────────────────────────
-  // Window explorer: pop naik dari bawah saat dibuka, turun manis saat ditutup
-  function folderWindowIn(node: Element, { duration = 280 } = {}) {
+  // Window explorer: pop naik dramatis dari bawah saat dibuka, turun manis saat ditutup
+  function folderWindowIn(node: Element, { duration = 420 } = {}) {
     return {
       duration,
       easing: cubicOut,
       css: (t: number) =>
-        `opacity: ${t}; transform: translateY(${(1 - t) * 28}px) scale(${0.9 + 0.1 * t});`,
+        `opacity: ${t}; transform: translateY(${(1 - t) * 56}px) scale(${0.82 + 0.18 * t});`,
     };
   }
 
-  function folderWindowOut(node: Element, { duration = 200 } = {}) {
+  function folderWindowOut(node: Element, { duration = 260 } = {}) {
     return {
       duration,
       easing: cubicIn,
       css: (t: number) =>
-        `opacity: ${t}; transform: translateY(${(1 - t) * 18}px) scale(${0.94 + 0.06 * t});`,
+        `opacity: ${t}; transform: translateY(${(1 - t) * 32}px) scale(${0.9 + 0.1 * t});`,
     };
   }
 
   // Frame zoom foto: pop ringan saat diperbesar
-  function zoomFrameIn(node: Element, { duration = 220 } = {}) {
+  function zoomFrameIn(node: Element, { duration = 300 } = {}) {
     return {
       duration,
       easing: cubicOut,
-      css: (t: number) => `opacity: ${t}; transform: scale(${0.92 + 0.08 * t});`,
+      css: (t: number) => `opacity: ${t}; transform: scale(${0.86 + 0.14 * t}) translateY(${(1 - t) * 16}px);`,
     };
   }
 
@@ -137,8 +137,8 @@
 {#if folderItems}
   <div
     class="modal-overlay backdrop-blur-xs z-50 flex items-center justify-center p-3"
-    in:fade={{ duration: 200, easing: cubicOut }}
-    out:fade={{ duration: 180, easing: cubicIn }}
+    in:fade={{ duration: 260, easing: cubicOut }}
+    out:fade={{ duration: 220, easing: cubicIn }}
     onclick={(e) => {
       if (e.target === e.currentTarget) onClose();
     }}
@@ -210,7 +210,7 @@
         <!-- Panel Kiri: Tree List Arsip per Tanggal -->
         <div
           class="w-full md:w-[320px] shrink-0 bg-white border-3 border-[#1c120c] flex flex-col min-h-[150px] md:min-h-0 overflow-hidden"
-          in:fade={{ delay: 120, duration: 200, easing: cubicOut }}
+          in:fade={{ delay: 150, duration: 260, easing: cubicOut }}
         >
           <div class="nes-panel-header font-pixel text-[9.5px] text-[#1c120c] px-2.5 py-2 border-b-2 border-[#1c120c] flex items-center justify-between shrink-0">
             <span>📁 ARSIP_TANGGAL</span>
@@ -259,7 +259,7 @@
         <!-- Panel Kanan: Preview Berkas Aktif -->
         <div
           class="flex-1 bg-white border-3 border-[#1c120c] flex flex-col min-h-0 overflow-hidden"
-          in:fade={{ delay: 160, duration: 200, easing: cubicOut }}
+          in:fade={{ delay: 200, duration: 260, easing: cubicOut }}
         >
           {#if selected}
             <!-- Preview Header -->

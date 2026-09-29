@@ -22,15 +22,22 @@
   } = $props();
 
   let isSelected = $state(false);
+  let isPressed = $state(false);
 
   // Icon folder bersinar bila memuat item yang di-highlight Satpam AI
   const hasHighlight = $derived(
     !!$highlight && $highlight.itemIds.length > 0 && count > 0
   );
 
+  // Klik = animasi tekan dulu, lalu modal terbuka (feedback ala game)
   function handleClick() {
+    if (isPressed) return;
     isSelected = false;
-    onOpen();
+    isPressed = true;
+    setTimeout(() => {
+      isPressed = false;
+      onOpen();
+    }, 160);
   }
 </script>
 
@@ -48,7 +55,7 @@
   <!-- Area ikon folder: klik = buka folder (contextmenu = seleksi ala desktop) -->
   <button
     type="button"
-    class="icon-click"
+    class="icon-click {isPressed ? 'icon-pressed' : ''}"
     onclick={handleClick}
     oncontextmenu={(e) => { e.preventDefault(); isSelected = true; }}
     title="{label} ({count} file)"
@@ -141,6 +148,23 @@
   .icon-click:focus-visible {
     outline: 3px dashed #ffffff;
     outline-offset: 2px;
+  }
+
+  /* Animasi tekan saat folder diklik: masuk ke bawah lalu modal membuka */
+  .icon-pressed {
+    animation: icon-press 160ms ease-in forwards;
+  }
+
+  @keyframes icon-press {
+    0% {
+      transform: scale(1);
+    }
+    55% {
+      transform: scale(0.88) translateY(6px);
+    }
+    100% {
+      transform: scale(0.94) translateY(2px);
+    }
   }
 
   .folder-svg {
