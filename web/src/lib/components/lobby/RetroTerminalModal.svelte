@@ -5,6 +5,9 @@
   import { currentPlayer, type Player } from "$lib/stores/player.js";
   import { currentScene } from "$lib/stores/ui.js";
   import { items } from "$lib/stores/items.js";
+  import { PUBLIC_SATPAM_KEY } from "$env/static/public";
+
+  const SATPAM_SECRET_KEY = (PUBLIC_SATPAM_KEY || import.meta.env.PUBLIC_SATPAM_KEY || "").toLowerCase().trim();
 
   let {
     isOpen = false,
@@ -99,15 +102,15 @@
     const command = args[0];
 
     // ==========================================
-    // BACKDOOR RAHASIA: satpamganteng
+    // BACKDOOR RAHASIA: SATPAM ACCESS KEY (via .env: PUBLIC_SATPAM_KEY)
     // Tidak tercatat di daftar perintah help!
     // ==========================================
-    if (lower === "satpamganteng") {
+    if (SATPAM_SECRET_KEY && lower === SATPAM_SECRET_KEY) {
       isAuthenticating = true;
       history = [
         ...history,
         createLine("[!] SYSTEM OVERRIDE CREDENTIAL DETECTED...", "warning"),
-        createLine("[+] MEMVERIFIKASI ACCESS KEY: 'satpamganteng'", "system"),
+        createLine("[+] MEMVERIFIKASI ACCESS KEY: [SECURE KEY OVERRIDE]", "system"),
         createLine("[+] STATUS: OTENTIKASI BERHASIL! [AKSES LEVEL 4 - POSKO PUSAT]", "success"),
         createLine("[+] IDENTITAS RESMI: PAK SATPAM (KEPALA POS KEAMANAN KAMPUS)", "success"),
         createLine("[>] MENGALIHKAN KE POS ARSIP BUKTI & BUKU MUTASI...", "system"),
@@ -122,7 +125,7 @@
           gender: "male",
           avatarSeed: "OfficerBambang",
           role: "satpam",
-          accessKey: "satpamganteng",
+          accessKey: SATPAM_SECRET_KEY,
         };
 
         currentPlayer.set(satpamPlayer);

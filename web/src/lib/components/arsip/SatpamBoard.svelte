@@ -10,6 +10,7 @@
   import SatpamFolderModal from "./SatpamFolderModal.svelte";
   import SatpamMutasiModal from "./SatpamMutasiModal.svelte";
   import SatpamChat from "../shared/SatpamChat.svelte";
+  import { PUBLIC_SATPAM_KEY } from "$env/static/public";
 
   type FolderKey =
     | "found"
@@ -132,9 +133,10 @@
 
   onMount(() => {
     const socket = getSocket();
+    const defaultKey = (PUBLIC_SATPAM_KEY || import.meta.env.PUBLIC_SATPAM_KEY || "").trim();
     if (socket?.connected && $currentPlayer?.role === "satpam") {
       socket.emit("satpam_join", {
-        accessKey: $currentPlayer.accessKey || "satpamganteng",
+        accessKey: $currentPlayer.accessKey || defaultKey,
       });
     }
   });

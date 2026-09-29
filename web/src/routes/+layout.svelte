@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import { initSocket } from '$lib/socket.js';
   import { currentPlayer } from '$lib/stores/player.js';
+  import { PUBLIC_SATPAM_KEY } from '$env/static/public';
   import ToastContainer from '$lib/components/shared/ToastContainer.svelte';
 
   let { children } = $props();
@@ -11,6 +12,7 @@
     const socket = initSocket();
 
     // Deteksi akun demo melalui query parameter URL
+    const SATPAM_DEFAULT_KEY = (PUBLIC_SATPAM_KEY || import.meta.env.PUBLIC_SATPAM_KEY || '').trim();
     const urlParams = new URLSearchParams(window.location.search);
     const urlUser = urlParams.get('user');
 
@@ -38,7 +40,7 @@
         gender: 'male',
         avatarSeed: 'OfficerBambang',
         role: 'satpam',
-        accessKey: 'satpamganteng',
+        accessKey: SATPAM_DEFAULT_KEY,
       });
     }
 
@@ -52,7 +54,7 @@
       if (p && socket?.connected) {
         socket.emit('user_join', p);
         if (p.role === 'satpam') {
-          socket.emit('satpam_join', { accessKey: p.accessKey || 'satpamganteng' });
+          socket.emit('satpam_join', { accessKey: p.accessKey || SATPAM_DEFAULT_KEY });
         }
       }
     };
@@ -63,7 +65,7 @@
       if (player && socket?.connected) {
         socket.emit('user_join', player);
         if (player.role === 'satpam') {
-          socket.emit('satpam_join', { accessKey: player.accessKey || 'satpamganteng' });
+          socket.emit('satpam_join', { accessKey: player.accessKey || SATPAM_DEFAULT_KEY });
         }
       }
     });
