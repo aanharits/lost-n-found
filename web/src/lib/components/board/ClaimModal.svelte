@@ -1,6 +1,6 @@
 <script lang="ts">
   import { activeModal, claimTargetItemId, claimAttemptCount } from '$lib/stores/ui.js';
-  import { items } from '$lib/stores/items.js';
+  import { items, type Item } from '$lib/stores/items.js';
   import { currentPlayer } from '$lib/stores/player.js';
   import { getSocket } from '$lib/socket.js';
   import TagIcon from '../shared/TagIcon.svelte';
@@ -19,12 +19,22 @@
     $items.find((i) => i.id === $claimTargetItemId) || null
   );
 
-  let submitLabel = $derived(targetItem?.type === 'found' ? 'Kirim Klaim' : 'Cocokkan Ciri');
+  // Snapshot item saat modal terbuka agar tidak layout-shift saat animasi keluar (exit transition)
+  let displayItem = $state<Item | null>(null);
+  $effect(() => {
+    if (targetItem) {
+      displayItem = targetItem;
+    }
+  });
+
+  let activeItem = $derived(targetItem || displayItem);
+
+  let submitLabel = $derived(activeItem?.type === 'found' ? 'Kirim Klaim' : 'Cocokkan Ciri');
 
   // Jumlah klaim milik player ini untuk barang target (dari data server).
   // Dipakai untuk menampilkan sisa kesempatan revisi sejak modal dibuka.
   let myAttempts = $derived(
-    (targetItem?.claims || []).filter(
+    (activeItem?.claims || []).filter(
       (c) => c.claimantNpm && c.claimantNpm === $currentPlayer?.npm
     ).length
   );
@@ -33,10 +43,14 @@
 
   // Judul modal berdasarkan status jenis barang
   let modalTitle = $derived(
-    targetItem
-      ? `KLAIM: ${targetItem.title} (${targetItem.type === 'found' ? 'KETEMU' : 'HILANG'})`
+    activeItem
+      ? `KLAIM: ${activeItem.title} (${activeItem.type === 'found' ? 'KETEMU' : 'HILANG'})`
       : 'KLAIM BARANG'
   );
+
+  function onKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Escape' && !loading) closeModal();
+  }
 
   // Pantau perubahan status targetItem dari socket (saat masa sanggah berakhir)
   $effect(() => {
@@ -80,7 +94,8 @@
 
   // Mengirim deskripsi klaim ke server menggunakan Zero-Knowledge Proof (ZKP)
   async function submitClaim() {
-    if (!targetItem) return;
+    if (!activeItem) return;
+    const targetItem = activeItem;
     if (!claimText.trim()) {
       errorMsg = 'Ceritain dulu ciri-ciri barangnya!';
       errorClass = 'bg-red-200 border-red-600 text-red-800';
@@ -259,52 +274,63 @@
   }
 </script>
 
-{#if targetItem}
-  <div class="modal-overlay backdrop-blur-xs" transition:fade={{ duration: 150 }}>
-    <div
-      class="relative max-w-md w-full m-4 bg-white border-4 border-[#1c120c] shadow-[6px_6px_0px_#0a060f] rounded flex flex-col overflow-hidden select-none"
-      transition:fly={{ y: 20, duration: 250 }}
-    >
-      <!-- Header Modal: Modern Minimalist Nintendo Blue Title Bar -->
-      <div class="bg-[#2563eb] text-white px-3.5 py-2.5 font-pixel text-[9px] md:text-[10px] flex justify-between items-center border-b-2 border-[#1c120c]">
-        <div class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-green-400 border border-[#0c0812] animate-pulse"></span>
-          <span class="font-bold tracking-wider">
-            {targetItem.type === 'found' ? 'KLAIM KEPEMILIKAN' : 'KEMBALIKAN BARANG'}
-          </span>
-        </div>
-        <button
-          onclick={closeModal}
-          class="text-white hover:text-red-200 font-pixel text-xs px-1.5 py-0.5 cursor-pointer leading-none"
-          type="button"
-          aria-label="Tutup"
-        >
-          ✕
-        </button>
-      </div>
+<svelte:window onkeydown={onKeyDown} />
 
-      <!-- Body Form Minimalis Modern 8-Bit Canvas -->
-      <div class="p-4 md:p-5 flex flex-col gap-3.5 bg-[#f8fafc]">
-        
-        <!-- Info Singkat Barang Target (Warna Warm Amber Bubble User) -->
+<div
+  class="modal-overlay backdrop-blur-xs flex items-center justify-center p-3"
+  style="z-index: 1050;"
+  transition:fade={{ duration: 150 }}
+  onclick={(e) => {
+    if (e.target === e.currentTarget && !loading) closeModal();
+  }}
+  role="presentation"
+>
+  <div
+    class="relative max-w-md w-full m-4 bg-white border-4 border-[#1c120c] shadow-[6px_6px_0px_#0a060f] rounded flex flex-col overflow-hidden select-none"
+    transition:fly={{ y: 20, duration: 250 }}
+  >
+    <!-- Header Modal: Modern Minimalist Nintendo Blue Title Bar -->
+    <div class="bg-[#2563eb] text-white px-3.5 py-2.5 font-pixel text-[9px] md:text-[10px] flex justify-between items-center border-b-2 border-[#1c120c]">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-green-400 border border-[#0c0812] animate-pulse"></span>
+        <span class="font-bold tracking-wider">
+          {activeItem?.type === 'found' ? 'KLAIM KEPEMILIKAN' : 'KEMBALIKAN BARANG'}
+        </span>
+      </div>
+      <button
+        onclick={closeModal}
+        class="text-white hover:text-red-200 font-pixel text-xs px-1.5 py-0.5 cursor-pointer leading-none"
+        type="button"
+        aria-label="Tutup"
+      >
+        ✕
+      </button>
+    </div>
+
+    <!-- Body Form Minimalis Modern 8-Bit Canvas -->
+    <div class="p-4 md:p-5 flex flex-col gap-3.5 bg-[#f8fafc]">
+      
+      <!-- Info Singkat Barang Target (Warna Warm Amber Bubble User) -->
+      {#if activeItem}
         <div class="bg-[#fef3c7] border-2 border-[#1c120c] rounded p-3 flex items-center gap-3 shadow-[2px_2px_0px_#1c120c]">
           <div class="w-10 h-10 rounded bg-white border-2 border-[#1c120c] flex items-center justify-center shrink-0 shadow-[1px_1px_0px_#1c120c]">
-            <TagIcon tag={targetItem.tag} fallback={targetItem.icon} size={28} title={targetItem.title} />
+            <TagIcon tag={activeItem.tag} fallback={activeItem.icon} size={28} title={activeItem.title} />
           </div>
           <div class="flex flex-col min-w-0">
             <div class="flex items-center gap-2">
               <span class="font-pixel text-[10px] text-[#1c120c] font-bold truncate">
-                {targetItem.title}
+                {activeItem.title}
               </span>
-              <span class="font-pixel text-[7px] px-1.5 py-0.5 rounded border border-[#1c120c] font-bold {targetItem.type === 'found' ? 'bg-[#16a34a] text-white' : 'bg-[#dc2626] text-white'}">
-                {targetItem.type === 'found' ? 'KETEMU' : 'HILANG'}
+              <span class="font-pixel text-[7px] px-1.5 py-0.5 rounded border border-[#1c120c] font-bold {activeItem.type === 'found' ? 'bg-[#16a34a] text-white' : 'bg-[#dc2626] text-white'}">
+                {activeItem.type === 'found' ? 'KETEMU' : 'HILANG'}
               </span>
             </div>
             <p class="font-sans text-[11px] text-stone-700 font-bold truncate mt-0.5">
-              Lokasi: {targetItem.desc}
+              Lokasi: {activeItem.desc}
             </p>
           </div>
         </div>
+      {/if}
 
         <!-- Section Bukti Ciri Khas Barang (Warna Pastel Mint Green Bubble Satpam AI) -->
         <div class="bg-[#dcfce7] border-2 border-[#1c120c] rounded p-3.5 flex flex-col gap-2.5 shadow-[2px_2px_0px_#1c120c]">
@@ -407,4 +433,4 @@
       </div>
     </div>
   </div>
-{/if}
+

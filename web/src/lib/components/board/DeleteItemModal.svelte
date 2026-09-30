@@ -1,6 +1,6 @@
 <script lang="ts">
   import { activeModal, deleteTargetItemId } from "$lib/stores/ui.js";
-  import { items } from "$lib/stores/items.js";
+  import { items, type Item } from "$lib/stores/items.js";
   import { currentPlayer } from "$lib/stores/player.js";
   import { getSocket } from "$lib/socket.js";
   import { fade, fly } from "svelte/transition";
@@ -10,6 +10,16 @@
   let targetItem = $derived(
     $items.find((i) => i.id === $deleteTargetItemId) || null,
   );
+
+  // Snapshot item saat modal terbuka agar tidak lenyap seketika saat animasi keluar
+  let displayItem = $state<Item | null>(null);
+  $effect(() => {
+    if (targetItem) {
+      displayItem = targetItem;
+    }
+  });
+
+  let activeItem = $derived(targetItem || displayItem);
 
   let errorMsg = $state("");
   let loading = $state(false);
@@ -22,13 +32,14 @@
   }
 
   function onKeyDown(e: KeyboardEvent) {
-    if (e.key === "Escape") closeModal();
+    if (e.key === "Escape" && !loading) closeModal();
   }
 
   function confirmDelete() {
-    if (!targetItem) return;
+    const itemToDelete = activeItem;
+    if (!itemToDelete) return;
 
-    if (targetItem.status !== "open") {
+    if (itemToDelete.status !== "open") {
       errorMsg = "Laporan yang sedang dalam proses klaim tidak bisa dihapus.";
       return;
     }
@@ -47,7 +58,7 @@
     const reporterNpm = $currentPlayer?.npm || "";
 
     socket.emit("item_delete", {
-      id: targetItem.id,
+      id: itemToDelete.id,
       reporterToken,
       reporterNpm,
     });
@@ -58,7 +69,15 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
-<div class="modal-overlay backdrop-blur-xs" transition:fade={{ duration: 150 }}>
+<div
+  class="modal-overlay backdrop-blur-xs flex items-center justify-center p-3"
+  style="z-index: 1050;"
+  transition:fade={{ duration: 150 }}
+  onclick={(e) => {
+    if (e.target === e.currentTarget && !loading) closeModal();
+  }}
+  role="presentation"
+>
   <div
     class="relative max-w-sm w-full m-4 bg-white border-4 border-[#1c120c] shadow-[6px_6px_0px_#0a060f] rounded flex flex-col overflow-hidden select-none"
     transition:fly={{ y: 20, duration: 250 }}
@@ -95,7 +114,7 @@
       {/if}
 
       <!-- Preview Item yang akan dihapus (Warna Warm Amber Bubble User) -->
-      {#if targetItem}
+      {#if activeItem}
         <div
           class="bg-[#fefce8] p-3 rounded border-2 border-[#1c120c] flex items-center gap-3 shadow-[2px_2px_0px_#1c120c]"
         >
@@ -103,37 +122,37 @@
             class="w-12 h-12 bg-white rounded border-2 border-[#1c120c] flex items-center justify-center flex-shrink-0 shadow-[1px_1px_0px_#1c120c]"
           >
             <TagIcon
-              tag={targetItem.tag}
-              fallback={targetItem.icon}
+              tag={activeItem.tag}
+              fallback={activeItem.icon}
               size={32}
-              title={targetItem.title}
+              title={activeItem.title}
             />
           </div>
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-1.5">
               <span
-                class="font-pixel text-[7.5px] px-1.5 py-0.5 rounded font-bold {targetItem.type ===
+                class="font-pixel text-[7.5px] px-1.5 py-0.5 rounded font-bold {activeItem.type ===
                 'found'
                   ? 'bg-[#16a34a] text-white'
                   : 'bg-[#dc2626] text-white'}"
               >
-                {targetItem.type === "found" ? "KETEMU" : "HILANG"}
+                {activeItem.type === "found" ? "KETEMU" : "HILANG"}
               </span>
               <p
                 class="font-bold text-[15px] leading-tight text-[#2c1b0f] truncate font-sans"
               >
-                {targetItem.title}
+                {activeItem.title}
               </p>
             </div>
             <p
               class="text-[10px] text-[#78350f] font-bold font-sans leading-none mt-0.5"
             >
-              {targetItem.date || "-"} | {targetItem.time || "-"}
+              {activeItem.date || "-"} | {activeItem.time || "-"}
             </p>
             <p
               class="text-[11px] text-[#451a03] font-medium font-sans truncate mt-0.5"
             >
-              {targetItem.desc}
+              {activeItem.desc}
             </p>
           </div>
         </div>
