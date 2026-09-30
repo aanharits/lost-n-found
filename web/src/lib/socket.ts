@@ -1,6 +1,6 @@
 import { io, type Socket } from 'socket.io-client';
 import { browser } from '$app/environment';
-import { items, archiveRequests, myArchiveRequests, type Item, type ArchiveRequest } from './stores/items.js';
+import { items, archiveRequests, myArchiveRequests, persistItemsToLocal, type Item, type ArchiveRequest } from './stores/items.js';
 import { socketConnected, onlineCount } from './stores/ui.js';
 
 const SERVER_URL = browser
@@ -30,8 +30,9 @@ export function initSocket(): Socket {
   if (socket) return socket;
   if (!browser) return null as any;
 
+  // Gunakan WebSocket murni secara langsung tanpa jeda handshake HTTP polling
   socket = io(SERVER_URL, {
-    transports: ['websocket', 'polling'],
+    transports: ['websocket'],
   });
 
   // Listener status koneksi websocket
@@ -45,10 +46,11 @@ export function initSocket(): Socket {
     socketConnected.set(false);
   });
 
-  // Menerima data awal seluruh item saat pertama kali terhubung
+  // Menerima data awal seluruh item saat pertama kali terhubung (dan simpan ke cache lokal)
   socket.on('items_init', (serverItems: Item[]) => {
     if (Array.isArray(serverItems)) {
       items.set(serverItems);
+      persistItemsToLocal(serverItems);
     }
   });
 

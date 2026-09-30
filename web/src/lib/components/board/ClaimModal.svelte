@@ -74,7 +74,7 @@
     waLink = '';
   }
 
-  import * as snarkjs from 'snarkjs';
+  // snarkjs dimuat secara lazy (dynamic import) di submitClaim agar bundle halaman utama tidak membengkak
   import { keccak_256 } from 'js-sha3';
   import { poseidon1 } from 'poseidon-lite';
 
@@ -147,7 +147,8 @@
           // Pre-check: apakah hash JS cocok dengan commitment yang tersimpan?
           if (poseidonHash !== commitments[cmtIdx]) continue; // tidak cocok, skip
 
-          // Cocok! Sekarang generate ZKP proof (pasti berhasil karena constraint terpenuhi)
+          // Cocok! Muat library snarkjs secara on-demand & generate ZKP proof
+          const snarkjs = await import('snarkjs');
           const { proof, publicSignals } = await snarkjs.groth16.fullProve(
             { secret: fe.toString(), target_hash: commitments[cmtIdx] },
             "/zk/single_keyword_proof.wasm",

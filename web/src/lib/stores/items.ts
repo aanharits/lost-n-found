@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { browser } from '$app/environment';
 
 // Tipe data objek klaim barang
 export interface Claim {
@@ -38,8 +39,32 @@ export interface Item {
   y: number;
 }
 
-// Store reaktif daftar barang yang ditampilkan pada papan
-export const items = writable<Item[]>([]);
+const CACHE_ITEMS_KEY = 'lnf_cached_items';
+
+function getInitialItems(): Item[] {
+  if (!browser) return [];
+  try {
+    const raw = sessionStorage.getItem(CACHE_ITEMS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+// Store reaktif daftar barang yang ditampilkan pada papan (instan 0ms dari sessionStorage saat F5)
+export const items = writable<Item[]>(getInitialItems());
+
+/** Simpan data item terakhir ke sessionStorage untuk instant rendering saat F5 */
+export function persistItemsToLocal(data: Item[]): void {
+  if (!browser || !Array.isArray(data)) return;
+  try {
+    sessionStorage.setItem(CACHE_ITEMS_KEY, JSON.stringify(data));
+  } catch {
+    // Kuota sessionStorage penuh atau privasi browser dinonaktifkan
+  }
+}
 
 // Tipe data permintaan aktivasi barang dari arsip (Inbox Satpam)
 export interface ArchiveRequest {
