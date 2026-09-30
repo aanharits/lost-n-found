@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { extractKeywordsWithAI } from '../zk/keywordExtractor.js';
 import { sanitizeEvidencePhoto } from '../utils/imageSanitizer.js';
-import { dbGetItems } from '../db/db-store.js';
+import { dbGetItemsForSatpam } from '../db/db-store.js';
 
 const api = new Hono();
 const SATPAM_SECRET_KEY = (process.env.SATPAM_ACCESS_KEY || '').trim();
@@ -97,7 +97,7 @@ api.get('/satpam/items', async (c) => {
   }
 
   try {
-    const items = await dbGetItems();
+    const items = await dbGetItemsForSatpam();
     const sanitized = items.map(({ reporterToken: _, ...rest }) => rest);
     return c.json({ success: true, items: sanitized });
   } catch (err: any) {

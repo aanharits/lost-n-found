@@ -1,5 +1,5 @@
 import { Server as SocketIOServer } from 'socket.io';
-import { dbGetItems } from '../db/db-store.js';
+import { dbGetItems, dbGetItemsForSatpam } from '../db/db-store.js';
 import { handleUserJoin, handleDisconnect, getConnectedUsersCount } from '../handlers/user.handler.js';
 import { handleItemAdd, handlePickEmoji } from '../handlers/report.handler.js';
 import { handleClaimSubmit } from '../handlers/claim.handler.js';
@@ -31,7 +31,7 @@ export function setupSocketHandlers(io: SocketIOServer): void {
           socket.join('satpam_room');
           console.log(`[Socket] Satpam verified and joined satpam_room: ${socket.id}`);
           try {
-            const allItems = await dbGetItems();
+            const allItems = await dbGetItemsForSatpam();
             // Satpam boleh melihat evidencePhoto, hanya reporterToken yang disanitasi
             const satpamItems = allItems.map(({ reporterToken: _, ...rest }) => rest);
             socket.emit('satpam_auth_success', { ok: true });
@@ -50,7 +50,7 @@ export function setupSocketHandlers(io: SocketIOServer): void {
         const key = data?.accessKey?.trim();
         if (SATPAM_SECRET_KEY && key === SATPAM_SECRET_KEY) {
           try {
-            const allItems = await dbGetItems();
+            const allItems = await dbGetItemsForSatpam();
             const satpamItems = allItems.map(({ reporterToken: _, ...rest }) => rest);
             socket.emit('satpam_items_response', satpamItems);
           } catch (err) {
