@@ -25,6 +25,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "drizzle-kit": "^0.31.11",
+    "socket.io-client": "^4.8.4",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }
