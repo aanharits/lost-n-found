@@ -112,6 +112,10 @@
                       <span class="bg-[#16a34a] text-white px-2 py-0.5 text-[7px] font-pixel font-bold rounded border border-[#1c120c]">
                         DISETUJUI
                       </span>
+                    {:else if claim.status === 'superseded'}
+                      <span class="bg-stone-400 text-white px-2 py-0.5 text-[7px] font-pixel font-bold rounded border border-[#1c120c]">
+                        DIGANTI REVISI
+                      </span>
                     {:else}
                       <span class="bg-[#dc2626] text-white px-2 py-0.5 text-[7px] font-pixel font-bold rounded border border-[#1c120c]">
                         DITOLAK

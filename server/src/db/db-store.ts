@@ -42,7 +42,8 @@ export interface Claim {
   score: number;
   confidence: string;
   reasoning: string;
-  status: 'pending' | 'approved' | 'rejected';
+  // 'superseded' = klaim lama yang digantikan oleh revisi pengklaim yang sama
+  status: 'pending' | 'approved' | 'rejected' | 'superseded';
   claimantName: string;
   claimantNpm: string;
   claimantContact: string;
@@ -89,7 +90,7 @@ function rowToClaim(row: ClaimRecord): Claim {
     score: row.score ?? 1.0,
     confidence: row.confidence ?? 'Tinggi',
     reasoning: row.reasoning ?? '',
-    status: (row.status ?? 'pending') as 'pending' | 'approved' | 'rejected',
+    status: (row.status ?? 'pending') as 'pending' | 'approved' | 'rejected' | 'superseded',
     claimantName: row.claimantName ?? '',
     claimantNpm: row.claimantNpm,
     claimantContact: row.claimantContact ?? '',
@@ -277,7 +278,7 @@ export async function dbInsertClaim(itemId: string, claim: Claim): Promise<Claim
 /** Update status klaim (approved/rejected) */
 export async function dbUpdateClaimStatus(
   claimId: string,
-  status: 'pending' | 'approved' | 'rejected',
+  status: 'pending' | 'approved' | 'rejected' | 'superseded',
   reasoning?: string
 ): Promise<void> {
   await db.update(claimsTable)

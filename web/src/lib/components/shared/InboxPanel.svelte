@@ -104,12 +104,14 @@
     pending: "MENUNGGU",
     approved: "DISETUJUI",
     rejected: "DITOLAK",
+    superseded: "DIGANTI REVISI",
   };
 
   const statusColor: Record<string, string> = {
     pending: "bg-[#ea580c] text-white",
     approved: "bg-[#16a34a] text-white",
     rejected: "bg-[#dc2626] text-white",
+    superseded: "bg-stone-400 text-white",
   };
 </script>
 
@@ -461,6 +463,17 @@
                         HUBUNGI VIA WHATSAPP ({targetContact})
                       </a>
                     {/if}
+                  </div>
+                {:else if entry.claim.status === "superseded"}
+                  <div
+                    class="bg-stone-100 border border-[#1c120c] p-2.5 shadow-[1px_1px_0_#1c120c]"
+                  >
+                    <p
+                      class="font-sans text-[10.5px] text-stone-600 font-bold leading-snug"
+                    >
+                      Klaim ini digantikan oleh versi revisi yang lebih baru dari
+                      pengklaim yang sama.
+                    </p>
                   </div>
                 {:else}
                   <div

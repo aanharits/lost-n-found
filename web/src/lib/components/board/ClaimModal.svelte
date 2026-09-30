@@ -205,10 +205,14 @@
       const claim = result.claim;
 
       if (claim.status === 'pending' || claim.status === 'approved') {
+        const remaining = 2 - $claimAttemptCount;
+        const revisionNote = remaining > 0
+          ? ` Kamu masih punya <strong>1 kesempatan revisi</strong> jika ingin memperbaiki ciri.`
+          : '';
         errorClass = 'bg-green-200 border-green-600 text-green-800';
-        errorMsg = targetItem.type === 'found'
+        errorMsg = (targetItem.type === 'found'
             ? `Klaim ZKP diverifikasi! Klaim masuk ke antrian review pelapor. Pantau status di INBOX > KLAIM SAYA.`
-            : `Ciri cocok dan terverifikasi! Pantau keputusan pelapor di INBOX > KLAIM SAYA.`;
+            : `Ciri cocok dan terverifikasi! Pantau keputusan pelapor di INBOX > KLAIM SAYA.`) + revisionNote;
         finished = true;
         claimText = '';
         
