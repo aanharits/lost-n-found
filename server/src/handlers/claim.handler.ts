@@ -113,7 +113,7 @@ export async function handleClaimSubmit(io: SocketIOServer, socket: Socket, data
     await dbUpdateItemStatus(itemId, 'disputed');
   }
 
-  // Mulai Dispute Window 1 menit (Gale-Shapley auto-resolve)
+  // Mulai Dispute Window 24 jam (Gale-Shapley auto-resolve)
   startDisputeWindow(io, itemId);
 
   io.emit('claim_updated', {

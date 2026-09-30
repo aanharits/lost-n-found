@@ -8,16 +8,16 @@ Backend untuk **Lost & Found Kampus AI** berfungsi sebagai pusat orkestrasi real
 
 ### 1. Web Framework & Realtime Server
 - **Hono (`hono`)**: Framework HTTP performa tinggi dengan adapter Node.js (`@hono/node-server`) untuk REST API (`/health`, `/api/verify-claim`).
-- **Socket.IO (`socket.io`)**: Menangani komunikasi dua arah berkecepatan tinggi: sinkronisasi koordinat drag-and-drop kartu, siaran laporan baru, timer dispute 1 menit, dan notifikasi inbox.
+- **Socket.IO (`socket.io`)**: Menangani komunikasi dua arah berkecepatan tinggi: sinkronisasi koordinat drag-and-drop kartu, siaran laporan baru, timer dispute 24 jam, dan notifikasi inbox.
 
 ### 2. Kriptografi & Zero-Knowledge Proofs (`src/services/zkp.service.ts`)
 - **Poseidon Hashing (`circomlibjs`)**: Mengubah ciri rahasia pelapor menjadi hash komitmen kriptografis `[h1, h2, h3]` yang aman.
 - **Groth16 Verification (`snarkjs`)**: Memverifikasi bukti matematis (proof) yang dikirim oleh browser pengklaim terhadap komitmen hash barang tanpa membocorkan ciri rahasia.
 
 ### 3. Gale-Shapley Matching Engine (`src/services/galeShapley.service.ts`)
-- **Dispute Window 1 Menit:** Ketika klaim valid pertama masuk, barang diberi status `disputed` dan timer 60 detik diaktifkan.
-- **Stable Matching:** Mengevaluasi seluruh klaim valid dalam antrean 1 menit berdasarkan skor ZKP dan prioritas waktu kedatangan untuk menentukan SATU pemilik sah yang adil (mencegah *race condition* atau kecurangan bot).
-- **Auto-Resolve:** Setelah 60 detik, klaim pemenang diubah ke `approved`, item menjadi `resolved`, dan nomor kontak WhatsApp dibuka untuk serah terima fisik.
+- **Dispute Window 24 Jam:** Ketika klaim valid pertama masuk, barang diberi status `disputed` dan timer 24 jam diaktifkan.
+- **Stable Matching:** Mengevaluasi seluruh klaim valid dalam antrean 24 jam berdasarkan skor ZKP dan prioritas waktu kedatangan untuk menentukan SATU pemilik sah yang adil (mencegah *race condition* atau kecurangan bot).
+- **Auto-Resolve:** Setelah 24 jam, klaim pemenang diubah ke `approved`, item menjadi `resolved`, dan nomor kontak WhatsApp dibuka untuk serah terima fisik.
 
 ### 4. Integrasi AI Groq Cloud (`src/services/groq.service.ts`)
 - Menstandarisasi teks deskripsi bebas dari pengguna menjadi 3 keyword baku menggunakan model bahasa berkecepatan tinggi (Qwen 2.5 / Llama 3) sebelum proses hashing Poseidon.
@@ -48,7 +48,7 @@ server/
 │   │   └── user.handler.ts   # Manajemen presensi & user online
 │   ├── services/
 │   │   ├── archiveRequest.service.ts # Manajemen request aktivasi arsip
-│   │   ├── galeShapley.service.ts    # Engine antrean dispute & matching 1 menit
+│   │   ├── galeShapley.service.ts    # Engine antrean dispute & matching 24 jam
 │   │   ├── groq.service.ts           # Standardisasi keyword NLP & chat AI
 │   │   └── zkp.service.ts            # Hashing Poseidon & verifikasi proof SnarkJS
 │   ├── routes/

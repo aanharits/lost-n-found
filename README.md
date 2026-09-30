@@ -21,7 +21,7 @@
 ### 2. Gale-Shapley Stable Matching
 
 - **Masalah:** Sistem konvensional memakai _First-Come, First-Served (FCFS)_. Pemilik asli yang mengetik teliti pasti kalah balapan dari bot otomatis atau koneksi cepat (_race condition_). Selain itu, barang umum (seperti tumbler hitam atau kunci motor) sering diklaim banyak orang sekaligus tanpa ada penilaian yang adil.
-- **Solusi Kami:** Begitu klaim valid pertama masuk, sistem membuka **Dispute Window 1 Menit ("APPROVAL 1 MENIT")**. Seluruh klaim yang lolos ZKP dalam 60 detik dievaluasi menggunakan algoritma **Gale-Shapley** (berdasarkan skor kecocokan ZKP dan prioritas waktu) untuk menetapkan pemilik sah secara adil dan stabil (_Pareto-optimal_).
+- **Solusi Kami:** Begitu klaim valid pertama masuk, sistem membuka **Dispute Window 24 Jam ("APPROVAL 24 JAM")**. Seluruh klaim yang lolos ZKP dalam 24 jam dievaluasi menggunakan algoritma **Gale-Shapley** (berdasarkan skor kecocokan ZKP dan prioritas waktu) untuk menetapkan pemilik sah secara adil dan stabil (_Pareto-optimal_).
 
 ---
 
@@ -46,7 +46,7 @@
 │ ➜ Groq Cloud API (Qwen 2.5) menstandarisasi bahasa bebas jadi 3 kata kunci │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ LAYER 3: THE JUDGE (Gale-Shapley Stable Matching)                           │
-│ ➜ Antrean sengketa 1 menit untuk eliminasi bot & pencocokan pemilik adil    │
+│ ➜ Antrean sengketa 24 jam untuk eliminasi bot & pencocokan pemilik adil     │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -62,14 +62,14 @@
      │         ├─ Filter Kategori Gamepad NES (D-PAD)
      │         ├─ Pencarian & Highlight Kartu Otomatis
      │         ├─ Tombol Rapihkan Papan (Auto-Grid Layout)
-     │         ├─ Drawer INBOX Kanan (Status Klaim, Timer 1 Menit, Request)
+     │         ├─ Drawer INBOX Kanan (Status Klaim, Timer 24 Jam, Request)
      │         ├─ Chat Asisten Satpam AI (Groq LLM)
      │         └─ Request Aktivasi Arsip Barang Lawas
      ▼
 [ LAPOR / KLAIM ] ───► Foto asli masuk ke arsip Satpam, board hanya aset ikon
      │                 Pengklaim generate ZKP Proof di browser ➜ Lolos ZKP
      ▼
-[ DISPUTE 1 MENIT ] ──► Antrean Gale-Shapley memvalidasi pemilik sah
+[ DISPUTE 24 JAM ] ──► Antrean Gale-Shapley memvalidasi pemilik sah
      ▼
 [ RESOLVED ] ───► Kontak WhatsApp dibuka untuk serah terima fisik barang
 ```
