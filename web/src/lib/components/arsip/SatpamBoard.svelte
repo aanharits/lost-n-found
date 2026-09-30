@@ -422,11 +422,12 @@
         // dan langsung klik PUBLISH setelah memeriksa barang.
         openItemDetail(item);
       }}
+      onClose={() => (isInboxOpen = false)}
     />
     <button
       type="button"
       onclick={() => (isInboxOpen = false)}
-      class="shrink-0 w-full font-pixel text-[8px] py-2 bg-[#1c120c] text-white hover:bg-[#2d2d2d] cursor-pointer border-t-2 border-[#1c120c]"
+      class="shrink-0 w-full font-pixel text-[8.5px] py-2.5 bg-[#1c120c] hover:bg-stone-800 text-white cursor-pointer border-t-2 border-[#1c120c] font-bold active:translate-y-0.5"
     >
       ✕ TUTUP INBOX
     </button>

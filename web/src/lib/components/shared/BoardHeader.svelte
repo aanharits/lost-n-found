@@ -166,30 +166,30 @@
       </button>
     {/if}
 
-    <!-- Logo Profil: Sesuai Screenshot Slate Navy Capsule -->
+    <!-- Logo Profil: Sesuai Screenshot Slate Navy Capsule (ukuran h-10 sama dengan tombol Inbox & Arsip) -->
     <div class="relative profile-menu-container">
       <button
         type="button"
         onclick={toggleProfile}
-        class="bg-[#2b3847] hover:bg-[#334354] border border-black/30 shadow-[0_2px_4px_rgba(0,0,0,0.3)] pl-1.5 pr-3 py-1.5 rounded-full flex items-center gap-2.5 transition-all active:translate-y-0.5 cursor-pointer select-none"
+        class="relative h-10 bg-[#2b3847] hover:bg-[#384a5e] {isProfileOpen ? 'ring-2 ring-[#facc15] bg-[#384a5e]' : ''} border border-black/30 shadow-[0_2px_4px_rgba(0,0,0,0.3)] pl-1.5 pr-3 rounded-full flex items-center gap-2 transition-all active:translate-y-0.5 cursor-pointer select-none"
         aria-label="Profil Akun"
       >
         <!-- Avatar Badge -->
-        <div class="w-8 h-8 rounded-full bg-[#ffd700] border-2 border-[#1c120c] flex items-center justify-center overflow-hidden shrink-0">
+        <div class="w-7 h-7 rounded-full bg-[#ffd700] border-2 border-[#1c120c] flex items-center justify-center overflow-hidden shrink-0">
           {#if $currentPlayer?.avatarSeed}
-            <Avatar seed={$currentPlayer.avatarSeed} size={32} />
+            <Avatar seed={$currentPlayer.avatarSeed} size={28} />
           {:else}
-            <span class="font-pixel text-[11px] text-[#1c120c] font-bold">
+            <span class="font-pixel text-[10px] text-[#1c120c] font-bold">
               {($currentPlayer?.name || 'U').charAt(0).toUpperCase()}
             </span>
           {/if}
         </div>
 
-        <span class="font-pixel text-[10px] md:text-[11px] text-white max-w-[90px] md:max-w-[130px] truncate font-bold">
+        <span class="font-pixel text-[9px] md:text-[10px] text-white max-w-[90px] md:max-w-[130px] truncate font-bold tracking-wide">
           {$currentPlayer?.name || 'Profil'}
         </span>
 
-        <span class="font-pixel text-[9px] text-slate-300 font-bold transition-transform duration-200 {isProfileOpen ? 'rotate-180' : ''}">
+        <span class="font-pixel text-[8px] md:text-[9px] text-slate-300 font-bold transition-transform duration-200 {isProfileOpen ? 'rotate-180' : ''}">
           v
         </span>
       </button>
