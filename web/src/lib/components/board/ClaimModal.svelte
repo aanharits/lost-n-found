@@ -21,6 +21,16 @@
 
   let submitLabel = $derived(targetItem?.type === 'found' ? 'Kirim Klaim' : 'Cocokkan Ciri');
 
+  // Jumlah klaim milik player ini untuk barang target (dari data server).
+  // Dipakai untuk menampilkan sisa kesempatan revisi sejak modal dibuka.
+  let myAttempts = $derived(
+    (targetItem?.claims || []).filter(
+      (c) => c.claimantNpm && c.claimantNpm === $currentPlayer?.npm
+    ).length
+  );
+  let isRevision = $derived(myAttempts > 0);
+  let remainingRevisions = $derived(Math.max(0, 2 - myAttempts));
+
   // Judul modal berdasarkan status jenis barang
   let modalTitle = $derived(
     targetItem
@@ -205,9 +215,14 @@
       const claim = result.claim;
 
       if (claim.status === 'pending' || claim.status === 'approved') {
-        const remaining = 2 - $claimAttemptCount;
+        // Hitung total klaim user ini untuk barang ini dari data server (authoritative),
+        // bukan dari counter sesi modal yang di-reset setiap kali modal dibuka.
+        const totalAttempts = (result.claims || []).filter(
+          (c: any) => c.claimantNpm && c.claimantNpm === player?.npm
+        ).length;
+        const remaining = Math.max(0, 2 - totalAttempts);
         const revisionNote = remaining > 0
-          ? ` Kamu masih punya <strong>1 kesempatan revisi</strong> jika ingin memperbaiki ciri.`
+          ? ` Kamu masih punya <strong>${remaining} kesempatan revisi</strong> jika ingin memperbaiki ciri.`
           : '';
         errorClass = 'bg-green-200 border-green-600 text-green-800';
         errorMsg = (targetItem.type === 'found'
@@ -292,6 +307,26 @@
 
         <!-- Section Bukti Ciri Khas Barang (Warna Pastel Mint Green Bubble Satpam AI) -->
         <div class="bg-[#dcfce7] border-2 border-[#1c120c] rounded p-3.5 flex flex-col gap-2.5 shadow-[2px_2px_0px_#1c120c]">
+          <!-- Info kesempatan klaim/revisi, tampil sejak modal dibuka -->
+          {#if !finished}
+            <div class="bg-white border-2 border-[#1c120c] rounded px-2.5 py-2 shadow-[1px_1px_0_#1c120c]">
+              {#if isRevision}
+                <p class="font-sans text-[11px] text-[#1c120c] font-bold leading-snug">
+                  Ini <span class="text-[#2563eb]">REVISI KLAIM</span> kamu.
+                  {#if remainingRevisions > 0}
+                    Setelah ini kesempatan revisi <span class="text-red-600">habis</span>.
+                  {:else}
+                    Kesempatan revisi sudah <span class="text-red-600">habis</span>.
+                  {/if}
+                </p>
+              {:else}
+                <p class="font-sans text-[11px] text-[#1c120c] font-bold leading-snug">
+                  Kamu punya <span class="text-[#2563eb]">1 kesempatan revisi</span> bila ingin memperbaiki ciri.
+                </p>
+              {/if}
+            </div>
+          {/if}
+
           <div class="flex flex-col gap-1.5">
             <label for="claim-desc" class="font-pixel text-[8.5px] md:text-[9.5px] text-[#1c120c] font-bold flex items-center justify-between">
               <span>BUKTI CIRI KHAS BARANG</span>
