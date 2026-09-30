@@ -1,134 +1,179 @@
 <script lang="ts">
   import { fly, fade } from "svelte/transition";
-  import { items } from "$lib/stores/items.js";
+  import { items, type Item, type Claim } from "$lib/stores/items.js";
   import { currentPlayer } from "$lib/stores/player.js";
   import { inboxOpen, inboxTab, type InboxTab } from "$lib/stores/ui.js";
-  import { getSocket } from "$lib/socket.js";
-  import TagIcon from "./TagIcon.svelte";
 
-  // ── Derived: item milik reporter yang punya klaim pending ────────────────
-  let reporterItems = $derived(
-    $items.filter(
-      (i) =>
-        !!$currentPlayer?.npm &&
-        i.reporterNpm === $currentPlayer.npm &&
-        (i.claims || []).length > 0,
-    ),
+  interface ClaimEntry {
+    item: Item;
+    claim: Claim;
+  }
+
+  type StatusFilter = "all" | "pending" | "approved" | "rejected";
+
+  let expandedClaimId = $state<string | null>(null);
+  let statusFilter = $state<StatusFilter>("all");
+
+  // 1. Klaim Masuk (klaim yang diajukan orang lain atas barang yang dilaporkan user ini)
+  const incomingClaims = $derived.by<ClaimEntry[]>(() => {
+    const npm = $currentPlayer?.npm || "";
+    if (!npm) return [];
+    const entries: ClaimEntry[] = [];
+    for (const it of $items) {
+      if (it.reporterNpm === npm && it.claims && it.claims.length > 0) {
+        for (const c of it.claims) {
+          entries.push({ item: it, claim: c });
+        }
+      }
+    }
+    // Urutkan terbaru di atas
+    entries.sort((a, b) => (b.claim.createdAt || "").localeCompare(a.claim.createdAt || ""));
+    return entries;
+  });
+
+  // 2. Klaim Saya (klaim yang pernah diajukan oleh user ini ke barang lain)
+  const myClaims = $derived.by<ClaimEntry[]>(() => {
+    const npm = $currentPlayer?.npm || "";
+    if (!npm) return [];
+    const entries: ClaimEntry[] = [];
+    for (const it of $items) {
+      if (it.claims && it.claims.length > 0) {
+        for (const c of it.claims) {
+          if (c.claimantNpm === npm) {
+            entries.push({ item: it, claim: c });
+          }
+        }
+      }
+    }
+    entries.sort((a, b) => (b.claim.createdAt || "").localeCompare(a.claim.createdAt || ""));
+    return entries;
+  });
+
+  const incomingPendingCount = $derived(
+    incomingClaims.filter((e) => e.claim.status === "pending").length,
   );
 
-  let incomingPendingCount = $derived(
-    reporterItems.reduce(
-      (acc, i) =>
-        acc + (i.claims || []).filter((c) => c.status === "pending").length,
-      0,
-    ),
+  const myPendingCount = $derived(
+    myClaims.filter((e) => e.claim.status === "pending").length,
   );
 
-  // ── Derived: klaim yang pernah diajukan oleh user ini ────────────────────
-  let myClaims = $derived(
-    $items
-      .filter((i) =>
-        (i.claims || []).some((c) => c.claimantNpm === $currentPlayer?.npm),
-      )
-      .map((i) => {
-        const myClaim = i.claims.find(
-          (c) => c.claimantNpm === $currentPlayer?.npm,
-        )!;
-        return { item: i, claim: myClaim };
-      }),
+  const overallPendingCount = $derived(
+    incomingPendingCount + myPendingCount,
   );
 
-  let myPendingCount = $derived(
-    myClaims.filter((m) => m.claim.status === "pending").length,
+  const currentCategoryList = $derived(
+    $inboxTab === "incoming" ? incomingClaims : myClaims,
   );
+
+  const filteredClaims = $derived.by(() => {
+    if (statusFilter === "all") return currentCategoryList;
+    return currentCategoryList.filter((e) => e.claim.status === statusFilter);
+  });
 
   function switchTab(tab: InboxTab) {
     inboxTab.set(tab);
+    expandedClaimId = null;
+    statusFilter = "all";
+  }
+
+  function toggleExpand(id: string) {
+    expandedClaimId = expandedClaimId === id ? null : id;
   }
 
   function close() {
     inboxOpen.set(false);
   }
 
-  // Format tanggal ISO ke format: 26/9/2026 21.59
   function formatDate(iso: string): string {
     if (!iso) return "-";
-    const d = new Date(iso);
-    const day = d.getDate();
-    const month = d.getMonth() + 1;
-    const year = d.getFullYear();
-    const hours = d.getHours().toString().padStart(2, "0");
-    const mins = d.getMinutes().toString().padStart(2, "0");
-    return `${day}/${month}/${year} ${hours}.${mins}`;
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      const year = d.getFullYear();
+      const month = d.toLocaleString("id-ID", { month: "short" });
+      const day = String(d.getDate()).padStart(2, "0");
+      const hours = String(d.getHours()).padStart(2, "0");
+      const mins = String(d.getMinutes()).padStart(2, "0");
+      return `${day} ${month} ${year}, ${hours}.${mins}`;
+    } catch {
+      return iso;
+    }
   }
 
-  // Label status klaim
-  function statusLabel(status: string): string {
-    if (status === "pending") return "PENDING";
-    if (status === "approved") return "DISETUJUI";
-    return "DITOLAK";
-  }
+  const statusLabel: Record<string, string> = {
+    pending: "MENUNGGU",
+    approved: "DISETUJUI",
+    rejected: "DITOLAK",
+  };
 
-  function statusClass(status: string): string {
-    if (status === "pending") return "bg-[#f59e0b] text-[#1c120c]";
-    if (status === "approved") return "bg-[#15803d] text-white";
-    return "bg-[#dc2626] text-white";
-  }
+  const statusColor: Record<string, string> = {
+    pending: "bg-[#ea580c] text-white",
+    approved: "bg-[#16a34a] text-white",
+    rejected: "bg-[#dc2626] text-white",
+  };
 </script>
+
+<svelte:window onkeydown={(e) => e.key === "Escape" && close()} />
 
 {#if $inboxOpen}
   <!-- Backdrop -->
-  <div
-    class="fixed inset-0 z-40"
+  <button
+    type="button"
+    class="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] pointer-events-auto border-0 cursor-default"
     onclick={close}
-    onkeydown={(e) => e.key === "Escape" && close()}
-    role="button"
-    tabindex="-1"
     aria-label="Tutup inbox"
-    transition:fade={{ duration: 100 }}
-  ></div>
+    transition:fade={{ duration: 150 }}
+  ></button>
 
-  <!-- Panel -->
+  <!-- Slide-in Drawer from Right (Konsisten seperti Inbox Satpam) -->
   <div
-    class="fixed top-12 right-3 z-50 w-[300px] md:w-[350px] bg-white border-4 border-[#1c120c] shadow-[5px_5px_0px_#0a060f] rounded flex flex-col overflow-hidden select-none"
-    transition:fly={{ y: -10, duration: 200 }}
+    class="fixed inset-y-0 right-0 w-[380px] max-w-[90vw] z-50 flex flex-col overflow-hidden shadow-[-4px_0_16px_rgba(0,0,0,0.4)] border-l-4 border-[#1c120c] bg-[#f8fafc] select-none pointer-events-auto"
+    transition:fly={{ x: 380, duration: 250 }}
     role="dialog"
     aria-label="Inbox Klaim"
   >
-    <!-- Header -->
+    <!-- NES Title Bar (Matching SatpamArchiveInbox) -->
     <div
-      class="bg-[#2563eb] text-white px-3 py-2 font-pixel text-[8.5px] flex justify-between items-center border-b-2 border-[#1c120c]"
+      class="bg-[#2563eb] text-white px-3.5 py-2.5 font-pixel text-[9px] md:text-[10px] flex justify-between items-center border-b-2 border-[#1c120c] select-none shrink-0"
     >
-      <div class="flex items-center gap-1.5">
-        <span
-          class="w-1.5 h-1.5 rounded-full bg-green-400 border border-[#0c0812] animate-pulse"
-        ></span>
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 bg-[#ffd700] border border-[#1c120c]"></span>
         <span class="font-bold tracking-wider">INBOX KLAIM</span>
+        {#if overallPendingCount > 0}
+          <span
+            class="bg-[#dc2626] text-white font-pixel text-[7.5px] px-1.5 py-0.5 border border-[#1c120c] font-bold shadow-[1px_1px_0_#1c120c]"
+          >
+            {overallPendingCount}
+          </span>
+        {/if}
       </div>
       <button
-        onclick={close}
-        class="text-white hover:text-red-200 font-pixel text-[10px] px-1 py-0.5 cursor-pointer leading-none"
         type="button"
+        onclick={close}
+        class="bg-[#dc2626] hover:bg-[#b91c1c] active:translate-y-0.5 text-white font-pixel text-[9px] px-2 py-0.5 border border-[#1c120c] cursor-pointer shadow-[1px_1px_0_#1c120c] leading-none"
         aria-label="Tutup"
       >
         X
       </button>
     </div>
 
-    <!-- Tabs -->
-    <div class="flex border-b-2 border-[#1c120c] bg-[#f8fafc]">
+    <!-- Segmented Tab Bar Kategori: KLAIM MASUK vs KLAIM SAYA -->
+    <div
+      class="bg-[#f1f5f9] px-3.5 py-2 border-b border-[#1c120c] flex items-center gap-2 select-none shrink-0"
+    >
       <button
         type="button"
         onclick={() => switchTab("incoming")}
-        class="flex-1 py-1.5 font-pixel text-[7.5px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 border-r-2 border-[#1c120c]
-          {$inboxTab === 'incoming'
-          ? 'bg-[#2563eb] text-white'
-          : 'text-[#1c120c] hover:bg-slate-100'}"
+        class="flex-1 py-1.5 px-2 font-pixel text-[7.5px] md:text-[8px] font-bold border border-[#1c120c] cursor-pointer transition-all flex items-center justify-center gap-1.5 {$inboxTab ===
+        'incoming'
+          ? 'bg-[#2563eb] text-white shadow-[1px_1px_0_#1c120c]'
+          : 'bg-white text-[#1c120c] hover:bg-stone-200'}"
       >
-        KLAIM MASUK
+        <span>KLAIM MASUK</span>
+        <span class="font-mono text-[9px]">({incomingClaims.length})</span>
         {#if incomingPendingCount > 0}
           <span
-            class="bg-[#dc2626] text-white font-pixel text-[6.5px] px-1 py-0.5 rounded border border-[#1c120c] leading-none"
+            class="bg-[#dc2626] text-white font-pixel text-[6.5px] px-1 py-0.2 rounded-none border border-white/60"
           >
             {incomingPendingCount}
           </span>
@@ -137,15 +182,16 @@
       <button
         type="button"
         onclick={() => switchTab("mine")}
-        class="flex-1 py-1.5 font-pixel text-[7.5px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1
-          {$inboxTab === 'mine'
-          ? 'bg-[#2563eb] text-white'
-          : 'text-[#1c120c] hover:bg-slate-100'}"
+        class="flex-1 py-1.5 px-2 font-pixel text-[7.5px] md:text-[8px] font-bold border border-[#1c120c] cursor-pointer transition-all flex items-center justify-center gap-1.5 {$inboxTab ===
+        'mine'
+          ? 'bg-[#2563eb] text-white shadow-[1px_1px_0_#1c120c]'
+          : 'bg-white text-[#1c120c] hover:bg-stone-200'}"
       >
-        KLAIM SAYA
+        <span>KLAIM SAYA</span>
+        <span class="font-mono text-[9px]">({myClaims.length})</span>
         {#if myPendingCount > 0}
           <span
-            class="bg-[#f59e0b] text-[#1c120c] font-pixel text-[6.5px] px-1 py-0.5 rounded border border-[#1c120c] leading-none"
+            class="bg-[#ea580c] text-white font-pixel text-[6.5px] px-1 py-0.2 rounded-none border border-white/60"
           >
             {myPendingCount}
           </span>
@@ -153,341 +199,320 @@
       </button>
     </div>
 
-    <!-- Content area -->
+    <!-- Segmented Status Filter (Matching SatpamArchiveInbox: SEMUA, MENUNGGU, DISETUJUI, DITOLAK) -->
     <div
-      class="flex flex-col gap-2.5 p-2.5 max-h-[380px] overflow-y-auto inbox-scroll bg-[#f8fafc]"
+      class="bg-[#f8fafc] px-3.5 py-2 border-b-2 border-[#1c120c] flex items-center justify-between gap-1 select-none shrink-0"
     >
-      <!-- ── Tab: KLAIM MASUK ──────────────────────────────────────────── -->
-      {#if $inboxTab === "incoming"}
-        {#if reporterItems.length === 0}
+      <div class="flex items-center gap-1 overflow-x-auto">
+        <button
+          type="button"
+          onclick={() => (statusFilter = "all")}
+          class="px-2 py-1 text-[7px] font-pixel font-bold border border-[#1c120c] cursor-pointer transition-all {statusFilter ===
+          'all'
+            ? 'bg-[#1c120c] text-white shadow-[1px_1px_0_#1c120c]'
+            : 'bg-white text-[#1c120c] hover:bg-stone-200'}"
+        >
+          SEMUA ({currentCategoryList.length})
+        </button>
+        <button
+          type="button"
+          onclick={() => (statusFilter = "pending")}
+          class="px-2 py-1 text-[7px] font-pixel font-bold border border-[#1c120c] cursor-pointer transition-all {statusFilter ===
+          'pending'
+            ? 'bg-[#ea580c] text-white shadow-[1px_1px_0_#1c120c]'
+            : 'bg-white text-[#1c120c] hover:bg-stone-200'}"
+        >
+          MENUNGGU ({currentCategoryList.filter(
+            (e) => e.claim.status === "pending",
+          ).length})
+        </button>
+        <button
+          type="button"
+          onclick={() => (statusFilter = "approved")}
+          class="px-2 py-1 text-[7px] font-pixel font-bold border border-[#1c120c] cursor-pointer transition-all {statusFilter ===
+          'approved'
+            ? 'bg-[#16a34a] text-white shadow-[1px_1px_0_#1c120c]'
+            : 'bg-white text-[#1c120c] hover:bg-stone-200'}"
+        >
+          DISETUJUI ({currentCategoryList.filter(
+            (e) => e.claim.status === "approved",
+          ).length})
+        </button>
+        <button
+          type="button"
+          onclick={() => (statusFilter = "rejected")}
+          class="px-2 py-1 text-[7px] font-pixel font-bold border border-[#1c120c] cursor-pointer transition-all {statusFilter ===
+          'rejected'
+            ? 'bg-[#dc2626] text-white shadow-[1px_1px_0_#1c120c]'
+            : 'bg-white text-[#1c120c] hover:bg-stone-200'}"
+        >
+          DITOLAK ({currentCategoryList.filter(
+            (e) => e.claim.status === "rejected",
+          ).length})
+        </button>
+      </div>
+
+      <span class="font-pixel text-[7px] text-stone-500 hidden sm:inline shrink-0">
+        {filteredClaims.length} ENTRI
+      </span>
+    </div>
+
+    <!-- List Items / Cards Container -->
+    <div
+      class="flex-1 min-h-0 overflow-y-auto px-3 py-3 flex flex-col gap-3 inbox-scroll"
+    >
+      {#if filteredClaims.length === 0}
+        <div class="h-full flex items-center justify-center p-6">
           <div
-            class="p-6 text-center font-pixel text-[7.5px] text-stone-500 font-bold bg-white border-2 border-[#1c120c] rounded shadow-[2px_2px_0_#1c120c]"
+            class="bg-stone-50 border-2 border-dashed border-[#1c120c] p-6 text-center text-[#1c120c] font-pixel text-[8px] leading-relaxed"
           >
-            BELUM ADA KLAIM MASUK
+            {#if currentCategoryList.length === 0}
+              {$inboxTab === "incoming"
+                ? "[BELUM ADA KLAIM MASUK]"
+                : "[BELUM ADA KLAIM YANG DIAJUKAN]"}
+            {:else}
+              [TIDAK ADA KLAIM PADA FILTER INI]
+            {/if}
           </div>
-        {:else}
-          {#each reporterItems as item (item.id)}
-            {@const pendingClaims = (item.claims || []).filter(
-              (c) => c.status === "pending",
-            )}
-            {@const otherClaims = (item.claims || []).filter(
-              (c) => c.status !== "pending",
-            )}
-            <div
-              class="flex flex-col gap-2 mb-0.5"
-              transition:fly={{ x: 10, duration: 150 }}
-            >
-              <!-- Item Header Card (Pastel Yellow / Cream) -->
-              <div
-                class="bg-[#fef9c3] border-2 border-[#1c120c] rounded-lg p-2.5 shadow-[2px_2px_0px_#1c120c] flex items-center gap-2.5"
-              >
-                <div
-                  class="w-9 h-9 rounded-md bg-white border-2 border-[#1c120c] flex items-center justify-center shrink-0 shadow-[1px_1px_0px_#1c120c]"
+        </div>
+      {:else}
+        {#each filteredClaims as entry (entry.claim.id)}
+          {@const isIncoming = $inboxTab === "incoming"}
+          {@const targetContact = isIncoming
+            ? entry.claim.claimantContact
+            : entry.item.reporterContact}
+          {@const cleanWa = (targetContact || "").replace(/[^0-9]/g, "")}
+
+          <div
+            class="shrink-0 border-2 border-[#1c120c] bg-white shadow-[2px_2px_0_#1c120c] overflow-hidden"
+            transition:fade={{ duration: 150 }}
+          >
+            <!-- Card Header: Status Tag + Tanggal -->
+            <div class="px-3 pt-3 pb-2.5">
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <span
+                  class="font-pixel text-[6.5px] px-1.5 py-0.5 rounded-none font-bold inline-block border border-[#1c120c] {statusColor[
+                    entry.claim.status
+                  ] || 'bg-stone-200 text-[#1c120c]'}"
                 >
-                  <TagIcon
-                    tag={item.tag}
-                    fallback={item.icon}
-                    size={24}
-                    title={item.title}
-                  />
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-1.5">
-                    <span
-                      class="font-pixel text-[11px] text-[#1c120c] font-bold truncate"
-                      >{item.title}</span
-                    >
-                    <span
-                      class="font-pixel text-[6.5px] px-1.5 py-0.5 rounded border border-[#1c120c] font-bold text-white tracking-wider {item.type ===
-                      'found'
-                        ? 'bg-[#15803d]'
-                        : 'bg-[#dc2626]'}"
-                    >
-                      {item.type === "found" ? "KETEMU" : "HILANG"}
-                    </span>
-                  </div>
-                  <p
-                    class="font-sans text-[10px] font-bold text-[#1c120c]/80 mt-0.5 truncate"
-                  >
-                    {item.desc ||
-                      `Total ${(item.claims || []).length} Pengajuan Klaim`}
-                  </p>
-                </div>
+                  [{statusLabel[entry.claim.status] ?? entry.claim.status}]
+                </span>
+                <span
+                  class="font-mono text-[9px] font-bold text-stone-600 shrink-0"
+                >
+                  {formatDate(entry.claim.createdAt)}
+                </span>
               </div>
 
-              <!-- Klaim Pending List (Pastel Mint Green) -->
-              {#if pendingClaims.length > 0}
-                <div class="flex flex-col gap-2">
-                  {#each pendingClaims as claim (claim.id)}
-                    <div
-                      class="bg-[#dcfce7] border-2 border-[#1c120c] rounded-lg p-2.5 shadow-[2px_2px_0px_#1c120c] flex flex-col gap-2"
-                    >
-                      <!-- Top Row: Badge PENDING & Timestamp -->
-                      <div class="flex justify-between items-center">
-                        <span
-                          class="bg-[#f59e0b] text-[#1c120c] px-1.5 py-0.5 text-[7px] font-pixel font-bold rounded border border-[#1c120c] tracking-wider"
-                        >
-                          PENDING
-                        </span>
-                        <span
-                          class="text-[9.5px] text-[#1c120c]/80 font-sans font-bold"
-                          >{formatDate(claim.createdAt)}</span
-                        >
-                      </div>
-
-                      <!-- Middle Box: Text Bubble KLAIM USER -->
-                      <div
-                        class="bg-white border-2 border-[#1c120c] rounded-md p-2 shadow-[1px_1px_0px_#1c120c]"
-                      >
-                        <span
-                          class="text-[#1c120c] text-[8px] font-pixel block mb-0.5 font-bold tracking-wider"
-                          >KLAIM USER:</span
-                        >
-                        <p
-                          class="font-sans text-[11px] text-[#1c120c] font-semibold leading-relaxed"
-                        >
-                          "{claim.text || "Klaim diajukan"}"
-                        </p>
-                      </div>
-
-                      <!-- Bottom Row: Oleh & WA -->
-                      <div
-                        class="flex items-center justify-between text-[10px] text-[#1c120c] font-sans border-t border-[#1c120c]/20 pt-1 font-bold"
-                      >
-                        <span
-                          >Oleh: <strong class="text-[#1c120c]"
-                            >{claim.claimantName || "Anonim"}</strong
-                          >
-                          ({claim.claimantNpm || "-"})</span
-                        >
-                        {#if claim.claimantContact}
-                          <span class="text-[#15803d] font-bold"
-                            >WA: {claim.claimantContact}</span
-                          >
-                        {/if}
-                      </div>
-
-                      <!-- Status Resolusi Gale-Shapley Otomatis -->
-                      {#if item.status !== "resolved"}
-                        <div
-                          class="mt-0.5 bg-[#fef3c7] border border-[#f59e0b] text-[#92400e] font-pixel text-[7px] py-1.5 px-2 rounded-md text-center font-bold flex items-center justify-center gap-1.5 shadow-[1px_1px_0px_#1c120c]"
-                        >
-                          <span
-                            class="w-1.5 h-1.5 rounded-full bg-[#f59e0b] animate-ping"
-                          ></span>
-                          <span>PROSES APPROVAL (24 JAM)</span>
-                        </div>
-                      {:else}
-                        <div
-                          class="mt-0.5 bg-[#bbf7d0] border border-[#16a34a] text-[#166534] font-pixel text-[7px] py-1.5 px-2 rounded-md text-center font-bold shadow-[1px_1px_0px_#1c120c]"
-                        >
-                          SUDAH DISELESAIKAN (GALE-SHAPLEY)
-                        </div>
-                      {/if}
-                    </div>
-                  {/each}
-                </div>
-              {/if}
-
-              <!-- Klaim Sudah Diproses -->
-              {#if otherClaims.length > 0}
-                <div class="flex flex-col gap-1 mt-0.5">
-                  <p class="font-pixel text-[6.5px] text-stone-500 font-bold">
-                    SUDAH DIPROSES ({otherClaims.length})
-                  </p>
-                  {#each otherClaims as claim (claim.id)}
-                    <div
-                      class="flex justify-between items-center px-2 py-1 bg-white border border-[#1c120c]/30 rounded-md shadow-sm"
-                    >
-                      <div class="flex items-center gap-1">
-                        <span
-                          class="font-sans text-[10px] text-stone-700 font-bold"
-                          >{claim.claimantName || "Anonim"}</span
-                        >
-                        {#if claim.claimantNpm}
-                          <span
-                            class="font-sans text-[9px] text-stone-500 font-medium"
-                            >({claim.claimantNpm})</span
-                          >
-                        {/if}
-                      </div>
+              <!-- Baris Judul & Aktor -->
+              <button
+                type="button"
+                onclick={() => toggleExpand(entry.claim.id)}
+                class="w-full text-left cursor-pointer group hover:bg-[#fefce8] -mx-1.5 px-1.5 py-1 transition-colors"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-1.5 flex-wrap">
                       <span
-                        class="font-pixel text-[6.5px] px-1 py-0.5 rounded border border-[#1c120c] font-bold {statusClass(
-                          claim.status,
-                        )}"
+                        class="font-sans font-bold text-xs text-[#1c120c] truncate"
                       >
-                        {statusLabel(claim.status)}
+                        {entry.item.title}
+                      </span>
+                      <span
+                        class="font-mono text-[8.5px] font-bold text-[#1c120c] bg-stone-100 px-1 py-0.5 border border-stone-300 shrink-0"
+                      >
+                        {entry.item.type === "found" ? "KETEMU" : "HILANG"} · {entry
+                          .item.category || "Umum"}
                       </span>
                     </div>
-                  {/each}
-                </div>
-              {/if}
-            </div>
-          {/each}
-        {/if}
-      {/if}
 
-      <!-- ── Tab: KLAIM SAYA (Konsisten Sesuai Gambar 2) ────────────────── -->
-      {#if $inboxTab === "mine"}
-        {#if myClaims.length === 0}
-          <div
-            class="p-6 text-center font-pixel text-[7.5px] text-stone-500 font-bold bg-white border-2 border-[#1c120c] rounded shadow-[2px_2px_0_#1c120c]"
-          >
-            BELUM ADA KLAIM YANG DIAJUKAN
-          </div>
-        {:else}
-          {#each myClaims as { item, claim } (claim.id)}
-            <div
-              class="flex flex-col gap-2 mb-0.5"
-              transition:fly={{ x: -10, duration: 150 }}
-            >
-              <!-- Item Header Card (Pastel Yellow / Cream Sesuai Gambar 2) -->
-              <div
-                class="bg-[#fef9c3] border-2 border-[#1c120c] rounded-lg p-2.5 shadow-[2px_2px_0px_#1c120c] flex items-center gap-2.5"
-              >
-                <div
-                  class="w-9 h-9 rounded-md bg-white border-2 border-[#1c120c] flex items-center justify-center shrink-0 shadow-[1px_1px_0px_#1c120c]"
-                >
-                  <TagIcon
-                    tag={item.tag}
-                    fallback={item.icon}
-                    size={24}
-                    title={item.title}
-                  />
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-1.5">
-                    <span
-                      class="font-pixel text-[11px] text-[#1c120c] font-bold truncate"
-                      >{item.title}</span
+                    <p
+                      class="font-sans text-[10.5px] text-stone-600 mt-1 truncate"
                     >
-                    <span
-                      class="font-pixel text-[6.5px] px-1.5 py-0.5 rounded border border-[#1c120c] font-bold text-white tracking-wider {item.type ===
-                      'found'
-                        ? 'bg-[#15803d]'
-                        : 'bg-[#dc2626]'}"
-                    >
-                      {item.type === "found" ? "KETEMU" : "HILANG"}
-                    </span>
+                      {#if isIncoming}
+                        👤 <span class="font-bold text-[#1c120c]"
+                          >{entry.claim.claimantName || "Anonim"}</span
+                        >
+                        {#if entry.claim.claimantNpm}
+                          <span class="text-stone-500 font-mono text-[9px]"
+                            >({entry.claim.claimantNpm})</span
+                          >
+                        {/if}
+                        {#if entry.claim.claimantContact}
+                          <span class="text-stone-400"> &bull; </span>
+                          <span
+                            class="text-[#16a34a] font-mono text-[10px] font-bold"
+                            >WA {entry.claim.claimantContact}</span
+                          >
+                        {/if}
+                      {:else}
+                        👤 <span class="font-bold text-[#1c120c]"
+                          >Pelapor: {entry.item.reporterName || "Anonim"}</span
+                        >
+                        {#if entry.item.desc}
+                          <span class="text-stone-400"> &bull; </span>
+                          <span class="text-stone-500 font-medium"
+                            >{entry.item.desc}</span
+                          >
+                        {/if}
+                      {/if}
+                    </p>
                   </div>
-                  <p
-                    class="font-sans text-[10px] font-bold text-[#1c120c]/80 mt-0.5 truncate"
-                  >
-                    {item.desc || "Laporan barang"}
-                  </p>
-                </div>
-              </div>
-
-              <!-- Status Klaim Card (Pastel Mint Green Sesuai Gambar 2) -->
-              <div
-                class="bg-[#dcfce7] border-2 border-[#1c120c] rounded-lg p-2.5 shadow-[2px_2px_0px_#1c120c] flex flex-col gap-2"
-              >
-                <!-- Top Row: Badge Status & Timestamp -->
-                <div class="flex justify-between items-center">
                   <span
-                    class="font-pixel text-[7px] px-1.5 py-0.5 rounded border border-[#1c120c] font-bold tracking-wider {statusClass(
-                      claim.status,
-                    )}"
+                    class="font-pixel text-[9px] text-[#2563eb] font-bold shrink-0 mt-0.5 group-hover:translate-x-0.5 transition-transform"
                   >
-                    {statusLabel(claim.status)}
+                    {expandedClaimId === entry.claim.id ? "▲" : "▼"}
                   </span>
-                  <span
-                    class="text-[9.5px] text-[#1c120c]/80 font-sans font-bold"
-                    >{formatDate(claim.createdAt)}</span
-                  >
                 </div>
+              </button>
+            </div>
 
-                <!-- Middle Box: Text Bubble KLAIM USER -->
+            <!-- Detail Accordion -->
+            {#if expandedClaimId === entry.claim.id}
+              <div
+                class="border-t-2 border-[#1c120c] bg-[#f8fafc] px-3 py-3 space-y-2.5"
+                transition:fly={{ y: -6, duration: 150 }}
+              >
+                <!-- Meta: Info Laporan Barang -->
                 <div
-                  class="bg-white border-2 border-[#1c120c] rounded-md p-2 shadow-[1px_1px_0px_#1c120c]"
+                  class="grid grid-cols-[70px_1fr] gap-x-2 gap-y-1.5 bg-white p-2 border border-stone-300 shadow-[1px_1px_0_#1c120c]"
                 >
                   <span
-                    class="text-[#1c120c] text-[8px] font-pixel block mb-0.5 font-bold tracking-wider"
-                    >KLAIM USER:</span
+                    class="font-pixel text-[6.5px] text-stone-500 font-bold pt-0.5"
+                    >BARANG</span
                   >
+                  <span
+                    class="font-sans text-[11px] text-[#1c120c] font-bold leading-snug"
+                    >{entry.item.title}</span
+                  >
+
+                  {#if entry.item.desc}
+                    <span
+                      class="font-pixel text-[6.5px] text-stone-500 font-bold pt-0.5"
+                      >LOKASI</span
+                    >
+                    <span
+                      class="font-sans text-[11px] text-[#1c120c] leading-snug"
+                      >{entry.item.desc}</span
+                    >
+                  {/if}
+
+                  {#if entry.item.date}
+                    <span
+                      class="font-pixel text-[6.5px] text-stone-500 font-bold pt-0.5"
+                      >WAKTU</span
+                    >
+                    <span
+                      class="font-mono text-[10px] text-[#1c120c] leading-snug"
+                      >{entry.item.date} {entry.item.time || ""}</span
+                    >
+                  {/if}
+                </div>
+
+                <!-- Text Bubble Bukti Klaim User -->
+                <div
+                  class="border border-stone-300 bg-white p-2.5 shadow-[1px_1px_0_#1c120c]"
+                >
+                  <p
+                    class="font-pixel text-[6.5px] text-stone-500 font-bold mb-1"
+                  >
+                    KLAIM USER / BUKTI KEPEMILIKAN
+                  </p>
                   <p
                     class="font-sans text-[11px] text-[#1c120c] font-semibold leading-relaxed"
                   >
-                    "{claim.text || "Klaim diajukan"}"
+                    "{entry.claim.text || "Klaim diajukan"}"
                   </p>
                 </div>
 
-                <!-- Pesan Keterangan Status (Persis Sesuai Gambar 2) -->
-                {#if claim.status === "rejected"}
-                  <p
-                    class="font-sans text-[10.5px] text-[#991b1b] font-semibold leading-snug"
+                <!-- Status Resolution Box -->
+                {#if entry.claim.status === "pending"}
+                  <div
+                    class="bg-[#fefce8] border border-[#1c120c] p-2.5 text-center shadow-[1px_1px_0_#1c120c]"
                   >
-                    Klaim kamu tidak disetujui. Pelapor memilih pengklaim lain
-                    yang lebih sesuai.
-                  </p>
-                {:else if claim.status === "approved"}
-                  <p
-                    class="font-sans text-[10.5px] text-[#15803d] font-bold leading-snug"
+                    <p
+                      class="font-pixel text-[7px] text-[#92400e] font-bold mb-1"
+                    >
+                      [PROSES APPROVAL OTOMATIS (24 JAM)]
+                    </p>
+                    <p class="font-sans text-[10.5px] text-stone-700 leading-snug">
+                      Klaim ini sedang ditampung dalam masa tenggang 24 jam sebelum dicocokkan otomatis oleh sistem Gale-Shapley.
+                    </p>
+                  </div>
+                {:else if entry.claim.status === "approved"}
+                  <div
+                    class="bg-emerald-50 border border-[#1c120c] p-2.5 shadow-[1px_1px_0_#1c120c] space-y-2"
                   >
-                    Klaim kamu disetujui! Hubungi pelapor untuk proses serah
-                    terima barang.
-                  </p>
-                  {#if item.reporterContact}
-                    {@const waNumber = item.reporterContact.replace(
-                      /[^0-9]/g,
-                      "",
-                    )}
-                    {#if waNumber}
+                    <p
+                      class="font-sans text-[10.5px] text-emerald-900 font-bold leading-snug"
+                    >
+                      Klaim disetujui! Hubungi {isIncoming
+                        ? "pengklaim"
+                        : "pelapor"} untuk proses serah terima barang.
+                    </p>
+                    {#if cleanWa}
                       <a
-                        href="https://wa.me/{waNumber}"
+                        href="https://wa.me/{cleanWa}"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="mt-0.5 bg-[#16a34a] hover:bg-[#15803d] active:translate-y-0.5 text-white font-pixel text-[7.5px] py-1.5 px-2.5 rounded-md block text-center border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] transition-all font-bold tracking-wider"
-                        style="text-decoration:none;"
+                        class="block w-full text-center bg-[#16a34a] hover:bg-[#15803d] active:translate-y-0.5 text-white font-pixel text-[7.5px] font-bold py-2 border border-[#1c120c] shadow-[1px_1px_0_#1c120c] cursor-pointer"
+                        style="text-decoration: none;"
                       >
-                        HUBUNGI VIA WHATSAPP
+                        HUBUNGI VIA WHATSAPP ({targetContact})
                       </a>
                     {/if}
-                  {/if}
+                  </div>
                 {:else}
-                  <div class="flex items-center gap-1.5">
-                    <span
-                      class="w-1.5 h-1.5 rounded-full bg-[#f59e0b] animate-pulse"
-                    ></span>
+                  <div
+                    class="bg-red-50 border border-[#1c120c] p-2.5 shadow-[1px_1px_0_#1c120c]"
+                  >
                     <p
-                      class="font-sans text-[10.5px] text-stone-700 font-semibold leading-snug"
+                      class="font-sans text-[10.5px] text-red-900 font-bold leading-snug"
                     >
-                      Klaim kamu masuk dalam antrean pencocokan (24 Jam).
+                      Klaim tidak disetujui. Pelapor memilih pengklaim lain yang
+                      lebih sesuai.
                     </p>
                   </div>
                 {/if}
               </div>
-            </div>
-          {/each}
-        {/if}
+            {/if}
+          </div>
+        {/each}
       {/if}
     </div>
 
-    <!-- Footer info -->
-    <div class="px-3 py-1.5 bg-white border-t-2 border-[#1c120c]">
-      <p class="font-pixel text-[6.5px] text-stone-400 font-bold text-center">
-        {#if $inboxTab === "incoming"}
-          SEMUA KLAIM DITAMPUNG SELAMA 24 JAM SEBELUM DICOCOKKAN OTOMATIS OLEH
-          SISTEM KAMI
-        {:else}
-          KLAIM KAMU DITAMPUNG SELAMA 24 JAM LALU AKAN DIPROSES OTOMATIS OLEH
-          SISTEM KAMI
-        {/if}
+    <!-- Notice Bar -->
+    <div
+      class="px-3.5 py-2 bg-[#f8fafc] border-t-2 border-[#1c120c] text-center shrink-0"
+    >
+      <p class="font-pixel text-[6.5px] text-stone-500 font-bold">
+        {$inboxTab === "incoming"
+          ? "SEMUA KLAIM DITAMPUNG SELAMA 24 JAM SEBELUM DICOCOKKAN OTOMATIS OLEH SISTEM"
+          : "KLAIM KAMU DITAMPUNG SELAMA 24 JAM LALU AKAN DIPROSES OTOMATIS OLEH SISTEM"}
       </p>
     </div>
+
+    <!-- Bottom Full Width Close Button -->
+    <button
+      type="button"
+      onclick={close}
+      class="shrink-0 w-full font-pixel text-[8.5px] py-2.5 bg-[#1c120c] hover:bg-stone-800 text-white cursor-pointer border-t-2 border-[#1c120c] font-bold active:translate-y-0.5"
+    >
+      ✕ TUTUP INBOX
+    </button>
   </div>
 {/if}
 
 <style>
   .inbox-scroll::-webkit-scrollbar {
-    width: 5px;
+    width: 6px;
   }
   .inbox-scroll::-webkit-scrollbar-track {
     background: #f1f5f9;
   }
   .inbox-scroll::-webkit-scrollbar-thumb {
     background: #cbd5e1;
-    border-radius: 2px;
+    border-radius: 3px;
   }
   .inbox-scroll::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;

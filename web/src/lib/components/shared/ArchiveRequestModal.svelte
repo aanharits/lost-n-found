@@ -1,38 +1,43 @@
 <script lang="ts">
-  import { fade, fly } from 'svelte/transition';
-  import { onMount } from 'svelte';
-  import { getSocket } from '$lib/socket.js';
-  import { currentPlayer } from '$lib/stores/player.js';
-  import { myArchiveRequests, type ArchiveRequest } from '$lib/stores/items.js';
+  import { fade, fly } from "svelte/transition";
+  import { onMount } from "svelte";
+  import { getSocket } from "$lib/socket.js";
+  import { currentPlayer } from "$lib/stores/player.js";
+  import { myArchiveRequests, type ArchiveRequest } from "$lib/stores/items.js";
 
   let { onClose }: { onClose: () => void } = $props();
 
-  let activeTab = $state<'submit' | 'status'>('submit');
+  let activeTab = $state<"submit" | "status">("submit");
 
   // Cek status
-  let lookupNpm = $state($currentPlayer?.npm || '');
-  let lookupContact = $state($currentPlayer?.contact || '');
+  let lookupNpm = $state($currentPlayer?.npm || "");
+  let lookupContact = $state($currentPlayer?.contact || "");
   let lookups = $state<ArchiveRequest[]>([]);
   let hasLooked = $state(false);
   let lookingUp = $state(false);
 
   // Form state
-  let senderName = $state($currentPlayer?.name || '');
-  let senderNpm = $state($currentPlayer?.npm || '');
-  let senderContact = $state('');
-  let itemTitle = $state('');
-  let itemCategory = $state('');
-  let dateFrom = $state('');
-  let dateTo = $state('');
-  let locationHint = $state('');
-  let description = $state('');
+  let senderName = $state($currentPlayer?.name || "");
+  let senderNpm = $state($currentPlayer?.npm || "");
+  let senderContact = $state("");
+  let itemTitle = $state("");
+  let itemCategory = $state("");
+  let dateFrom = $state("");
+  let dateTo = $state("");
+  let locationHint = $state("");
+  let description = $state("");
 
   let submitting = $state(false);
   let submitted = $state(false);
-  let errorMsg = $state('');
+  let errorMsg = $state("");
 
   const CATEGORIES = [
-    '', 'Personal', 'Gadget', 'Pakaian & Aksesoris', 'Dokumen & Kartu', 'Lainnya'
+    "",
+    "Personal",
+    "Gadget",
+    "Pakaian & Aksesoris",
+    "Dokumen & Kartu",
+    "Lainnya",
   ];
 
   // Dengarkan kegagalan dari server; hanya tutup modal jika sukses terkonfirmasi
@@ -48,7 +53,7 @@
     const onError = (data: { message?: string }) => {
       submitting = false;
       submitted = false;
-      errorMsg = data?.message || 'Permintaan gagal dikirim. Coba lagi.';
+      errorMsg = data?.message || "Permintaan gagal dikirim. Coba lagi.";
     };
 
     const unsub = myArchiveRequests.subscribe((v) => {
@@ -59,73 +64,84 @@
       }
     });
 
-    socket.on('archive_request_sent', onSent);
-    socket.on('archive_request_error', onError);
+    socket.on("archive_request_sent", onSent);
+    socket.on("archive_request_error", onError);
 
     return () => {
-      socket.off('archive_request_sent', onSent);
-      socket.off('archive_request_error', onError);
+      socket.off("archive_request_sent", onSent);
+      socket.off("archive_request_error", onError);
       unsub();
     };
   });
 
   function handleLookup() {
     if (!lookupNpm.trim() && !lookupContact.trim()) {
-      errorMsg = 'Isi NPM atau nomor WA untuk mengecek status.';
+      errorMsg = "Isi NPM atau nomor WA untuk mengecek status.";
       return;
     }
-    errorMsg = '';
+    errorMsg = "";
     lookingUp = true;
     hasLooked = false;
     const socket = getSocket();
     if (!socket) {
       lookingUp = false;
-      errorMsg = 'Tidak terhubung ke server.';
+      errorMsg = "Tidak terhubung ke server.";
       return;
     }
-    socket.emit('archive_requests_mine', {
+    socket.emit("archive_requests_mine", {
       npm: lookupNpm.trim(),
       contact: lookupContact.trim(),
     });
   }
 
   const statusLabel: Record<string, string> = {
-    pending: 'MENUNGGU DIPERIKSA',
-    approved: 'DIPUBLISH KE BOARD',
-    rejected: 'DITOLAK',
+    pending: "MENUNGGU DIPERIKSA",
+    approved: "DIPUBLISH KE BOARD",
+    rejected: "DITOLAK",
   };
 
   const statusClass: Record<string, string> = {
-    pending: 'bg-amber-400 text-[#1c120c]',
-    approved: 'bg-emerald-600 text-white',
-    rejected: 'bg-red-600 text-white',
+    pending: "bg-[#ea580c] text-white",
+    approved: "bg-[#16a34a] text-white",
+    rejected: "bg-[#dc2626] text-white",
   };
 
   function formatDate(iso: string) {
     try {
-      return new Date(iso).toLocaleString('id-ID', {
-        day: '2-digit', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-      });
-    } catch { return iso; }
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      const year = d.getFullYear();
+      const month = d.toLocaleString("id-ID", { month: "short" });
+      const day = String(d.getDate()).padStart(2, "0");
+      const hours = String(d.getHours()).padStart(2, "0");
+      const mins = String(d.getMinutes()).padStart(2, "0");
+      return `${day} ${month} ${year}, ${hours}.${mins}`;
+    } catch {
+      return iso;
+    }
   }
 
   function handleSubmit() {
-    if (!senderName.trim() || !senderContact.trim() || !itemTitle.trim() || !description.trim()) {
-      errorMsg = 'Nama, kontak WA, nama barang, dan deskripsi wajib diisi.';
+    if (
+      !senderName.trim() ||
+      !senderContact.trim() ||
+      !itemTitle.trim() ||
+      !description.trim()
+    ) {
+      errorMsg = "Nama, kontak WA, nama barang, dan deskripsi wajib diisi.";
       return;
     }
-    errorMsg = '';
+    errorMsg = "";
     submitting = true;
 
     const socket = getSocket();
     if (!socket) {
-      errorMsg = 'Tidak terhubung ke server.';
+      errorMsg = "Tidak terhubung ke server.";
       submitting = false;
       return;
     }
 
-    socket.emit('archive_request_submit', {
+    socket.emit("archive_request_submit", {
       senderName: senderName.trim(),
       senderNpm: senderNpm.trim(),
       senderContact: senderContact.trim(),
@@ -158,99 +174,169 @@
 
   <!-- Modal -->
   <div
-    class="relative w-full max-w-md bg-white border-4 border-[#1c120c] shadow-[8px_8px_0_#1c120c] flex flex-col z-10 max-h-[90vh] overflow-y-auto"
+    class="relative w-full max-w-md bg-white border-4 border-[#1c120c] shadow-[6px_6px_0px_#0a060f] flex flex-col z-10 max-h-[90vh] overflow-y-auto select-none"
     transition:fly={{ y: 20, duration: 200 }}
   >
-    <!-- Header -->
-    <div class="bg-[#1c120c] px-4 py-2.5 flex items-center justify-between shrink-0">
+    <!-- Header: NES Blue Titlebar -->
+    <div
+      class="bg-[#2563eb] text-white px-3.5 py-2.5 flex items-center justify-between border-b-2 border-[#1c120c] select-none shrink-0"
+    >
       <div class="flex items-center gap-2">
-        <span class="font-pixel text-[#ffd700] text-[10px] tracking-widest">📬 MINTA AKTIFKAN DARI ARSIP</span>
+        <span class="w-2.5 h-2.5 bg-[#ffd700] border border-[#1c120c]"></span>
+        <span
+          class="font-pixel text-white text-[9.5px] md:text-[10px] font-bold tracking-wider"
+          >MINTA AKTIFKAN DARI ARSIP</span
+        >
       </div>
       <button
         type="button"
         onclick={onClose}
-        class="text-white hover:text-[#ffd700] font-pixel text-[10px] transition-colors"
-        aria-label="Tutup"
-      >✕</button>
+        class="bg-[#dc2626] hover:bg-[#b91c1c] active:translate-y-0.5 text-white font-pixel text-[9px] px-2 py-0.5 border border-[#1c120c] cursor-pointer shadow-[1px_1px_0_#1c120c] leading-none"
+        aria-label="Tutup">✕</button
+      >
     </div>
 
-    <!-- Tab bar -->
-    <div class="flex border-b-2 border-[#1c120c] shrink-0">
+    <!-- Segmented Tab bar NES Blue Minimalist -->
+    <div
+      class="bg-[#f8fafc] px-3.5 py-2 border-b-2 border-[#1c120c] flex items-center gap-2 select-none shrink-0"
+    >
       <button
         type="button"
-        onclick={() => (activeTab = 'submit')}
-        class="flex-1 font-pixel text-[8px] py-2.5 cursor-pointer transition-colors
-          {activeTab === 'submit' ? 'bg-[#ffd700] text-[#1c120c]' : 'bg-white text-stone-500 hover:bg-stone-100'}"
+        onclick={() => (activeTab = "submit")}
+        class="flex-1 font-pixel text-[7.5px] md:text-[8px] py-1.5 px-2 border border-[#1c120c] cursor-pointer transition-all font-bold text-center {activeTab ===
+        'submit'
+          ? 'bg-[#2563eb] text-white shadow-[1px_1px_0_#1c120c]'
+          : 'bg-white text-[#1c120c] hover:bg-stone-200'}"
       >
-        📬 AJUKAN PERMINTAAN
+        AJUKAN PERMINTAAN
       </button>
       <button
         type="button"
-        onclick={() => (activeTab = 'status')}
-        class="flex-1 font-pixel text-[8px] py-2.5 cursor-pointer transition-colors border-l-2 border-[#1c120c]
-          {activeTab === 'status' ? 'bg-[#ffd700] text-[#1c120c]' : 'bg-white text-stone-500 hover:bg-stone-100'}"
+        onclick={() => (activeTab = "status")}
+        class="flex-1 font-pixel text-[7.5px] md:text-[8px] py-1.5 px-2 border border-[#1c120c] cursor-pointer transition-all font-bold text-center {activeTab ===
+        'status'
+          ? 'bg-[#2563eb] text-white shadow-[1px_1px_0_#1c120c]'
+          : 'bg-white text-[#1c120c] hover:bg-stone-200'}"
       >
-        🔎 CEK STATUS
+        CEK STATUS
       </button>
     </div>
 
-    {#if activeTab === 'status'}
+    {#if activeTab === "status"}
       <!-- ===== CEK STATUS ===== -->
       <div class="p-4 flex flex-col gap-3">
-        <div class="bg-[#fefce8] border-2 border-[#1c120c] px-3 py-2.5">
-          <p class="font-pixel text-[7px] text-[#92400e] leading-relaxed">
-            Masukkan NPM atau nomor WA yang kamu pakai saat mengirim permintaan untuk melihat statusnya.
+        <div class="bg-[#eff6ff] border-2 border-[#1c120c] px-3 py-2.5">
+          <p
+            class="font-pixel text-[7px] text-[#1e40af] leading-relaxed font-bold"
+          >
+            Masukkan NPM atau nomor WA yang kamu pakai saat mengirim permintaan
+            untuk melihat statusnya.
           </p>
         </div>
 
         <div class="flex flex-col gap-1">
-          <label for="lookup-npm" class="font-pixel text-[7px] text-[#1c120c] font-bold">NPM</label>
-          <input id="lookup-npm" type="text" bind:value={lookupNpm} placeholder="NPM kamu"
-            class="border-2 border-[#1c120c] px-2 py-1.5 font-sans text-xs text-[#1c120c] outline-none focus:border-[#2563eb]" />
+          <label
+            for="lookup-npm"
+            class="font-pixel text-[7px] text-[#1c120c] font-bold">NPM</label
+          >
+          <input
+            id="lookup-npm"
+            type="text"
+            bind:value={lookupNpm}
+            placeholder="NPM kamu"
+            class="border-2 border-[#1c120c] px-2 py-1.5 font-sans text-xs text-[#1c120c] outline-none focus:border-[#2563eb]"
+          />
         </div>
         <div class="flex flex-col gap-1">
-          <label for="lookup-contact" class="font-pixel text-[7px] text-[#1c120c] font-bold">ATAU NOMOR WHATSAPP</label>
-          <input id="lookup-contact" type="text" bind:value={lookupContact} placeholder="08xxxxxxxxxx"
-            class="border-2 border-[#1c120c] px-2 py-1.5 font-sans text-xs text-[#1c120c] outline-none focus:border-[#2563eb]" />
+          <label
+            for="lookup-contact"
+            class="font-pixel text-[7px] text-[#1c120c] font-bold"
+            >ATAU NOMOR WHATSAPP</label
+          >
+          <input
+            id="lookup-contact"
+            type="text"
+            bind:value={lookupContact}
+            placeholder="08xxxxxxxxxx"
+            class="border-2 border-[#1c120c] px-2 py-1.5 font-sans text-xs text-[#1c120c] outline-none focus:border-[#2563eb]"
+          />
         </div>
 
-        <button type="button" onclick={handleLookup} disabled={lookingUp}
-          class="font-pixel text-[8px] py-2.5 px-3 border-2 border-[#1c120c] bg-[#2563eb] hover:bg-[#1d4ed8] text-white shadow-[2px_2px_0_#1c120c] active:shadow-none active:translate-y-0.5 transition-all cursor-pointer disabled:opacity-50 font-bold"
+        <button
+          type="button"
+          onclick={handleLookup}
+          disabled={lookingUp}
+          class="font-pixel text-[8px] py-2.5 px-3 border-2 border-[#1c120c] bg-[#ffd700] hover:bg-[#fbbf24] text-black shadow-[2px_2px_0_#1c120c] active:shadow-none active:translate-y-0.5 transition-all cursor-pointer disabled:opacity-50 font-bold"
         >
-          {lookingUp ? 'MENCARI...' : '🔎 CEK STATUS PERMINTAAN'}
+          {lookingUp ? "MENCARI..." : "CEK STATUS PERMINTAAN"}
         </button>
 
         {#if hasLooked}
           {#if lookups.length === 0}
-            <div class="bg-stone-50 border-2 border-stone-300 px-3 py-4 text-center">
-              <p class="font-pixel text-[7.5px] text-stone-500 leading-relaxed">
-                Tidak ada permintaan yang cocok dengan NPM / nomor WA tersebut.
+            <div
+              class="bg-stone-50 border-2 border-dashed border-[#1c120c] px-3 py-4 text-center"
+            >
+              <p
+                class="font-pixel text-[7.5px] text-stone-500 leading-relaxed font-bold"
+              >
+                [TIDAK ADA PERMINTAAN YANG COCOK DENGAN DATA TERSEBUT]
               </p>
             </div>
           {:else}
             <div class="flex flex-col gap-2">
               {#each lookups as req (req.id)}
-                <div class="border-2 border-[#1c120c] bg-white shadow-[2px_2px_0_#1c120c] p-2.5">
+                <div
+                  class="border-2 border-[#1c120c] bg-white shadow-[2px_2px_0_#1c120c] p-2.5"
+                >
                   <div class="flex items-center justify-between gap-2 mb-1.5">
-                    <span class="font-pixel text-[6.5px] px-1.5 py-0.5 border border-[#1c120c] {statusClass[req.status]}">
-                      {statusLabel[req.status] ?? req.status}
+                    <span
+                      class="font-pixel text-[6.5px] px-1.5 py-0.5 rounded-none font-bold inline-block border border-[#1c120c] {statusClass[
+                        req.status
+                      ]}"
+                    >
+                      [{statusLabel[req.status] ?? req.status}]
                     </span>
-                    <span class="font-pixel text-[6.5px] text-stone-400 shrink-0">{formatDate(req.createdAt)}</span>
+                    <span
+                      class="font-mono text-[9px] font-bold text-stone-500 shrink-0"
+                      >{formatDate(req.createdAt)}</span
+                    >
                   </div>
-                  <p class="font-sans font-bold text-sm text-[#1c120c] truncate">"{req.itemTitle}"</p>
-                  {#if req.status === 'rejected' && req.rejectMessage}
+                  <p
+                    class="font-sans font-bold text-sm text-[#1c120c] truncate"
+                  >
+                    "{req.itemTitle}"
+                  </p>
+                  {#if req.status === "rejected" && req.rejectMessage}
                     <div class="mt-2 bg-red-50 border border-red-300 p-2">
-                      <p class="font-pixel text-[6.5px] text-red-600 mb-0.5">PESAN SATPAM:</p>
-                      <p class="font-sans text-[10.5px] text-red-700 leading-relaxed">{req.rejectMessage}</p>
+                      <p
+                        class="font-pixel text-[6.5px] text-red-600 mb-0.5 font-bold"
+                      >
+                        PESAN SATPAM:
+                      </p>
+                      <p
+                        class="font-sans text-[10.5px] text-red-700 leading-relaxed"
+                      >
+                        {req.rejectMessage}
+                      </p>
                     </div>
-                  {:else if req.status === 'approved'}
-                    <p class="font-sans text-[10.5px] text-emerald-700 leading-relaxed mt-1.5">
-                      ✅ Barang sudah dipublish ke board publik. Silakan buka board dan ajukan klaim (ZKP) jika itu milikmu.
-                    </p>
+                  {:else if req.status === "approved"}
+                    <div class="mt-2 bg-emerald-50 border border-[#1c120c] p-2">
+                      <p
+                        class="font-sans text-[10.5px] text-emerald-800 leading-relaxed font-semibold"
+                      >
+                        Barang sudah dipublish ke board publik. Silakan buka
+                        board dan ajukan klaim (ZKP) jika itu milikmu.
+                      </p>
+                    </div>
                   {:else}
-                    <p class="font-sans text-[10.5px] text-stone-600 leading-relaxed mt-1.5">
-                      ⏳ Permintaanmu sedang diperiksa Satpam. Satpam akan menghubungi WA kamu.
-                    </p>
+                    <div class="mt-2 bg-[#f8fafc] border border-stone-200 p-2">
+                      <p
+                        class="font-sans text-[10.5px] text-stone-600 leading-relaxed font-semibold"
+                      >
+                        Permintaanmu sedang diperiksa Satpam. Satpam akan
+                        menghubungi WA kamu.
+                      </p>
+                    </div>
                   {/if}
                 </div>
               {/each}
@@ -260,12 +346,25 @@
       </div>
     {:else if submitted}
       <!-- Success state -->
-      <div class="flex flex-col items-center justify-center p-8 gap-4" transition:fade>
-        <span class="text-5xl">✅</span>
-        <p class="font-pixel text-[9px] text-[#16a34a] text-center leading-relaxed">
-          PERMINTAAN TERKIRIM KE SATPAM!<br/>
-          Satpam akan menghubungi WA kamu segera.
-        </p>
+      <div
+        class="flex flex-col items-center justify-center p-8 gap-4"
+        transition:fade
+      >
+        <div
+          class="border-2 border-[#16a34a] bg-emerald-50 px-4 py-3 shadow-[2px_2px_0_#1c120c] text-center"
+        >
+          <p
+            class="font-pixel text-[9.5px] text-[#16a34a] font-bold tracking-wider mb-1.5"
+          >
+            [PERMINTAAN TERKIRIM]
+          </p>
+          <p
+            class="font-sans text-xs text-stone-700 leading-relaxed font-semibold"
+          >
+            Permintaan berhasil dikirim ke Posko Satpam.<br />
+            Satpam akan memeriksa arsip dan menghubungi WhatsApp kamu segera.
+          </p>
+        </div>
       </div>
     {:else}
       <!-- Form -->
@@ -273,7 +372,11 @@
         <!-- Identitas -->
         <div class="grid grid-cols-2 gap-2">
           <div class="flex flex-col gap-1">
-            <label for="arch-sender-name" class="font-pixel text-[7px] text-[#1c120c] font-bold">NAMA *</label>
+            <label
+              for="arch-sender-name"
+              class="font-pixel text-[7px] text-[#1c120c] font-bold"
+              >NAMA *</label
+            >
             <input
               id="arch-sender-name"
               type="text"
@@ -283,7 +386,10 @@
             />
           </div>
           <div class="flex flex-col gap-1">
-            <label for="arch-sender-npm" class="font-pixel text-[7px] text-[#1c120c] font-bold">NPM</label>
+            <label
+              for="arch-sender-npm"
+              class="font-pixel text-[7px] text-[#1c120c] font-bold">NPM</label
+            >
             <input
               id="arch-sender-npm"
               type="text"
@@ -295,7 +401,11 @@
         </div>
 
         <div class="flex flex-col gap-1">
-          <label for="arch-contact" class="font-pixel text-[7px] text-[#1c120c] font-bold">KONTAK WHATSAPP *</label>
+          <label
+            for="arch-contact"
+            class="font-pixel text-[7px] text-[#1c120c] font-bold"
+            >KONTAK WHATSAPP *</label
+          >
           <input
             id="arch-contact"
             type="text"
@@ -310,7 +420,11 @@
         <!-- Info barang -->
         <div class="grid grid-cols-2 gap-2">
           <div class="flex flex-col gap-1">
-            <label for="arch-item-title" class="font-pixel text-[7px] text-[#1c120c] font-bold">NAMA BARANG *</label>
+            <label
+              for="arch-item-title"
+              class="font-pixel text-[7px] text-[#1c120c] font-bold"
+              >NAMA BARANG *</label
+            >
             <input
               id="arch-item-title"
               type="text"
@@ -320,21 +434,29 @@
             />
           </div>
           <div class="flex flex-col gap-1">
-            <label for="arch-category" class="font-pixel text-[7px] text-[#1c120c] font-bold">KATEGORI</label>
+            <label
+              for="arch-category"
+              class="font-pixel text-[7px] text-[#1c120c] font-bold"
+              >KATEGORI</label
+            >
             <select
               id="arch-category"
               bind:value={itemCategory}
-              class="border-2 border-[#1c120c] px-2 py-1.5 font-sans text-xs text-[#1c120c] outline-none focus:border-[#2563eb] bg-white"
+              class="border-2 border-[#1c120c] px-2 py-1.5 font-sans text-xs text-[#1c120c] outline-none focus:border-[#2563eb] bg-white cursor-pointer"
             >
               {#each CATEGORIES as cat}
-                <option value={cat}>{cat || '— Pilih —'}</option>
+                <option value={cat}>{cat || "— Pilih —"}</option>
               {/each}
             </select>
           </div>
         </div>
 
         <div class="flex flex-col gap-1">
-          <label for="arch-date-from" class="font-pixel text-[7px] text-[#1c120c] font-bold">KIRA-KIRA KAPAN HILANG</label>
+          <label
+            for="arch-date-from"
+            class="font-pixel text-[7px] text-[#1c120c] font-bold"
+            >KIRA-KIRA KAPAN HILANG</label
+          >
           <div class="flex items-center gap-2">
             <input
               id="arch-date-from"
@@ -352,7 +474,11 @@
         </div>
 
         <div class="flex flex-col gap-1">
-          <label for="arch-location" class="font-pixel text-[7px] text-[#1c120c] font-bold">LOKASI HILANG</label>
+          <label
+            for="arch-location"
+            class="font-pixel text-[7px] text-[#1c120c] font-bold"
+            >LOKASI HILANG</label
+          >
           <input
             id="arch-location"
             type="text"
@@ -363,7 +489,11 @@
         </div>
 
         <div class="flex flex-col gap-1">
-          <label for="arch-description" class="font-pixel text-[7px] text-[#1c120c] font-bold">DESKRIPSI SINGKAT *</label>
+          <label
+            for="arch-description"
+            class="font-pixel text-[7px] text-[#1c120c] font-bold"
+            >DESKRIPSI SINGKAT *</label
+          >
           <textarea
             id="arch-description"
             bind:value={description}
@@ -371,12 +501,17 @@
             rows="3"
             class="border-2 border-[#1c120c] px-2 py-1.5 font-sans text-xs text-[#1c120c] outline-none focus:border-[#2563eb] resize-none"
           ></textarea>
-          <p class="font-pixel text-[6px] text-stone-400">⚠️ Ciri rahasia khusus dipakai saat klaim ZKP di board, bukan di sini.</p>
+          <p class="font-pixel text-[6px] text-stone-500 font-bold">
+            * Catatan: Ciri rahasia khusus dipakai saat klaim ZKP di board,
+            bukan di sini.
+          </p>
         </div>
 
         {#if errorMsg}
           <div class="bg-red-50 border-2 border-red-400 px-3 py-2">
-            <p class="font-pixel text-[7px] text-red-600">{errorMsg}</p>
+            <p class="font-pixel text-[7px] text-red-600 font-bold">
+              {errorMsg}
+            </p>
           </div>
         {/if}
 
@@ -385,15 +520,16 @@
           <button
             type="button"
             onclick={onClose}
-            class="flex-1 font-pixel text-[8px] py-2 px-3 border-2 border-[#1c120c] bg-white hover:bg-stone-100 text-[#1c120c] shadow-[2px_2px_0_#1c120c] active:shadow-none active:translate-y-0.5 transition-all cursor-pointer"
-          >BATAL</button>
+            class="flex-1 font-pixel text-[8px] md:text-[8.5px] py-2.5 px-3 border-2 border-[#1c120c] bg-stone-100 hover:bg-stone-200 text-[#1c120c] shadow-[2px_2px_0_#1c120c] active:shadow-none active:translate-y-0.5 transition-all cursor-pointer font-bold"
+            >BATAL</button
+          >
           <button
             type="button"
             onclick={handleSubmit}
             disabled={submitting}
-            class="flex-1 font-pixel text-[8px] py-2 px-3 border-2 border-[#1c120c] bg-[#ffd700] hover:bg-[#facc15] text-[#1c120c] shadow-[2px_2px_0_#1c120c] active:shadow-none active:translate-y-0.5 transition-all cursor-pointer disabled:opacity-50 font-bold"
+            class="flex-1 font-pixel text-[8px] md:text-[8.5px] py-2.5 px-3 border-2 border-[#1c120c] bg-[#ffd700] hover:bg-[#fbbf24] text-black shadow-[2px_2px_0_#1c120c] active:shadow-none active:translate-y-0.5 transition-all cursor-pointer disabled:opacity-50 font-bold"
           >
-            {submitting ? 'MENGIRIM...' : '📬 KIRIM KE SATPAM'}
+            {submitting ? "MENGIRIM..." : "KIRIM KE SATPAM"}
           </button>
         </div>
       </div>

@@ -20,17 +20,21 @@ export const draggable: Action<HTMLElement, DraggableParams> = (node, params) =>
 
   // Memulai proses drag saat pointer ditekan di area kartu non-tombol.
   // Posisi dihitung relatif terhadap offsetParent (track), sehingga tetap
-  // benar meski track sedang digeser oleh pagination.
+  // presisi meski track sedang digeser oleh pagination atau kontainer bergeser.
   function onPointerDown(e: PointerEvent) {
     if ((e.target as HTMLElement).tagName.toLowerCase() === 'button') return;
     if ((e.target as HTMLElement).closest('button')) return;
+    if (e.button !== 0) return; // Hanya drag dengan tombol mouse utama / touch
 
     const origin = (node.offsetParent as HTMLElement) ?? getContainer() ?? node.parentElement;
-    const originRect = origin?.getBoundingClientRect();
+    if (!origin) return;
+
+    const originRect = origin.getBoundingClientRect();
 
     isDragging = true;
-    startX = e.clientX - (originRect?.left ?? 0) - node.offsetLeft;
-    startY = e.clientY - (originRect?.top ?? 0) - node.offsetTop;
+    // Jarak (offset) kursor relatif terhadap titik (0,0) kartu di dalam origin
+    startX = e.clientX - originRect.left - node.offsetLeft;
+    startY = e.clientY - originRect.top - node.offsetTop;
 
     node.classList.add('is-dragging');
     node.style.zIndex = '100';
@@ -45,20 +49,26 @@ export const draggable: Action<HTMLElement, DraggableParams> = (node, params) =>
     if (!isDragging) return;
     e.preventDefault();
 
+    const origin = (node.offsetParent as HTMLElement) ?? getContainer() ?? node.parentElement;
     const container = getContainer();
-    if (!container) return;
+    if (!origin || !container) return;
 
-    let newX = e.clientX - startX;
-    let newY = e.clientY - startY;
-
+    const originRect = origin.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
 
-    // Batasi pergerakan kartu agar tetap di dalam batas kontainer papan
-    if (newX < 0) newX = 0;
-    if (newX + node.offsetWidth > containerRect.width - 14) {
-      newX = containerRect.width - node.offsetWidth - 14;
-    }
-    if (newY < 0) newY = 0;
+    let newX = e.clientX - originRect.left - startX;
+    let newY = e.clientY - originRect.top - startY;
+
+    // Batasi pergerakan kartu agar tetap di dalam batas visual kontainer papan
+    const minX = containerRect.left - originRect.left + 8;
+    const maxX = containerRect.right - originRect.left - node.offsetWidth - 8;
+    const minY = containerRect.top - originRect.top + 8;
+    const maxY = containerRect.bottom - originRect.top - node.offsetHeight - 8;
+
+    if (newX < minX) newX = minX;
+    if (newX > maxX) newX = maxX;
+    if (newY < minY) newY = minY;
+    if (newY > maxY) newY = maxY;
 
     node.style.left = `${newX}px`;
     node.style.top = `${newY}px`;
@@ -72,6 +82,14 @@ export const draggable: Action<HTMLElement, DraggableParams> = (node, params) =>
     node.classList.remove('is-dragging');
     node.style.zIndex = '10';
     node.style.cursor = 'grab';
+
+    if (node.hasPointerCapture(e.pointerId)) {
+      try {
+        node.releasePointerCapture(e.pointerId);
+      } catch {
+        // Abaikan jika pointer capture telah terlepas otomatis
+      }
+    }
 
     const x = parseInt(node.style.left, 10) || 0;
     const y = parseInt(node.style.top, 10) || 0;

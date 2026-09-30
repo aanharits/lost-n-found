@@ -258,6 +258,7 @@ body {
 
 .item-card.is-dragging {
   transition: none !important;
+  transform: none !important;
 }
 
 .item-card:hover {
