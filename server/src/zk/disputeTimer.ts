@@ -11,8 +11,8 @@ const activeTimers = new Map<string, NodeJS.Timeout>();
 
 /**
  * Memulai perhitungan mundur dispute window untuk suatu barang.
- * Selama 1 menit, klaim lain yang lolos verifikasi ZKP dapat masuk antrean.
- * Setelah 1 menit berakhir, Gale-Shapley otomatis mengeksekusi resolusi pemenang
+ * Selama 24 jam, klaim lain yang lolos verifikasi ZKP dapat masuk antrean.
+ * Setelah 24 jam berakhir, Gale-Shapley otomatis mengeksekusi resolusi pemenang
  * berdasarkan ZKP intersection score tertinggi dan waktu pengajuan paling awal.
  *
  * Jika sudah ada timer aktif untuk item ini, biarkan berjalan

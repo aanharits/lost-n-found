@@ -39,7 +39,7 @@ web/src/lib/components/
 │
 └── shared/                       # Komponen Navigasi & Panel Tambahan
     ├── BoardHeader.svelte        # Header papan, counter online, profile capsule
-    ├── InboxPanel.svelte         # Drawer slide-in kanan (status klaim & timer 1 menit)
+    ├── InboxPanel.svelte         # Drawer slide-in kanan (status klaim & timer 24 jam)
     ├── CategoryGamepad.svelte    # Filter kategori bergaya tombol kontroler NES
     ├── ArchiveRequestModal.svelte# Form mahasiswa minta pencarian arsip lama
     ├── DosTerminal.svelte        # Terminal retro MS-DOS C:\> interaktif
