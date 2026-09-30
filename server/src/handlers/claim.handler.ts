@@ -17,6 +17,25 @@ try {
   console.error('[ZKP] Gagal memuat zk_v2_verification_key.json. Pastikan Trusted Setup sudah selesai.');
 }
 
+// PENTING (produksi): paksa snarkjs memakai kurva BN128 SINGLE-THREAD.
+// Secara default `getCurveFromName` membangun worker pool sebanyak os.cpus().length
+// (sampai 64 worker). Di container Railway yang thread/memori-nya dibatasi, ini
+// membuat seluruh proses Node crash (Railway membalas 502 selama restart) tepat
+// saat klaim diverifikasi. Mode single-thread hanya memakai ~15MB tanpa worker.
+let curveReady: Promise<void> | undefined;
+function ensureSingleThreadCurve(): Promise<void> {
+  return (curveReady ??= (snarkjs as any).curves
+    .getCurveFromName('bn128', { singleThread: true })
+    .then((curve: any) => {
+      // Simpan sebagai kurva global agar groth16.verify (yang dipanggil tanpa
+      // opsi) memakai instance single-thread ini, bukan membangun worker pool lagi.
+      (globalThis as any).curve_bn128 = curve;
+    })
+    .catch((err: unknown) => {
+      console.error('[ZKP] Gagal membangun kurva BN128 single-thread:', err);
+    }));
+}
+
 const SCORE_THRESHOLD = 0.5;
 
 // Menangani proses verifikasi pengajuan klaim barang via Zero-Knowledge Proof v2
@@ -59,6 +78,9 @@ export async function handleClaimSubmit(io: SocketIOServer, socket: Socket, data
     socket.emit('claim_error', { message: 'Data ZKP barang corrupt di database.' });
     return;
   }
+
+  // Pastikan kurva BN128 single-thread siap (lihat catatan di atas)
+  await ensureSingleThreadCurve();
 
   // Verifikasi setiap proof yang dikirimkan
   let matchedCount = 0;
