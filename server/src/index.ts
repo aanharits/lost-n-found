@@ -10,6 +10,7 @@ import { setupSocketHandlers } from './socket/handlers.js';
 import { rehydrateDisputes } from './zk/disputeTimer.js';
 import { startExpireJob } from './zk/expireItems.js';
 import { startArchiveCleanupJob } from './jobs/archiveCleanup.js';
+import { dbGetItems } from './db/db-store.js';
 import api from './routes/api.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -114,6 +115,15 @@ try {
 } catch (err) {
   console.error('[Server] Gagal memulai archive cleanup job (degraded mode):', err);
 }
+
+// Pre-warm in-memory items cache agar request/refresh pertama langsung instan (0ms)
+dbGetItems()
+  .then((items) => {
+    console.log(`[Server] In-memory cache siap: ${items.length} item aktif.`);
+  })
+  .catch((err) => {
+    console.warn('[Server] Gagal pre-warm cache saat startup (akan dimuat on-demand):', err.message);
+  });
 
 // Tutup server secara bersih saat menerima sinyal terminasi
 const handleShutdown = () => {
