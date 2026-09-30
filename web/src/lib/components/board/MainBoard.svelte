@@ -320,7 +320,7 @@
 
         <!-- Indikator halaman + titik -->
         <div
-          class="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-white/90 border-2 border-[#1c120c] rounded-full px-3 py-1 shadow-[2px_2px_0_#1c120c] select-none"
+          class="absolute bottom-4 right-4 z-30 flex items-center gap-2 bg-white/90 border-2 border-[#1c120c] rounded-full px-3 py-1 shadow-[2px_2px_0_#1c120c] select-none"
         >
           <button
             type="button"
