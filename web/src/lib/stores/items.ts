@@ -7,7 +7,8 @@ export interface Claim {
   score: number;
   confidence: string;
   reasoning: string;
-  status: 'pending' | 'approved' | 'rejected';
+  // 'superseded' = klaim lama yang digantikan oleh revisi pengklaim yang sama
+  status: 'pending' | 'approved' | 'rejected' | 'superseded';
   claimantName: string;
   claimantNpm: string;
   claimantContact: string;

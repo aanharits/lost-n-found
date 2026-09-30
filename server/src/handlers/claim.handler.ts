@@ -1,6 +1,12 @@
 import type { Server as SocketIOServer, Socket } from 'socket.io';
 import { claimSubmitSchema } from '../schemas/claim.schema.js';
-import { dbGetItem, dbInsertClaim, dbUpdateItemStatus, type Claim } from '../db/db-store.js';
+import {
+  dbGetItem,
+  dbInsertClaim,
+  dbUpdateItemStatus,
+  dbUpdateClaimStatus,
+  type Claim,
+} from '../db/db-store.js';
 import { startDisputeWindow } from '../zk/disputeTimer.js';
 import fs from 'fs';
 import path from 'path';
@@ -15,6 +21,25 @@ try {
   vKey = JSON.parse(fs.readFileSync(vKeyPath, 'utf-8'));
 } catch (e) {
   console.error('[ZKP] Gagal memuat zk_v2_verification_key.json. Pastikan Trusted Setup sudah selesai.');
+}
+
+// PENTING (produksi): paksa snarkjs memakai kurva BN128 SINGLE-THREAD.
+// Secara default `getCurveFromName` membangun worker pool sebanyak os.cpus().length
+// (sampai 64 worker). Di container Railway yang thread/memori-nya dibatasi, ini
+// membuat seluruh proses Node crash (Railway membalas 502 selama restart) tepat
+// saat klaim diverifikasi. Mode single-thread hanya memakai ~15MB tanpa worker.
+let curveReady: Promise<void> | undefined;
+function ensureSingleThreadCurve(): Promise<void> {
+  return (curveReady ??= (snarkjs as any).curves
+    .getCurveFromName('bn128', { singleThread: true })
+    .then((curve: any) => {
+      // Simpan sebagai kurva global agar groth16.verify (yang dipanggil tanpa
+      // opsi) memakai instance single-thread ini, bukan membangun worker pool lagi.
+      (globalThis as any).curve_bn128 = curve;
+    })
+    .catch((err: unknown) => {
+      console.error('[ZKP] Gagal membangun kurva BN128 single-thread:', err);
+    }));
 }
 
 const SCORE_THRESHOLD = 0.5;
@@ -48,6 +73,30 @@ export async function handleClaimSubmit(io: SocketIOServer, socket: Socket, data
     return;
   }
 
+  // Batasi klaim per pengklaim: 1 klaim awal + 1 revisi (total maksimal 2 submit)
+  // untuk barang yang sama. Setiap submit membuat 1 baris klaim, jadi jumlah baris
+  // milik NPM ini = jumlah percobaan.
+  const MAX_CLAIM_ATTEMPTS = 2;
+  const myClaims = item.claims.filter(
+    (c) => c.claimantNpm && claimantNpm && c.claimantNpm === claimantNpm
+  );
+
+  // Sudah ada klaim yang disetujui → tidak boleh klaim/revisi lagi
+  if (myClaims.some((c) => c.status === 'approved')) {
+    socket.emit('claim_error', {
+      message: 'Klaim Anda untuk barang ini sudah disetujui. Tidak perlu mengajukan klaim lagi.',
+    });
+    return;
+  }
+
+  // Jatah percobaan habis (sudah pakai klaim awal + 1 revisi)
+  if (myClaims.length >= MAX_CLAIM_ATTEMPTS) {
+    socket.emit('claim_error', {
+      message: 'Kesempatan revisi klaim Anda untuk barang ini sudah habis (maksimal 1 kali revisi).',
+    });
+    return;
+  }
+
   // Validasi ZKP: pastikan vKey tersedia
   if (!vKey) {
     socket.emit('claim_error', { message: 'Sistem ZKP backend belum siap.' });
@@ -59,6 +108,9 @@ export async function handleClaimSubmit(io: SocketIOServer, socket: Socket, data
     socket.emit('claim_error', { message: 'Data ZKP barang corrupt di database.' });
     return;
   }
+
+  // Pastikan kurva BN128 single-thread siap (lihat catatan di atas)
+  await ensureSingleThreadCurve();
 
   // Verifikasi setiap proof yang dikirimkan
   let matchedCount = 0;
@@ -109,19 +161,37 @@ export async function handleClaimSubmit(io: SocketIOServer, socket: Socket, data
 
   const savedClaim = await dbInsertClaim(itemId, claimEntry);
 
+  // Jika ini revisi, tandai klaim pending lama milik NPM yang sama sebagai
+  // 'superseded' agar tidak ikut berkompetisi di Gale-Shapley.
+  const superseded = myClaims.filter((c) => c.status === 'pending');
+  await Promise.all(
+    superseded.map((c) =>
+      dbUpdateClaimStatus(c.id, 'superseded', 'Digantikan oleh revisi klaim pengklaim yang sama.')
+    )
+  );
+
   if (item.status === 'open') {
     await dbUpdateItemStatus(itemId, 'disputed');
   }
 
-  // Mulai Dispute Window 24 jam (Gale-Shapley auto-resolve)
+  // Dispute Window 24 jam tetap dihitung dari klaim PERTAMA (startDisputeWindow
+  // mengabaikan item yang timernya sudah berjalan), sehingga revisi tidak
+  // memperpanjang masa tunggu.
   startDisputeWindow(io, itemId);
+
+  const updatedClaims = [
+    ...item.claims.map((c) =>
+      superseded.some((s) => s.id === c.id) ? { ...c, status: 'superseded' as const } : c
+    ),
+    savedClaim,
+  ];
 
   io.emit('claim_updated', {
     itemId: item.id,
     itemTitle: item.title,
     claim: savedClaim,
     status: item.status === 'open' ? 'disputed' : item.status,
-    claims: [...item.claims, savedClaim],
+    claims: updatedClaims,
     reporterContact: item.reporterContact,
   });
 }

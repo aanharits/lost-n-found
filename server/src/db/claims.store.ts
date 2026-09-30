@@ -27,10 +27,10 @@ export async function dbInsertClaim(itemId: string, claim: Claim): Promise<Claim
   return newClaim;
 }
 
-/** Update status klaim (approved/rejected) */
+/** Update status klaim (approved/rejected/superseded) */
 export async function dbUpdateClaimStatus(
   claimId: string,
-  status: 'pending' | 'approved' | 'rejected',
+  status: Claim['status'],
   reasoning?: string
 ): Promise<void> {
   updateClaimInCache(claimId, status, reasoning);

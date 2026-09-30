@@ -52,6 +52,18 @@
       currentPlayerNpm === item.reporterNpm,
   );
 
+  // Klaim milik player ini (semua status). Batas = 1 klaim awal + 1 revisi.
+  const myClaims = $derived(
+    !!currentPlayerNpm
+      ? (item.claims || []).filter((c) => c.claimantNpm === currentPlayerNpm)
+      : [],
+  );
+  const myApprovedClaim = $derived(myClaims.find((c) => c.status === "approved"));
+  const myPendingClaim = $derived(myClaims.find((c) => c.status === "pending"));
+
+  // Masih boleh klaim/revisi: belum disetujui DAN percobaan belum habis (< 2)
+  const canClaim = $derived(!myApprovedClaim && myClaims.length < 2);
+
   // Human-readable short ID
   const displayCode = $derived(formatShortCode(item.shortCode, item.id));
 </script>
@@ -169,12 +181,28 @@
             HAPUS
           </button>
         {/if}
+      {:else if myApprovedClaim}
+        <button
+          disabled
+          title="Klaim Anda untuk barang ini sudah disetujui"
+          class="bg-[#78716c] text-[#e7e5e4] font-pixel text-[7.5px] py-1.5 mt-1 w-full rounded border-2 border-[#44403c] cursor-not-allowed text-center select-none tracking-wider"
+        >
+          KLAIM DISETUJUI
+        </button>
+      {:else if !canClaim}
+        <button
+          disabled
+          title="Kesempatan revisi klaim untuk barang ini sudah habis"
+          class="bg-[#78716c] text-[#d6d3d1] font-pixel text-[7.5px] py-1.5 mt-1 w-full rounded border-2 border-[#44403c] cursor-not-allowed text-center select-none tracking-wider"
+        >
+          REVISI HABIS
+        </button>
       {:else}
         <button
           onclick={onClaim}
           class="bg-[#0284c7] hover:bg-[#0369a1] active:translate-y-0.5 text-white font-pixel text-[8.5px] py-1.5 mt-1 w-full rounded border-2 border-[#140b05] shadow-[2px_2px_0px_#140b05] active:shadow-none cursor-pointer text-center select-none transition-all tracking-wider font-bold"
         >
-          KLAIM BARANG
+          {myPendingClaim ? "REVISI KLAIM" : "KLAIM BARANG"}
         </button>
       {/if}
     </div>

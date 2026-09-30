@@ -10,7 +10,7 @@ export function rowToClaim(row: ClaimRecord): Claim {
     score: row.score ?? 1.0,
     confidence: row.confidence ?? 'Tinggi',
     reasoning: row.reasoning ?? '',
-    status: (row.status ?? 'pending') as 'pending' | 'approved' | 'rejected',
+    status: (row.status ?? 'pending') as Claim['status'],
     claimantName: row.claimantName ?? '',
     claimantNpm: row.claimantNpm,
     claimantContact: row.claimantContact ?? '',
