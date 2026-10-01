@@ -49,6 +49,34 @@ if (browser) {
 // Store reaktif daftar barang yang ditampilkan pada papan (default kosong, diisi data live dari WebSocket)
 export const items = writable<Item[]>([]);
 
+// Status apakah data awal item dari server sudah selesai dimuat
+export const itemsLoaded = writable<boolean>(false);
+
+const LAST_COUNT_KEY = 'lnf_last_known_count';
+
+function getSavedItemCount(): number {
+  if (!browser) return 3;
+  try {
+    const raw = localStorage.getItem(LAST_COUNT_KEY);
+    if (raw !== null) {
+      const parsed = parseInt(raw, 10);
+      if (!isNaN(parsed) && parsed >= 0) return Math.min(parsed, 16);
+    }
+  } catch {}
+  return 3;
+}
+
+// Menyimpan estimasi jumlah item terakhir agar jumlah skeleton presisi sesuai data
+export const lastKnownItemCount = writable<number>(getSavedItemCount());
+
+export function updateLastKnownItemCount(count: number): void {
+  if (!browser) return;
+  try {
+    localStorage.setItem(LAST_COUNT_KEY, String(count));
+    lastKnownItemCount.set(count);
+  } catch {}
+}
+
 /** No-op: tidak menyimpan cache lokal agar UI selalu 100% konsisten dengan database */
 export function persistItemsToLocal(_data: Item[]): void {
   // sengaja dikosongkan agar data yang sudah dihapus tidak muncul kembali saat refresh

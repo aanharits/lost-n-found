@@ -1,6 +1,6 @@
 import { io, type Socket } from 'socket.io-client';
 import { browser } from '$app/environment';
-import { items, archiveRequests, myArchiveRequests, persistItemsToLocal, type Item, type ArchiveRequest } from './stores/items.js';
+import { items, itemsLoaded, updateLastKnownItemCount, archiveRequests, myArchiveRequests, persistItemsToLocal, type Item, type ArchiveRequest } from './stores/items.js';
 import { socketConnected, onlineCount } from './stores/ui.js';
 
 const SERVER_URL = browser
@@ -50,7 +50,10 @@ export function initSocket(): Socket {
   socket.on('items_init', (serverItems: Item[]) => {
     if (Array.isArray(serverItems)) {
       items.set(serverItems);
+      const activeCount = serverItems.filter((i) => i.status !== 'expired' && i.status !== 'resolved').length;
+      updateLastKnownItemCount(activeCount);
       persistItemsToLocal(serverItems);
+      itemsLoaded.set(true);
     }
   });
 
@@ -58,6 +61,7 @@ export function initSocket(): Socket {
   socket.on('satpam_items_init', (satpamItems: Item[]) => {
     if (Array.isArray(satpamItems)) {
       items.set(satpamItems);
+      itemsLoaded.set(true);
     }
   });
 

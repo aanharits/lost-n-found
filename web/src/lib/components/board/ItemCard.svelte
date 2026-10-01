@@ -2,7 +2,7 @@
   import type { Item } from "$lib/stores/items.js";
   import { highlight, isItemHighlighted } from "$lib/stores/highlight.js";
   import { draggable } from "$lib/actions/draggable.js";
-  import { fly } from "svelte/transition";
+  import { fly, fade } from "svelte/transition";
   import TagIcon from "../shared/TagIcon.svelte";
   import { formatShortCode } from "$lib/utils/shortCode.js";
 
@@ -77,7 +77,8 @@
   id={item.id}
   style="left: {item.x}px; top: {item.y}px;"
   use:draggable={{ itemId: item.id, containerId: "board-container", onDragEnd }}
-  transition:fly={{ y: -30, duration: 400 }}
+  in:fly={{ y: -12, duration: 320 }}
+  out:fade={{ duration: 180 }}
 >
   <!-- Pushpin 8-bit -->
   <div

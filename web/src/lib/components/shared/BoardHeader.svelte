@@ -8,7 +8,7 @@
     inboxOpen,
     inboxTab,
   } from "$lib/stores/ui.js";
-  import { items } from "$lib/stores/items.js";
+  import { items, itemsLoaded } from "$lib/stores/items.js";
   import Avatar from "./Avatar.svelte";
   import InboxPanel from "./InboxPanel.svelte";
   import ArchiveRequestModal from "./ArchiveRequestModal.svelte";
@@ -73,6 +73,7 @@
 
   function switchUser() {
     items.set([]);
+    itemsLoaded.set(false);
     currentPlayer.logout();
     goto("/lobby");
   }

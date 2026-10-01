@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
   import { onMount } from 'svelte';
-  import { items } from '$lib/stores/items.js';
+  import { items, itemsLoaded, lastKnownItemCount, updateLastKnownItemCount } from '$lib/stores/items.js';
   import { currentPlayer } from '$lib/stores/player.js';
   import {
     activeModal,
@@ -12,6 +12,7 @@
   import { highlight } from '$lib/stores/highlight.js';
   import { getSocket } from '$lib/socket.js';
   import ItemCard from './ItemCard.svelte';
+  import CardSkeleton from './CardSkeleton.svelte';
   import ReportModal from './ReportModal.svelte';
   import ClaimModal from './ClaimModal.svelte';
   import ClaimsReviewModal from './ClaimsReviewModal.svelte';
@@ -32,6 +33,18 @@
 
   // Layout paginated: kartu mengisi grid lalu pindah halaman ke samping
   const layout = $derived(calculateGridLayout(boardWidth, boardHeight));
+
+  // Jumlah skeleton kartu presisi mengikuti jumlah data aktual (misal 3 jika datanya 3)
+  const skeletonCount = $derived(
+    Math.max(0, Math.min($lastKnownItemCount, layout.perPage))
+  );
+
+  // Sinkronkan estimasi jumlah kartu begitu data terkonfirmasi dari server
+  $effect(() => {
+    if ($itemsLoaded) {
+      updateLastKnownItemCount(publicItems.length);
+    }
+  });
 
   const totalPages = $derived(
     Math.max(1, Math.ceil(publicItems.length / layout.perPage))
@@ -149,10 +162,15 @@
     measure();
     const ro = new ResizeObserver(measure);
     if (boardContainer) ro.observe(boardContainer);
-    window.addEventListener('resize', measure);
+    // Safety fallback: jika dalam 3.5 detik server belum merespons, set itemsLoaded = true agar tidak terus menampilkan skeleton
+    const loadTimeout = setTimeout(() => {
+      itemsLoaded.set(true);
+    }, 3500);
+
     return () => {
       ro.disconnect();
       window.removeEventListener('resize', measure);
+      clearTimeout(loadTimeout);
     };
   });
 
@@ -224,8 +242,8 @@
       bind:this={boardContainer}
       class="board-container w-full flex-grow overflow-hidden relative cursor-default rounded-xl shadow-[8px_8px_0px_rgba(0,0,0,0.5)]"
     >
-      <!-- Tombol aksi: Lapor & Rapihkan -->
-      <div class="absolute top-4 left-4 z-20 flex gap-2">
+      <!-- Tombol aksi: Lapor & Rapihkan & Status Loading -->
+      <div class="absolute top-4 left-4 z-20 flex items-center gap-2">
         <button
           onclick={openReportModal}
           class="bg-[#22c55e] hover:bg-[#16a34a] active:translate-y-0.5 text-[#1c120c] font-pixel text-[9px] md:text-[10px] py-2 px-3.5 rounded border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] active:shadow-none cursor-pointer transition-all select-none font-bold tracking-wider"
@@ -238,6 +256,15 @@
         >
           RAPIHKAN
         </button>
+        {#if !$itemsLoaded}
+          <div
+            class="bg-white/95 border-2 border-[#1c120c] px-2.5 py-1.5 rounded flex items-center gap-1.5 shadow-[2px_2px_0_#1c120c] select-none"
+            transition:fade={{ duration: 150 }}
+          >
+            <span class="w-2 h-2 rounded-full bg-[#2563eb] animate-ping"></span>
+            <span class="font-pixel text-[8px] md:text-[9px] text-[#1c120c] font-bold">MEMUAT...</span>
+          </div>
+        {/if}
       </div>
 
       <!-- Filter status hilang / ketemu -->
@@ -268,7 +295,7 @@
         </button>
       </div>
 
-      <!-- Area render kartu barang (paginated / swipe).
+      <!-- Area render kartu barang (paginated / swipe / skeleton loading).
            Item 'expired' disembunyikan (masuk arsip Satpam), dan item 'resolved'
            (sudah selesai/dikembalikan) otomatis hilang dari board publik.
            Data tetap tersimpan di database & tetap terlihat di arsip Satpam.
@@ -284,16 +311,47 @@
           class="cards-track"
           style="transform: translateX(-{currentPage * layout.pageWidth}px);"
         >
-          {#each publicItems as item (item.id)}
-            <ItemCard
-              {item}
-              currentPlayerNpm={$currentPlayer?.npm || ''}
-              onClaim={() => openClaimModal(item.id)}
-              onReviewClaims={() => openClaimsReview(item.id)}
-              onDelete={() => openDeleteModal(item.id)}
-              onDragEnd={(x, y) => handleItemDragEnd(item.id, x, y)}
-            />
-          {/each}
+          {#if !$itemsLoaded}
+            {#each Array(skeletonCount) as _, idx}
+              {@const pos = layout.getPos(idx)}
+              <CardSkeleton x={pos.x} y={pos.y} delay={(idx % 8) * 80} />
+            {/each}
+          {:else if publicItems.length === 0}
+            <div
+              class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-sm w-full mx-4 bg-[#fefce8] border-4 border-[#1c120c] shadow-[6px_6px_0px_#0a060f] rounded-lg p-5 flex flex-col items-center text-center gap-3 select-none z-20 pointer-events-auto"
+              transition:fade={{ duration: 250 }}
+            >
+              <div class="w-12 h-12 rounded-full bg-[#fef08a] border-2 border-[#1c120c] flex items-center justify-center text-2xl shadow-[2px_2px_0px_#1c120c]">
+                📋
+              </div>
+              <div>
+                <h3 class="font-pixel text-[11px] md:text-[12px] text-[#1c120c] font-bold tracking-wider">
+                  PAPAN MASIH KOSONG
+                </h3>
+                <p class="font-sans text-xs text-stone-700 mt-1 font-medium leading-relaxed">
+                  Belum ada laporan barang hilang atau penemuan saat ini.
+                </p>
+              </div>
+              <button
+                onclick={openReportModal}
+                type="button"
+                class="bg-[#22c55e] hover:bg-[#16a34a] active:translate-y-0.5 text-[#1c120c] font-pixel text-[9px] py-2 px-4 rounded border-2 border-[#1c120c] shadow-[2px_2px_0_#1c120c] active:shadow-none cursor-pointer transition-all font-bold tracking-wider mt-1"
+              >
+                + BUAT LAPORAN PERTAMA
+              </button>
+            </div>
+          {:else}
+            {#each publicItems as item (item.id)}
+              <ItemCard
+                {item}
+                currentPlayerNpm={$currentPlayer?.npm || ''}
+                onClaim={() => openClaimModal(item.id)}
+                onReviewClaims={() => openClaimsReview(item.id)}
+                onDelete={() => openDeleteModal(item.id)}
+                onDragEnd={(x, y) => handleItemDragEnd(item.id, x, y)}
+              />
+            {/each}
+          {/if}
         </div>
       </div>
 
