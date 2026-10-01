@@ -4,14 +4,25 @@ import type { Item, Claim } from './types.js';
 // Menyimpan item aktif di RAM backend untuk respons seketika (~0ms) saat refresh/connect
 
 let itemsCache: Item[] | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_TTL_MS = 5000; // 5 detik TTL agar tetap instan saat banyak user bersamaan, namun otomatis sinkron bila data di DB dihapus/diubah
 let fetchPromise: Promise<Item[]> | null = null;
 
 export function getItemsCache(): Item[] | null {
-  return itemsCache;
+  if (itemsCache !== null) {
+    if (Date.now() - cacheTimestamp < CACHE_TTL_MS) {
+      return itemsCache;
+    }
+    // Cache sudah melewati batas TTL 5 detik, bersihkan agar query ulang dari DB
+    itemsCache = null;
+    cacheTimestamp = 0;
+  }
+  return null;
 }
 
 export function setItemsCache(items: Item[] | null): void {
   itemsCache = items;
+  cacheTimestamp = Date.now();
 }
 
 export function getFetchPromise(): Promise<Item[]> | null {
@@ -25,6 +36,7 @@ export function setFetchPromise(p: Promise<Item[]> | null): void {
 /** Mengosongkan cache agar query berikutnya mengambil data segar dari database */
 export function invalidateItemsCache(): void {
   itemsCache = null;
+  cacheTimestamp = 0;
 }
 
 /** Cari item dari cache berdasarkan ID */

@@ -72,6 +72,7 @@
   }
 
   function switchUser() {
+    items.set([]);
     currentPlayer.logout();
     goto("/lobby");
   }

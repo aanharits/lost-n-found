@@ -2,6 +2,9 @@ import { Hono } from 'hono';
 import { extractKeywordsWithAI } from '../zk/keywordExtractor.js';
 import { sanitizeEvidencePhoto } from '../utils/imageSanitizer.js';
 import { dbGetItemsForSatpam } from '../db/db-store.js';
+import { invalidateItemsCache } from '../db/cache.js';
+import { db } from '../db/index.js';
+import { itemsTable } from '../db/schema.js';
 
 const api = new Hono();
 const SATPAM_SECRET_KEY = (process.env.SATPAM_ACCESS_KEY || '').trim();
@@ -103,6 +106,26 @@ api.get('/satpam/items', async (c) => {
   } catch (err: any) {
     console.error('[API Satpam] Error loading items:', err);
     return c.json({ error: 'Gagal memuat arsip Satpam' }, 500);
+  }
+});
+
+// Endpoint untuk mengosongkan in-memory cache server secara instan
+api.all('/cache/flush', (c) => {
+  invalidateItemsCache();
+  return c.json({ ok: true, message: 'Server in-memory cache flushed successfully' });
+});
+
+// Endpoint status sinkronisasi DB vs Cache
+api.get('/db-status', async (c) => {
+  try {
+    const rows = await db.select({ id: itemsTable.id, title: itemsTable.title }).from(itemsTable);
+    return c.json({
+      ok: true,
+      dbItemCount: rows.length,
+      items: rows,
+    });
+  } catch (err: any) {
+    return c.json({ ok: false, error: err.message }, 500);
   }
 });
 

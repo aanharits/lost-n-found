@@ -39,31 +39,19 @@ export interface Item {
   y: number;
 }
 
-const CACHE_ITEMS_KEY = 'lnf_cached_items';
-
-function getInitialItems(): Item[] {
-  if (!browser) return [];
+// Bersihkan cache lama di sessionStorage jika ada, agar tidak ada data hantu saat refresh
+if (browser) {
   try {
-    const raw = sessionStorage.getItem(CACHE_ITEMS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+    sessionStorage.removeItem('lnf_cached_items');
+  } catch {}
 }
 
-// Store reaktif daftar barang yang ditampilkan pada papan (instan 0ms dari sessionStorage saat F5)
-export const items = writable<Item[]>(getInitialItems());
+// Store reaktif daftar barang yang ditampilkan pada papan (default kosong, diisi data live dari WebSocket)
+export const items = writable<Item[]>([]);
 
-/** Simpan data item terakhir ke sessionStorage untuk instant rendering saat F5 */
-export function persistItemsToLocal(data: Item[]): void {
-  if (!browser || !Array.isArray(data)) return;
-  try {
-    sessionStorage.setItem(CACHE_ITEMS_KEY, JSON.stringify(data));
-  } catch {
-    // Kuota sessionStorage penuh atau privasi browser dinonaktifkan
-  }
+/** No-op: tidak menyimpan cache lokal agar UI selalu 100% konsisten dengan database */
+export function persistItemsToLocal(_data: Item[]): void {
+  // sengaja dikosongkan agar data yang sudah dihapus tidak muncul kembali saat refresh
 }
 
 // Tipe data permintaan aktivasi barang dari arsip (Inbox Satpam)

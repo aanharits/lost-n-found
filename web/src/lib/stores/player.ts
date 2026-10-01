@@ -53,6 +53,7 @@ function createPlayerStore() {
       if (browser) {
         sessionStorage.removeItem('lf_player');
         localStorage.removeItem('lf_player');
+        sessionStorage.removeItem('lnf_cached_items');
       }
       set(null);
     },
