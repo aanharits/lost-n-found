@@ -61,6 +61,19 @@
     incomingPendingCount + myPendingCount,
   );
 
+  // Jika klaim masuk baru tiba saat panel sedang terbuka, otomatis arahkan ke
+  // tab "KLAIM MASUK". Tanpa ini, klaim baru bisa "tidak terlihat" hanya karena
+  // tab yang sedang aktif adalah "KLAIM SAYA".
+  let lastIncomingPendingCount = 0;
+  $effect(() => {
+    const count = incomingPendingCount;
+    const isOpen = $inboxOpen;
+    if (isOpen && count > lastIncomingPendingCount) {
+      inboxTab.set("incoming");
+    }
+    lastIncomingPendingCount = count;
+  });
+
   const currentCategoryList = $derived(
     $inboxTab === "incoming" ? incomingClaims : myClaims,
   );

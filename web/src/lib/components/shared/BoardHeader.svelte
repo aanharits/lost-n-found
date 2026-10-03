@@ -9,6 +9,7 @@
     inboxTab,
   } from "$lib/stores/ui.js";
   import { items, itemsLoaded } from "$lib/stores/items.js";
+  import { requestItemsSnapshot } from "$lib/socket.js";
   import Avatar from "./Avatar.svelte";
   import InboxPanel from "./InboxPanel.svelte";
   import ArchiveRequestModal from "./ArchiveRequestModal.svelte";
@@ -65,6 +66,10 @@
       );
       inboxTab.set(hasIncoming ? "incoming" : "mine");
       inboxOpen.set(true);
+      // Tarik snapshot terbaru dari server: inbox tidak boleh hanya mengandalkan
+      // event push, karena sekali event realtime terlewat isinya baru muncul
+      // setelah reload halaman.
+      requestItemsSnapshot();
     } else {
       inboxOpen.set(false);
     }

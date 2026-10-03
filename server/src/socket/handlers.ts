@@ -61,6 +61,36 @@ export function setupSocketHandlers(io: SocketIOServer): void {
           socket.emit('satpam_auth_failed', { message: 'Access key Satpam tidak valid.' });
         }
       });
+
+      // Permintaan snapshot data terbaru (pull manual oleh client).
+      // Dipakai saat inbox dibuka dan saat tab kembali aktif, sebagai jaring
+      // pengaman bila ada event realtime yang terlewat (mis. socket di-throttle
+      // browser saat tab berada di background).
+      // Balasannya memakai event yang sudah ditangani client agar tidak perlu
+      // handler baru:
+      //   - Satpam (accessKey valid) -> satpam_items_response (lengkap + evidencePhoto)
+      //   - Publik                   -> items_init (sudah disanitasi)
+      socket.on('items_get', async (data: { accessKey?: string }) => {
+        const key = data?.accessKey?.trim();
+        const isSatpam = !!SATPAM_SECRET_KEY && key === SATPAM_SECRET_KEY;
+        try {
+          if (isSatpam) {
+            // dbGetItems() tidak lagi memuat evidencePhoto (dioptimasi untuk publik),
+            // jadi Satpam wajib memakai dbGetItemsForSatpam() agar foto bukti tidak hilang.
+            const allItems = await dbGetItemsForSatpam();
+            const satpamItems = allItems.map(({ reporterToken: _, ...rest }) => rest);
+            socket.emit('satpam_items_response', satpamItems);
+          } else {
+            const allItems = await dbGetItems();
+            const sanitized = allItems.map(({ reporterToken: _, evidencePhoto: __, ...rest }) => rest);
+            socket.emit('items_init', sanitized);
+          }
+        } catch (err) {
+          // Sengaja TIDAK mengirim payload kosong: lebih baik client memakai data
+          // lama daripada papan/inbox ikut kosong karena kegagalan DB sesaat.
+          console.error('[Socket] Failed to load items snapshot:', err);
+        }
+      });
     } catch (err) {
       console.error('[Socket] Failed to register satpam handlers:', err);
     }

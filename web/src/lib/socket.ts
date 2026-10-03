@@ -1,13 +1,19 @@
 import { io, type Socket } from 'socket.io-client';
 import { browser } from '$app/environment';
+import { get } from 'svelte/store';
 import { items, itemsLoaded, updateLastKnownItemCount, archiveRequests, myArchiveRequests, persistItemsToLocal, type Item, type ArchiveRequest } from './stores/items.js';
 import { socketConnected, onlineCount } from './stores/ui.js';
+import { currentPlayer } from './stores/player.js';
 
 const SERVER_URL = browser
   ? (import.meta.env.PUBLIC_SERVER_URL || 'http://localhost:3001')
   : '';
 
 let socket: Socket | null = null;
+
+// Dipasang sekali per sesi halaman agar `visibilitychange` tidak menumpuk
+// listener setiap `initSocket()` dipanggil ulang (mis. HMR).
+let visibilityListenerAttached = false;
 
 // Callback untuk menampilkan notifikasi toast ke UI
 let toastCallback: ((message: string, type: string) => void) | null = null;
@@ -20,13 +26,70 @@ function showToast(message: string, type: string = 'info') {
   if (toastCallback) toastCallback(message, type);
 }
 
+// Menggabungkan daftar klaim berdasarkan `id` (data dari server diutamakan).
+// Klaim lokal yang belum ada di payload tetap dipertahankan agar data tidak
+// hilang bila payload server datang tidak lengkap — penggantian wholesale
+// (claims: data.claims) rawan menghapus klaim yang sudah tampil di inbox.
+function mergeClaimsById(local: any[], incoming: any[]): any[] {
+  const seen = new Set<string>();
+  const result: any[] = [];
+
+  for (const claim of incoming || []) {
+    if (!claim || !claim.id || seen.has(claim.id)) continue;
+    seen.add(claim.id);
+    result.push(claim);
+  }
+
+  for (const claim of local || []) {
+    if (!claim || !claim.id || seen.has(claim.id)) continue;
+    seen.add(claim.id);
+    result.push(claim);
+  }
+
+  return result;
+}
+
 // Mengambil instance socket aktif
 export function getSocket(): Socket | null {
   return socket;
 }
 
+// Meminta snapshot data terbaru dari server (pull manual).
+//
+// Dipakai saat inbox dibuka dan saat tab kembali aktif. Ini penting karena
+// inbox/board hanya mengandalkan event push; bila satu saja event realtime
+// terlewat (tab di background, koneksi sempat putus, reload dev server),
+// datanya baru muncul setelah user me-refresh halaman.
+export function requestItemsSnapshot(): void {
+  if (!socket?.connected) return;
+
+  const player = get(currentPlayer);
+
+  const isSatpam = player?.role === 'satpam';
+  const accessKey = player?.accessKey || '';
+
+  // Jangan minta snapshot publik untuk sesi Satpam yang accessKey-nya belum
+  // tersedia: balasan publik tidak menyertakan evidencePhoto sehingga bisa
+  // menurunkan kualitas data yang sedang ditampilkan.
+  if (isSatpam && !accessKey) return;
+
+  socket.emit('items_get', { accessKey: isSatpam ? accessKey : '' });
+}
+
 // Inisialisasi koneksi Socket.IO ke backend dan daftarkan seluruh event listener realtime
 export function initSocket(): Socket {
+  // Pasang sekali untuk seluruh sesi halaman: setiap tab kembali aktif, tarik
+  // snapshot agar event yang terlewat saat tab di background (browser menahan
+  // timer websocket, koneksi sempat putus, HMR) tidak membuat inbox/board basi.
+  if (browser && !visibilityListenerAttached) {
+    visibilityListenerAttached = true;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        requestItemsSnapshot();
+      }
+    });
+  }
+
   if (socket) return socket;
   if (!browser) return null as any;
 
@@ -39,6 +102,8 @@ export function initSocket(): Socket {
   socket.on('connect', () => {
     console.log('[Socket] Connected to WebSocket server');
     socketConnected.set(true);
+    // Reconnect (socket baru) otomatis dapat `items_init` dari server, jadi di
+    // sini tidak perlu pull tambahan untuk menghindari duplikasi snapshot.
   });
 
   socket.on('disconnect', () => {
@@ -66,8 +131,9 @@ export function initSocket(): Socket {
   });
 
   socket.on('satpam_items_response', (satpamItems: Item[]) => {
-    if (Array.isArray(satpamItems)) {
+    if (Array.isArray(satpamItems) && satpamItems.length > 0) {
       items.set(satpamItems);
+      itemsLoaded.set(true);
     }
   });
 
@@ -138,7 +204,11 @@ export function initSocket(): Socket {
     items.update((current) =>
       current.map((item) => {
         if (item.id === data.itemId) {
-          return { ...item, claims: data.claims, status: data.status };
+          // Server adalah kebenaran untuk array `claims` milik item ini: ganti
+          // seluruhnya agar perubahan status di server (mis. klaim lama menjadi
+          // `superseded`) ikut tercermin. Klaim lokal yang belum dikenal server
+          // tetap dipertahankan agar tidak hilang bila payload tidak lengkap.
+          return { ...item, claims: mergeClaimsById(item.claims || [], data.claims), status: data.status };
         }
         return item;
       })
