@@ -179,10 +179,17 @@ export async function handleClaimSubmit(io: SocketIOServer, socket: Socket, data
   // memperpanjang masa tunggu.
   startDisputeWindow(io, itemId);
 
+  // PENTING: `item` bisa berupa objek cache RAM (referensi, bukan salinan), sehingga
+  // dbInsertClaim() di atas sudah ikut mendorong savedClaim ke `item.claims`.
+  // Buang dulu agar savedClaim tidak terkirim DUA KALI — id klaim ganda membuat
+  // {#each ... (claim.id)} di InboxPanel pelapor crash dan inbox tidak bisa dibuka
+  // sampai halaman di-refresh.
   const updatedClaims = [
-    ...item.claims.map((c) =>
-      superseded.some((s) => s.id === c.id) ? { ...c, status: 'superseded' as const } : c
-    ),
+    ...item.claims
+      .filter((c) => c.id !== savedClaim.id)
+      .map((c) =>
+        superseded.some((s) => s.id === c.id) ? { ...c, status: 'superseded' as const } : c
+      ),
     savedClaim,
   ];
 

@@ -227,7 +227,8 @@ export function initSocket(): Socket {
     items.update((current) =>
       current.map((item) => {
         if (item.id === data.itemId) {
-          return { ...item, claims: data.claims, status: data.status };
+          // Dedupe per id: klaim ganda membuat {#each} ber-key di InboxPanel crash.
+          return { ...item, claims: mergeClaimsById([], data.claims), status: data.status };
         }
         return item;
       })
